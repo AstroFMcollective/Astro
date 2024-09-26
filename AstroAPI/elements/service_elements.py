@@ -65,7 +65,7 @@ class Album:
 		self.api_http_code = api_http_code
 
 class Podcast:
-	def __init__(self, service: str, url: str, id: any, title: str, censored_title: str, publisher: str, release_year: str, cover_url: str, is_explicit: bool, api_response_time: int, api_http_code: int):
+	def __init__(self, service: str, url: str, id: any, title: str, censored_title: str, publisher: str, cover_url: str, is_explicit: bool, api_response_time: int, api_http_code: int):
 		self.service = service
 		self.type = 'podcast'
 		self.url = url
@@ -73,7 +73,6 @@ class Podcast:
 		self.title = title
 		self.censored_title = censored_title
 		self.publisher = publisher
-		self.release_year = release_year
 		self.cover_url = cover_url
 		self.is_explicit = is_explicit
 		self.api_response_time = api_response_time
@@ -90,5 +89,30 @@ class PodcastEpisode:
 		self.release_year = release_year
 		self.cover_url = cover_url
 		self.is_explicit = is_explicit
+		self.api_response_time = api_response_time
+		self.api_http_code = api_http_code
+
+class Playlist:
+	def __init__(self, service: str, url: str, id: any, title: str, owner: str, songs: list, cover_url: str, api_response_time: int, api_http_code: int):
+		self.service = service
+		self.type = 'playlist'
+		self.url = url
+		self.id = str(id)
+		self.title = title
+		self.owner = owner
+		self.songs = songs
+		self.cover_url = cover_url
+		self.api_response_time = api_response_time
+		self.api_http_code = api_http_code
+
+class Artist:
+	def __init__(self, service: str, url: str, id: any, name: str, genres: list, profie_pic_url: str, api_response_time: int, api_http_code: int):
+		self.service = service
+		self.type = 'artist'
+		self.url = url
+		self.id = str(id)
+		self.name = name
+		self.genres = genres
+		self.profile_pic_url = profie_pic_url
 		self.api_response_time = api_response_time
 		self.api_http_code = api_http_code
