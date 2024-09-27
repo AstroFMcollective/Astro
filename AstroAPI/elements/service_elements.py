@@ -105,6 +105,23 @@ class Playlist:
 		self.api_response_time = api_response_time
 		self.api_http_code = api_http_code
 
+class Audiobook:
+	def __init__(self, service: str, url: str, id: any, title: str, censored_title: str, authors: list, narrators: list, publisher: str, chapters: int, cover_url: str, is_explicit: bool, api_response_time: int, api_http_code: int) -> None:
+		self.service = service
+		self.type = 'audiobook'
+		self.url = url
+		self.id = str(id)
+		self.title = title
+		self.censored_title = censored_title
+		self.authors = authors
+		self.narrators = narrators
+		self.publisher = publisher
+		self.chapters = chapters
+		self.cover_url = cover_url
+		self.is_explicit = is_explicit
+		self.api_response_time = api_response_time
+		self.api_http_code = api_http_code
+
 class Artist:
 	def __init__(self, service: str, url: str, id: any, name: str, genres: list, profie_pic_url: str, api_response_time: int, api_http_code: int):
 		self.service = service
