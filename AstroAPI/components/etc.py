@@ -5,16 +5,16 @@ from urllib.parse import urlparse
 from urllib import request
 from PIL import Image
 from io import BytesIO
-from discord import Webhook
+#from discord import Webhook
 import numpy as np
 import difflib 
 import json
 import re
-import discord as discord
+#import discord as discord
 import requests
-import aiohttp
+#import aiohttp
 import asyncio
-import configparser
+#import configparser
 
 
 
@@ -218,6 +218,7 @@ def clean_up_collection_title(string: str):
 def remove_duplicates(items: list):
 	return list(dict.fromkeys(items))
 
+'''
 async def check_reaction(message: discord.Message, reaction_emoji: str):
 	if not message.reactions:
 		return False
@@ -233,3 +234,4 @@ async def add_reactions(message: discord.Message, emojis: list):
 			await message.add_reaction(emoji)
 	except:
 		pass
+'''

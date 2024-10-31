@@ -1,1 +1,1 @@
-from AstroAPI.media_services._media_services import Spotify
+from AstroAPI.media_services.all import Spotify
