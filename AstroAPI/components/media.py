@@ -1,8 +1,10 @@
 class Error:
-	def __init__(self, http_code: int = None, error_msg: str = None) -> object:
+	def __init__(self, component: str, http_code: int = None, error_msg: str = None, request: str = None) -> object:
 		self.type = 'error'
+		self.component = component,
 		self.http_code = http_code
 		self.error_msg = error_msg
+		self.request = request
 
 class Song:
 	def __init__(self, service: str, type: str, url: str, id: any, title: str, censored_title: str, artists: list, cover_url: str, api_response_time: int, api_http_code: int, collection: str = None, is_explicit: bool = None) -> object:
