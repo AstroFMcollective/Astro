@@ -5,6 +5,7 @@ import aiohttp
 class Spotify:
 	def __init__(self, client_id: str, client_secret: str):
 		self.service = 'spotify'
+		self.component = 'Spotify API'
 		self.client_id = client_id
 		self.client_secret = client_secret
 		self.token = None
@@ -12,7 +13,7 @@ class Spotify:
 		asyncio.run(self.get_token())
 
 
-	
+
 	async def get_token(self) -> str:
 		if self.token == None or (self.token_expiration_date == None or current_time() > self.token_expiration_date):
 			async with aiohttp.ClientSession() as session:
@@ -25,6 +26,12 @@ class Spotify:
 						json_response = await response.json()
 						self.token = json_response['access_token']
 						self.token_expiration_date = current_time() + int(json_response['expires_in'])
+					else:
+						return Error(
+							component = self.component,
+							http_code = response.status,
+							error_msg = "HTTP error getting Spotify token"
+						)
 
 		return self.token
 
@@ -48,7 +55,6 @@ class Spotify:
 			async with session.get(url = api_url, headers = api_headers, timeout = timeout, params = api_params) as response:
 				if response.status == 200:
 					json_response = await response.json()
-					save_json(json_response)
 
 					for song in json_response['tracks']['items']:
 						song_type = ('track' if song['album']['album_type'] != 'single' else 'single')
@@ -75,6 +81,13 @@ class Spotify:
 							api_http_code = response.status
 						))
 						return filter_song(songs = songs, query_artist = artists[0], query_title = title, query_song_type = song_type, query_collection = collection, query_is_explicit = is_explicit)
+				else:
+					return Error(
+						component = self.component,
+						http_code = response.status,
+						error_msg = "HTTP error when searching for Spotify song",
+						request = f'Artists: `{', '.join(artists)}`\nTitle: `{title}`\nSong type: `{song_type}`\nCollection title: `{collection}`\nIs explicit? `{is_explicit}`'
+					)
 
 
 
@@ -96,7 +109,6 @@ class Spotify:
 			async with session.get(url = api_url, headers = api_headers, timeout = timeout, params = api_params) as response:
 				if response.status == 200:
 					json_response = await response.json()
-					save_json(json_response)
 
 					for collection in json_response['albums']['items']:
 						collection_type = ('album' if collection['album_type'] != 'single' else 'ep')
@@ -121,12 +133,19 @@ class Spotify:
 							api_http_code = response.status
 						))
 						return filter_collection(collections = collections, query_artist = artists[0], query_title = title, query_year = year)
+				else:
+					return Error(
+						component = self.component,
+						http_code = response.status,
+						error_msg = "HTTP error when searching for Spotify collection",
+						request = f'Artists: `{', '.join(artists)}`\nTitle: `{title}`\nYear: `{year}`'
+					)
 
 
 	
-	async def lookup_song(self, song_id: str):
+	async def lookup_song(self, id: str):
 		async with aiohttp.ClientSession() as session:
-			api_url = f'https://api.spotify.com/v1/tracks/{song_id}'
+			api_url = f'https://api.spotify.com/v1/tracks/{id}'
 			api_headers = {'Authorization': f'Bearer {await self.get_token()}'}
 			timeout = aiohttp.ClientTimeout(total = 30)
 			start_time = current_time_ms()
@@ -158,10 +177,18 @@ class Spotify:
 						api_response_time = end_time - start_time,
 						api_http_code = response.status
 					)
+				else:
+					return Error(
+						component = self.component,
+						http_code = response.status,
+						error_msg = "HTTP error when looking up Spotify song ID",
+						request = f'ID: `{id}`\n[Open Song URL](https://open.spotify.com/track/{id})'
+					)
+				
 
 
 	
-	async def lookup_collection(self, collection_id: str):
+	async def lookup_collection(self, id: str):
 		async with aiohttp.ClientSession() as session:
 			api_url = f'https://api.spotify.com/v1/albums/{collection_id}'
 			api_headers = {'Authorization': f'Bearer {await self.get_token()}'}
@@ -192,4 +219,11 @@ class Spotify:
 						cover_url = collection_cover,
 						api_response_time = end_time - start_time,
 						api_http_code = response.status
+					)
+				else:
+					return Error(
+						component = self.component,
+						http_code = response.status,
+						error_msg = "HTTP error when looking up Spotify song ID",
+						request = f'ID: `{id}`\n[Open Song URL](https://open.spotify.com/track/{id})'
 					)
