@@ -1,7 +1,7 @@
-from AstroAPI.components.media import Error
+from AstroAPI.components.media import *
 from AstroAPI.components.etc import *
 
-def filter_song(songs: list, query_artist: str, query_title: str, query_song_type: str = None, query_collection: str = None, query_is_explicit: bool = None):
+def filter_song(songs: list, query_artist: str, query_title: str, query_song_type: str = None, query_collection: str = None, query_is_explicit: bool = None) -> Song:
 	max_score = 3000
 	if query_collection != None:
 		max_score += 1000
@@ -53,7 +53,7 @@ def filter_song(songs: list, query_artist: str, query_title: str, query_song_typ
 
 
 
-def filter_collection(collections: list, query_artist: str, query_title: str, query_year: str = None):
+def filter_collection(collections: list, query_artist: str, query_title: str, query_year: str = None) -> Collection:
 	max_score = 2000
 	if query_year != None:
 		max_score += 1000
