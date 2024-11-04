@@ -5,23 +5,21 @@ from urllib.parse import urlparse
 from urllib import request
 from PIL import Image
 from io import BytesIO
-#from discord import Webhook
+from discord import Webhook
 import numpy as np
 import difflib 
 import json
 import re
-#import discord as discord
+import discord as discord
 import requests
-#import aiohttp
 import asyncio
-#import configparser
 
 
 
-def current_time():
+def current_unix_time():
 	return int(time())
 
-def current_time_ms():
+def current_unix_time_ms():
 	return int(time() * 1000)
 
 def save_json(json_data: dict):
@@ -218,7 +216,6 @@ def clean_up_collection_title(string: str):
 def remove_duplicates(items: list):
 	return list(dict.fromkeys(items))
 
-'''
 async def check_reaction(message: discord.Message, reaction_emoji: str):
 	if not message.reactions:
 		return False
@@ -234,4 +231,3 @@ async def add_reactions(message: discord.Message, emojis: list):
 			await message.add_reaction(emoji)
 	except:
 		pass
-'''

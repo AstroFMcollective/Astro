@@ -1,7 +1,7 @@
 from AstroAPI.components.media import *
 from AstroAPI.components.etc import *
 
-def filter_song(songs: list, query_artist: str, query_title: str, query_song_type: str = None, query_collection: str = None, query_is_explicit: bool = None) -> Song:
+def filter_song(service: str, songs: list, query_artists: list, query_title: str, query_song_type: str = None, query_collection: str = None, query_is_explicit: bool = None) -> Song:
 	max_score = 3000
 	if query_collection != None:
 		max_score += 1000
@@ -11,8 +11,8 @@ def filter_song(songs: list, query_artist: str, query_title: str, query_song_typ
 	data_with_similarity = []
 	for data in songs:
 		track_similarity = 0
-
-		artist_input = bare_bones(query_artist)
+		
+		artist_input = bare_bones(query_artists[0])
 		artists_reference = data.artists
 		artists_with_similarity = []
 		for artist_name in artists_reference:
@@ -47,13 +47,13 @@ def filter_song(songs: list, query_artist: str, query_title: str, query_song_typ
 		if percentage(max_score, data_with_similarity[0][0]) > 30:
 			return data_with_similarity[0][1]
 		else:
-			return Error(error_msg = 'Empty response')
+			return Empty(service = service, request = f'Artists: `{', '.join(query_artists)}`\nTitle: `{query_title}`\nSong type: `{query_song_type}`\nCollection title: `{query_collection}`\nIs explicit? `{query_is_explicit}`')
 	else:
-		return Error(error_msg = 'Empty response')
+		return Empty(service = service, request = f'Artists: `{', '.join(query_artists)}`\nTitle: `{query_title}`\nSong type: `{query_song_type}`\nCollection title: `{query_collection}`\nIs explicit? `{query_is_explicit}`')
 
 
 
-def filter_collection(collections: list, query_artist: str, query_title: str, query_year: str = None) -> Collection:
+def filter_collection(service: str, collections: list, query_artists: list, query_title: str, query_year: str = None) -> Collection:
 	max_score = 2000
 	if query_year != None:
 		max_score += 1000
@@ -62,7 +62,7 @@ def filter_collection(collections: list, query_artist: str, query_title: str, qu
 	for data in collections:
 		track_similarity = 0
 
-		artist_input = bare_bones(query_artist)
+		artist_input = bare_bones(query_artists[0])
 		artists_reference = data.artists
 		artists_with_similarity = []
 		for artist_name in artists_reference:
@@ -88,6 +88,6 @@ def filter_collection(collections: list, query_artist: str, query_title: str, qu
 		if percentage(max_score, data_with_similarity[0][0]) > 30:
 			return data_with_similarity[0][1]
 		else:
-			return Error(error_msg = 'Empty response')
+			return Empty(service = service, request = f'Artists: `{', '.join(query_artists)}`\nTitle: `{query_title}`\nYear: `{query_year}`')
 	else:
-		return Error(error_msg = 'Empty response')
+		return Empty(service = service, request = f'Artists: `{', '.join(query_artists)}`\nTitle: `{query_title}`\nYear: `{query_year}`')

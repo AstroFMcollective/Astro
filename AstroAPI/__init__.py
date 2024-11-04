@@ -1,1 +1,1 @@
-from AstroAPI.media_services.all import Spotify
+from AstroAPI.media_services.all import Spotify, Tidal

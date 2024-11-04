@@ -1,5 +1,4 @@
-tokens.ini
-service_keys.ini
+keys.ini
 __pycache__
 test.py
 save_json_data.json
