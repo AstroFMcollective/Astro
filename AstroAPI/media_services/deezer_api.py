@@ -1,5 +1,4 @@
 from AstroAPI.components.all import *
-from asyncio import run
 import aiohttp
 
 class Deezer:
@@ -59,7 +58,7 @@ class Deezer:
 						service = self.service,
 						component = self.component,
 						http_code = response.status,
-						error_msg = "HTTP error when searching for Deezer song",
+						error_msg = "HTTP error when searching for song",
 						request = f'Artists: `{', '.join(artists)}`\nTitle: `{title}`\nSong type: `{song_type}`\nCollection title: `{collection}`\nIs explicit? `{is_explicit}`'
 					)
 
@@ -108,19 +107,19 @@ class Deezer:
 								api_response_time = end_time - start_time,
 								api_http_code = result.status
 							))
-							return filter_collection(service = self.service, collections = collections, query_artists = artists, query_title = title, query_year = year)
+					return filter_collection(service = self.service, collections = collections, query_artists = artists, query_title = title, query_year = year)
 				else:
 					return Error(
 						service = self.service,
 						component = self.component,
 						http_code = response.status,
-						error_msg = "HTTP error when searching for Deezer collection",
+						error_msg = "HTTP error when searching for collection",
 						request = f'Artists: `{', '.join(artists)}`\nTitle: `{title}`\nYear: `{year}`'
 					)
 
 
 	
-	async def lookup_song(self, id: str):
+	async def lookup_song(self, id: str) -> object:
 		async with aiohttp.ClientSession() as session:
 			api_url = f'https://api.deezer.com/track/{id}'
 			api_headers = {
@@ -160,13 +159,13 @@ class Deezer:
 						service = self.service,
 						component = self.component,
 						http_code = response.status,
-						error_msg = "HTTP error when looking up Deezer song ID",
+						error_msg = "HTTP error when looking up song ID",
 						request = f'ID: `{id}`\n[Open Song URL](https://tidal.com/browse/track/{id})'
 					)
 				
 
 
-	async def lookup_collection(self, id: str):
+	async def lookup_collection(self, id: str) -> object:
 		async with aiohttp.ClientSession() as session:
 			api_url = f'https://api.deezer.com/album/{id}'
 			api_headers = {
@@ -204,6 +203,6 @@ class Deezer:
 						service = self.service,
 						component = self.component,
 						http_code = response.status,
-						error_msg = "HTTP error when looking up Deezer collection ID",
+						error_msg = "HTTP error when looking up collection ID",
 						request = f'ID: `{id}`\n[Open Collection URL](https://tidal.com/browse/album/{id})'
 					)

@@ -2,7 +2,7 @@ from AstroAPI.components.all import *
 from asyncio import run
 import aiohttp
 
-class Spotify:
+class Spotify: #balls
 	def __init__(self, client_id: str, client_secret: str):
 		self.service = 'spotify'
 		self.component = 'Spotify API'
@@ -31,7 +31,7 @@ class Spotify:
 							service = self.service,
 							component = self.component,
 							http_code = response.status,
-							error_msg = "HTTP error when getting Spotify token"
+							error_msg = "HTTP error when getting token"
 						)
 
 		return self.token
@@ -84,13 +84,13 @@ class Spotify:
 							api_response_time = end_time - start_time,
 							api_http_code = response.status
 						))
-						return filter_song(service = self.service, songs = songs, query_artists = artists, query_title = title, query_song_type = song_type, query_collection = collection, query_is_explicit = is_explicit)
+					return filter_song(service = self.service, songs = songs, query_artists = artists, query_title = title, query_song_type = song_type, query_collection = collection, query_is_explicit = is_explicit)
 				else:
 					return Error(
 						service = self.service,
 						component = self.component,
 						http_code = response.status,
-						error_msg = "HTTP error when searching for Spotify song",
+						error_msg = "HTTP error when searching for song",
 						request = f'Artists: `{', '.join(artists)}`\nTitle: `{title}`\nSong type: `{song_type}`\nCollection title: `{collection}`\nIs explicit? `{is_explicit}`'
 					)
 
@@ -139,19 +139,19 @@ class Spotify:
 							api_response_time = end_time - start_time,
 							api_http_code = response.status
 						))
-						return filter_collection(service = self.service, collections = collections, query_artists = artists, query_title = title, query_year = year)
+					return filter_collection(service = self.service, collections = collections, query_artists = artists, query_title = title, query_year = year)
 				else:
 					return Error(
 						service = self.service,
 						component = self.component,
 						http_code = response.status,
-						error_msg = "HTTP error when searching for Spotify collection",
+						error_msg = "HTTP error when searching for collection",
 						request = f'Artists: `{', '.join(artists)}`\nTitle: `{title}`\nYear: `{year}`'
 					)
 
 
 	
-	async def lookup_song(self, id: str):
+	async def lookup_song(self, id: str) -> object:
 		async with aiohttp.ClientSession() as session:
 			api_url = f'https://api.spotify.com/v1/tracks/{id}'
 			api_headers = {'Authorization': f'Bearer {await self.get_token()}'}
@@ -189,13 +189,13 @@ class Spotify:
 						service = self.service,
 						component = self.component,
 						http_code = response.status,
-						error_msg = "HTTP error when looking up Spotify song ID",
+						error_msg = "HTTP error when looking up song ID",
 						request = f'ID: `{id}`\n[Open Song URL](https://open.spotify.com/track/{id})'
 					)
 				
 
 
-	async def lookup_collection(self, id: str):
+	async def lookup_collection(self, id: str) -> object:
 		async with aiohttp.ClientSession() as session:
 			api_url = f'https://api.spotify.com/v1/albums/{id}'
 			api_headers = {'Authorization': f'Bearer {await self.get_token()}'}
@@ -231,6 +231,6 @@ class Spotify:
 						service = self.service,
 						component = self.component,
 						http_code = response.status,
-						error_msg = "HTTP error when looking up Spotify collection ID",
+						error_msg = "HTTP error when looking up collection ID",
 						request = f'ID: `{id}`\n[Open Collection URL](https://open.spotify.com/album/{id})'
 					)
