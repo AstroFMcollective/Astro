@@ -1,1 +1,1 @@
-from AstroAPI.media_services.all import Spotify, Tidal, Deezer
+from AstroAPI.media_services.all import Spotify, AppleMusic, Tidal, Deezer
