@@ -183,6 +183,7 @@ def has_music_video_declaration(string: str):
 	return False
 
 def remove_music_video_declaration(string: str):
+	og_string = string
 	optimized_string = string.lower()
 	declarations = [
 		'(official video)',
@@ -194,7 +195,8 @@ def remove_music_video_declaration(string: str):
 		if declaration in optimized_string:
 			optimized_string = optimized_string.replace(declaration, '')
 			optimized_string = optimized_string[:len(optimized_string)-1]
-	return optimized_string
+	og_string = og_string[:len(optimized_string)]
+	return og_string
 
 def track_is_explicit(is_explicit: bool | None):
 	if is_explicit != None:

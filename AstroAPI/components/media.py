@@ -29,7 +29,7 @@ class Song:
 		self.api_http_code = api_http_code
 
 class MusicVideo:
-	def __init__(self, service: str, url: str, id: any, title: str, artists: list, thumbnail_url: str, is_explicit: bool, api_response_time: int, api_http_code: int) -> object:
+	def __init__(self, service: str, url: str, id: any, title: str, artists: list, thumbnail_url: str, api_response_time: int, api_http_code: int, is_explicit: bool = None) -> object:
 		self.service = service
 		self.type = 'music_video'
 		self.url = url
@@ -43,7 +43,7 @@ class MusicVideo:
 		self.api_http_code = api_http_code
 
 class Collection:
-	def __init__(self, service: str, type: str, url: str, id: any, title: str, artists: list, release_year: int, cover_url: str, api_response_time: int, api_http_code: int) -> object:
+	def __init__(self, service: str, type: str, url: str, id: any, title: str, artists: list, cover_url: str, api_response_time: int, api_http_code: int, release_year: int = None) -> object:
 		self.service = service
 		self.type = type
 		self.url = url
@@ -51,7 +51,7 @@ class Collection:
 		self.title = title
 		self.censored_title = title
 		self.artists = artists
-		self.release_year = release_year
+		self.release_year = None if release_year == None else int(release_year)
 		self.cover_url = cover_url
 		self.api_response_time = api_response_time
 		self.api_http_code = api_http_code
@@ -78,7 +78,7 @@ class PodcastEpisode:
 		self.id = str(id)
 		self.title = title
 		self.censored_title = title
-		self.release_year = release_year
+		self.release_year = None if release_year == None else int(release_year)
 		self.cover_url = cover_url
 		self.is_explicit = is_explicit
 		self.api_response_time = api_response_time
