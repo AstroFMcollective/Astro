@@ -36,7 +36,7 @@ class YouTubeMusic:
 				song_title = song['title']
 				song_artists = [artist['name'] for artist in song['artists']] if song['artists'] != [] else await self.lookup_artist(video_id = song['videoId'])
 				if not isinstance(song_artists, list): song_artists = split_artists(song_artists.name)
-				ong_cover = song['thumbnails'][len(song['thumbnails'])-1]['url']
+				song_cover = song['thumbnails'][len(song['thumbnails'])-1]['url']
 				song_is_explicit = song['isExplicit']
 				song_collection = song['album']['name']
 				end_time = current_unix_time_ms()
@@ -81,7 +81,7 @@ class YouTubeMusic:
 				collection_url = f'https://music.youtube.com/playlist?list={collection['playlistId']}'
 				collection_id = collection['playlistId']
 				collection_title = collection['title']
-				collection_artists = [artist['name'] for artist in result['artists']]
+				collection_artists = [artist['name'] for artist in collection['artists']]
 				collection_year = collection['year']
 				collection_cover = collection['thumbnails'][len(collection['thumbnails'])-1]['url']
 				end_time = current_unix_time_ms()
