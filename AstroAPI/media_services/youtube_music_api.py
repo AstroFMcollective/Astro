@@ -8,6 +8,11 @@ class YouTubeMusic:
 		self.service = 'youtube_music'
 		self.component = 'YouTube Music API'
 		self.ytm = YTMusic()
+		self.allowed_video_types = [
+			'MUSIC_VIDEO_TYPE_ATV',
+			'MUSIC_VIDEO_TYPE_OMV',
+			'MUSIC_VIDEO_TYPE_OFFICIAL_SOURCE_MUSIC'
+		]
 
 
 
@@ -29,8 +34,9 @@ class YouTubeMusic:
 				song_url = f'https://music.youtube.com/watch?v={song['videoId']}'
 				song_id = song['videoId']
 				song_title = song['title']
-				song_artists = [artist['name'] for artist in song['artists']]
-				song_cover = song['thumbnails'][len(song['thumbnails'])-1]['url']
+				song_artists = [artist['name'] for artist in song['artists']] if song['artists'] != [] else await self.lookup_artist(video_id = song['videoId'])
+				if not isinstance(song_artists, list): song_artists = split_artists(song_artists.name)
+				ong_cover = song['thumbnails'][len(song['thumbnails'])-1]['url']
 				song_is_explicit = song['isExplicit']
 				song_collection = song['album']['name']
 				end_time = current_unix_time_ms()
@@ -75,7 +81,7 @@ class YouTubeMusic:
 				collection_url = f'https://music.youtube.com/playlist?list={collection['playlistId']}'
 				collection_id = collection['playlistId']
 				collection_title = collection['title']
-				collection_artists = [artist['name'] for artist in collection['artists']]
+				collection_artists = [artist['name'] for artist in result['artists']]
 				collection_year = collection['year']
 				collection_cover = collection['thumbnails'][len(collection['thumbnails'])-1]['url']
 				end_time = current_unix_time_ms()
@@ -110,7 +116,7 @@ class YouTubeMusic:
 			)
 			result = results[0]
 			result_type = result['resultType']
-			save_json(result)
+
 			if result_type == 'song':
 				return Song(
 					service = self.service,
@@ -165,18 +171,142 @@ class YouTubeMusic:
 
 
 
-	async def lookup_song(self):
-		return
+	async def lookup_song(self, id: str):
+		try:
+			start_time = current_unix_time_ms()
+			song = self.ytm.get_song(id)['videoDetails']
+			save_json(song)
+
+			if 'musicVideoType' in song:
+				if song['musicVideoType'] in self.allowed_video_types:
+					song_url = f'https://music.youtube.com/watch?v={song['videoId']}'
+					song_id = song['videoId']
+					song_title = song['title']
+					song_artists = await self.lookup_artist(video_id = song['videoId'])
+					if not isinstance(song_artists, list): song_artists = split_artists(song_artists.name)
+					song_cover = song['thumbnail']['thumbnails'][len(song['thumbnail']['thumbnails'])-1]['url']
+					end_time = current_unix_time_ms()
+					if song['musicVideoType'] == 'MUSIC_VIDEO_TYPE_ATV':
+						return Song(
+							service = self.service,
+							type = 'track',
+							url = song_url,
+							id = song_id,
+							title = song_title,
+							artists = song_artists,
+							collection = None,
+							is_explicit = None,
+							cover_url = song_cover,
+							api_response_time = end_time - start_time,
+							api_http_code = 200
+						)
+					else:
+						song_title = remove_music_video_declaration(song_title)
+						return MusicVideo(
+							service = self.service,
+							url = song_url,
+							id = song_id,
+							title = song_title,
+							artists = [song_artists.name],
+							is_explicit = None,
+							thumbnail_url = song_cover,
+							api_response_time = end_time - start_time,
+							api_http_code = 200
+						)
+			return
+		except Exception as msg:
+			return Error(
+				service = self.service,
+				component = self.component,
+				error_msg = f'Error when looking up song: "{msg}"',
+				request = f'ID: `{id}`\n[Open Song URL](https://music.youtube.com/watch?v={id})'
+			)
 
 
 
-	async def lookup_collection(self):
-		return
+	async def lookup_collection(self, id: str):
+		try:
+			start_time = current_unix_time_ms()
+			browse_id = self.ytm.get_album_browse_id(id)
+			collection = self.ytm.get_album(browse_id)
+			
+			collection_type = ('album' if collection['type'] == 'Album' else 'ep')
+			collection_url = f'https://music.youtube.com/playlist?list={collection['audioPlaylistId']}'
+			collection_id = collection['audioPlaylistId']
+			collection_title = collection['title']
+			collection_artists = [artist['name'] for artist in collection['artists']]
+			collection_year = collection['year']
+			collection_cover = collection['thumbnails'][len(collection['thumbnails'])-1]['url']
+			end_time = current_unix_time_ms()
+			return Collection(
+				service = self.service,
+				type = collection_type,
+				url = collection_url,
+				id = collection_id,
+				title = collection_title,
+				artists = collection_artists,
+				release_year = collection_year,
+				cover_url = collection_cover,
+				api_response_time = end_time - start_time,
+				api_http_code = 200
+			)
+			
+		except Exception as msg:
+			return Error(
+				service = self.service,
+				component = self.component,
+				error_msg = f'Error when looking up collection: "{msg}"',
+				request = f'ID: `{id}`\n[Open Collection URL](https://music.youtube.com/playlist?list={id})'
+			)
 	
 
 
-	async def lookup_artist(self, id: str):
+	async def lookup_artist(self, id: str = None, video_id: str = None):
 		try:
-			return
+			start_time = current_unix_time_ms()
+			try:
+				if video_id == None and id == None:
+					return Empty(
+						service = self.service,
+						request = f'ID: `{id}`'
+					)
+				elif video_id != None and id == None:
+					id = self.ytm.get_song(video_id)['videoDetails']['channelId']
+				artist = self.ytm.get_artist(id)
+
+				artist_url = f'https://www.youtube.com/channel/{artist['channelId']}'
+				artist_id = artist['channelId']
+				artist_name = artist['name']
+				end_time = current_unix_time_ms()
+				return Artist(
+					service = self.service,
+					url = artist_url,
+					id = artist_id,
+					name = artist_name,
+					api_response_time = end_time - start_time,
+					api_http_code = 200
+				)
+			except:
+				artist = self.ytm.get_song(video_id)['videoDetails']
+				save_json(artist)
+
+				artist_url = f'https://www.youtube.com/channel/{artist['channelId']}'
+				artist_id = artist['channelId']
+				artist_name = artist['author']
+				end_time = current_unix_time_ms()
+				return Artist(
+					service = self.service,
+					url = artist_url,
+					id = artist_id,
+					name = artist_name,
+					api_response_time = end_time - start_time,
+					api_http_code = 200
+				)
 		except Exception as msg:
-			return Error()
+			return Error(
+				service = self.service,
+				component = self.component,
+				error_msg = f'Error when looking up artist: "{msg}"',
+				request = f'ID: `{id}`\nVideo ID: `{video_id}`\n[Open Artist URL](https://www.youtube.com/channel/{id})\n[Open Video URL](https://music.youtube.com/watch?v={id})'
+			)
+		
