@@ -116,13 +116,13 @@ class Audiobook:
 		self.api_http_code = api_http_code
 
 class Artist:
-	def __init__(self, service: str, url: str, id: any, name: str, genres: list, profie_pic_url: str, api_response_time: int, api_http_code: int) -> object:
+	def __init__(self, service: str, url: str, id: any, name: str, api_response_time: int, api_http_code: int, profie_pic_url: str = None, genres: list = None) -> object:
 		self.service = service
 		self.type = 'artist'
 		self.url = url
 		self.id = str(id)
 		self.name = name
 		self.genres = genres
-		self.profile_pic_url = profie_pic_url
+		self.profile_pic_url = profie_pic_url if profie_pic_url != None else 'https://developer.valvesoftware.com/w/images/thumb/8/8b/Debugempty.png/200px-Debugempty.png'
 		self.api_response_time = api_response_time
 		self.api_http_code = api_http_code
