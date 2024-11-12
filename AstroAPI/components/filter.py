@@ -1,6 +1,8 @@
 from AstroAPI.components.media import *
 from AstroAPI.components.etc import *
 
+
+
 def filter_song(service: str, songs: list, query_artists: list, query_title: str, query_song_type: str = None, query_collection: str = None, query_is_explicit: bool = None) -> Song:
 	max_score = 3000
 	if query_collection != None:
