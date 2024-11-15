@@ -14,11 +14,11 @@ class Empty:
 		self.request = request
 
 class Song:
-	def __init__(self, service: str, type: str, url: str, id: any, title: str, artists: list, cover_url: str, api_response_time: int, api_http_code: int, collection: str = None, is_explicit: bool = None) -> object:
+	def __init__(self, service: str, type: str, url: str | dict, id: any, title: str, artists: list, cover_url: str, api_response_time: int, api_http_code: int, collection: str = None, is_explicit: bool = None) -> object:
 		self.service = service
 		self.type = type
-		self.url = url
-		self.id = str(id)
+		self.url = {service: url} if isinstance(url, str) else url
+		self.id = {service: str(id)} if not isinstance(id, dict) else id
 		self.title = title
 		self.censored_title = title
 		self.collection = collection
@@ -29,11 +29,11 @@ class Song:
 		self.api_http_code = api_http_code
 
 class MusicVideo:
-	def __init__(self, service: str, url: str, id: any, title: str, artists: list, thumbnail_url: str, api_response_time: int, api_http_code: int, is_explicit: bool = None) -> object:
+	def __init__(self, service: str, url: str | dict, id: any, title: str, artists: list, thumbnail_url: str, api_response_time: int, api_http_code: int, is_explicit: bool = None) -> object:
 		self.service = service
 		self.type = 'music_video'
-		self.url = url
-		self.id = str(id)
+		self.url = {service: url} if isinstance(url, str) else url
+		self.id = {service: str(id)} if not isinstance(id, dict) else id
 		self.title = title
 		self.censored_title = title
 		self.artists = artists
@@ -43,11 +43,11 @@ class MusicVideo:
 		self.api_http_code = api_http_code
 
 class Collection:
-	def __init__(self, service: str, type: str, url: str, id: any, title: str, artists: list, cover_url: str, api_response_time: int, api_http_code: int, release_year: int = None) -> object:
+	def __init__(self, service: str, type: str, url: str | dict, id: any, title: str, artists: list, cover_url: str, api_response_time: int, api_http_code: int, release_year: int = None) -> object:
 		self.service = service
 		self.type = type
-		self.url = url
-		self.id = str(id)
+		self.url = {service: url} if isinstance(url, str) else url
+		self.id = {service: str(id)} if not isinstance(id, dict) else id
 		self.title = title
 		self.censored_title = title
 		self.artists = artists
@@ -57,11 +57,11 @@ class Collection:
 		self.api_http_code = api_http_code
 
 class Podcast:
-	def __init__(self, service: str, url: str, id: any, title: str, publisher: str, cover_url: str, is_explicit: bool, api_response_time: int, api_http_code: int) -> object:
+	def __init__(self, service: str, url: str | dict, id: any, title: str, publisher: str, cover_url: str, is_explicit: bool, api_response_time: int, api_http_code: int) -> object:
 		self.service = service
 		self.type = 'podcast'
-		self.url = url
-		self.id = str(id)
+		self.url = {service: url} if isinstance(url, str) else url
+		self.id = {service: str(id)} if not isinstance(id, dict) else id
 		self.title = title
 		self.censored_title = title
 		self.publisher = publisher
@@ -71,11 +71,11 @@ class Podcast:
 		self.api_http_code = api_http_code
 
 class PodcastEpisode:
-	def __init__(self, service: str, url: str, id: any, title: str, release_year: str, cover_url: str, is_explicit: bool, api_response_time: int, api_http_code: int) -> object:
+	def __init__(self, service: str, url: str | dict, id: any, title: str, release_year: str, cover_url: str, is_explicit: bool, api_response_time: int, api_http_code: int) -> object:
 		self.service = service
 		self.type = 'podcast_episode'
-		self.url = url
-		self.id = str(id)
+		self.url = {service: url} if isinstance(url, str) else url
+		self.id = {service: str(id)} if not isinstance(id, dict) else id
 		self.title = title
 		self.censored_title = title
 		self.release_year = None if release_year == None else int(release_year)
@@ -85,11 +85,11 @@ class PodcastEpisode:
 		self.api_http_code = api_http_code
 
 class Playlist:
-	def __init__(self, service: str, url: str, id: any, title: str, owner: str, songs: list, cover_url: str, api_response_time: int, api_http_code: int) -> object:
+	def __init__(self, service: str, url: str | dict, id: any, title: str, owner: str, songs: list, cover_url: str, api_response_time: int, api_http_code: int) -> object:
 		self.service = service
 		self.type = 'playlist'
-		self.url = url
-		self.id = str(id)
+		self.url = {service: url} if isinstance(url, str) else url
+		self.id = {service: str(id)} if not isinstance(id, dict) else id
 		self.title = title
 		self.censored_title = title
 		self.owner = owner
@@ -99,11 +99,11 @@ class Playlist:
 		self.api_http_code = api_http_code
 
 class Audiobook:
-	def __init__(self, service: str, url: str, id: any, title: str, authors: list, narrators: list, publisher: str, chapters: int, cover_url: str, is_explicit: bool, api_response_time: int, api_http_code: int) -> object:
+	def __init__(self, service: str, url: str | dict, id: any, title: str, authors: list, narrators: list, publisher: str, chapters: int, cover_url: str, is_explicit: bool, api_response_time: int, api_http_code: int) -> object:
 		self.service = service
 		self.type = 'audiobook'
-		self.url = url
-		self.id = str(id)
+		self.url = {service: url} if isinstance(url, str) else url
+		self.id = {service: str(id)} if not isinstance(id, dict) else id
 		self.title = title
 		self.censored_title = title
 		self.authors = authors
@@ -116,11 +116,11 @@ class Audiobook:
 		self.api_http_code = api_http_code
 
 class Artist:
-	def __init__(self, service: str, url: str, id: any, name: str, api_response_time: int, api_http_code: int, profie_pic_url: str = None, genres: list = None) -> object:
+	def __init__(self, service: str, url: str | dict, id: any, name: str, api_response_time: int, api_http_code: int, profie_pic_url: str = None, genres: list = None) -> object:
 		self.service = service
 		self.type = 'artist'
-		self.url = url
-		self.id = str(id)
+		self.url = {service: url} if isinstance(url, str) else url
+		self.id = {service: str(id)} if not isinstance(id, dict) else id
 		self.name = name
 		self.genres = genres
 		self.profile_pic_url = profie_pic_url if profie_pic_url != None else 'https://developer.valvesoftware.com/w/images/thumb/8/8b/Debugempty.png/200px-Debugempty.png'
