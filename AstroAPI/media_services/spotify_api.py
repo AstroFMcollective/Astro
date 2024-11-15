@@ -2,6 +2,8 @@ from AstroAPI.components.all import *
 from asyncio import run
 import aiohttp
 
+
+
 class Spotify: #balls
 	def __init__(self, client_id: str, client_secret: str):
 		self.service = 'spotify'
@@ -47,7 +49,7 @@ class Spotify: #balls
 			songs = []
 			api_url = f'https://api.spotify.com/v1/search'
 			api_params = {
-				'q': f'artist:{artists[0]} track:{title}',
+				'q': (f'artist:{artists[0]} track:{title}' if collection == None else f'artist:{artists[0]} track:{title} album:{collection}'),
 				'type': 'track',
 				'market': 'US',
 				'limit': 50,
