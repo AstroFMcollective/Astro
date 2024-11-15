@@ -49,9 +49,15 @@ def filter_song(service: str, songs: list, query_artists: list, query_title: str
 		if percentage(max_score, data_with_similarity[0][0]) > 30:
 			return data_with_similarity[0][1]
 		else:
-			return Empty(service = service, request = f'Artists: `{', '.join(query_artists)}`\nTitle: `{query_title}`\nSong type: `{query_song_type}`\nCollection title: `{query_collection}`\nIs explicit? `{query_is_explicit}`')
+			return Empty(
+				service = service,
+				request = f'Artists: `{', '.join(query_artists)}`\nTitle: `{query_title}`\nSong type: `{query_song_type}`\nCollection title: `{query_collection}`\nIs explicit? `{query_is_explicit}`'
+			)
 	else:
-		return Empty(service = service, request = f'Artists: `{', '.join(query_artists)}`\nTitle: `{query_title}`\nSong type: `{query_song_type}`\nCollection title: `{query_collection}`\nIs explicit? `{query_is_explicit}`')
+		return Empty(
+			service = service,
+			request = f'Artists: `{', '.join(query_artists)}`\nTitle: `{query_title}`\nSong type: `{query_song_type}`\nCollection title: `{query_collection}`\nIs explicit? `{query_is_explicit}`'
+		)
 
 
 
@@ -90,6 +96,12 @@ def filter_collection(service: str, collections: list, query_artists: list, quer
 		if percentage(max_score, data_with_similarity[0][0]) > 30:
 			return data_with_similarity[0][1]
 		else:
-			return Empty(service = service, request = f'Artists: `{', '.join(query_artists)}`\nTitle: `{query_title}`\nYear: `{query_year}`')
+			return Empty(
+				service = service,
+				request = f'Artists: `{', '.join(query_artists)}`\nTitle: `{query_title}`\nYear: `{query_year}`'
+			)
 	else:
-		return Empty(service = service, request = f'Artists: `{', '.join(query_artists)}`\nTitle: `{query_title}`\nYear: `{query_year}`')
+		return Empty(
+			service = service,
+			request = f'Artists: `{', '.join(query_artists)}`\nTitle: `{query_title}`\nYear: `{query_year}`'
+		)

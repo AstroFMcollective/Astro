@@ -1,6 +1,8 @@
 from AstroAPI.components.all import *
 import aiohttp
 
+
+
 class Deezer:
 	def __init__(self):
 		self.service = 'deezer'

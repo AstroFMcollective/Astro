@@ -3,6 +3,8 @@ from base64 import b64encode
 from asyncio import run
 import aiohttp
 
+
+
 class Tidal:
 	def __init__(self, client_id: str, client_secret: str):
 		self.service = 'tidal'

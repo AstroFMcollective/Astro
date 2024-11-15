@@ -1,7 +1,7 @@
 from AstroAPI.components.all import *
 from ytmusicapi import YTMusic
-#from asyncio import run
-import aiohttp
+
+
 
 class YouTubeMusic:
 	def __init__(self):
@@ -175,7 +175,6 @@ class YouTubeMusic:
 		try:
 			start_time = current_unix_time_ms()
 			song = self.ytm.get_song(id)['videoDetails']
-			save_json(song)
 
 			if 'musicVideoType' in song:
 				if song['musicVideoType'] in self.allowed_video_types:
@@ -288,7 +287,6 @@ class YouTubeMusic:
 				)
 			except:
 				artist = self.ytm.get_song(video_id)['videoDetails']
-				save_json(artist)
 
 				artist_url = f'https://www.youtube.com/channel/{artist['channelId']}'
 				artist_id = artist['channelId']

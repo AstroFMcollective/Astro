@@ -1,6 +1,8 @@
 from AstroAPI.components.all import *
 import aiohttp
 
+
+
 class AppleMusic:
 	def __init__(self):
 		self.service = 'apple_music'
