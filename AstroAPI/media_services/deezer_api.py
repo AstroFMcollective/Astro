@@ -55,6 +55,7 @@ class Deezer:
 								api_http_code = result.status
 							))
 					return filter_song(service = self.service, songs = songs, query_artists = artists, query_title = title, query_song_type = song_type, query_collection = collection, query_is_explicit = is_explicit)
+				
 				else:
 					return Error(
 						service = self.service,
@@ -110,6 +111,7 @@ class Deezer:
 								api_http_code = result.status
 							))
 					return filter_collection(service = self.service, collections = collections, query_artists = artists, query_title = title, query_year = year)
+				
 				else:
 					return Error(
 						service = self.service,
@@ -156,6 +158,7 @@ class Deezer:
 						api_response_time = end_time - start_time,
 						api_http_code = response.status
 					)
+				
 				else:
 					return Error(
 						service = self.service,
@@ -200,6 +203,7 @@ class Deezer:
 						api_response_time = end_time - start_time,
 						api_http_code = response.status
 					)
+				
 				else:
 					return Error(
 						service = self.service,

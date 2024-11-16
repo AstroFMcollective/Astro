@@ -13,6 +13,7 @@ class AppleMusic:
 			artists = [optimize_for_search(artist) for artist in artists]
 			title = optimize_for_search(replace_with_ascii(title).lower())
 			collection = clean_up_collection_title(optimize_for_search(collection)) if collection != None else None
+			collection = f'{collection} - Single' if song_type == 'single' else collection
 			
 			songs = []
 			api_url = f'https://itunes.apple.com/search'
@@ -117,6 +118,57 @@ class AppleMusic:
 					)
 
 
+
+	async def search_music_video(self, artists: list, title: str, is_explicit: bool = None) -> object:
+		async with aiohttp.ClientSession() as session:
+			artists = [optimize_for_search(artist) for artist in artists]
+			title = optimize_for_search(replace_with_ascii(title).lower())
+			
+			videos = []
+			api_url = f'https://itunes.apple.com/search'
+			api_params = {
+				'term': f'{artists[0]} "{title}"',
+				'entity': 'musicVideo',
+				'limit': 200,
+				'country': 'us'
+			}
+			timeout = aiohttp.ClientTimeout(total = 30)
+			start_time = current_unix_time_ms()
+
+			async with session.get(url = api_url, timeout = timeout, params = api_params) as response:
+				if response.status == 200:
+					json_response = await response.json(content_type = 'text/javascript')
+
+					for video in json_response['results']:
+						mv_url = video['trackViewUrl']
+						mv_id = video['trackId']
+						mv_title = video['trackName']
+						mv_artists = split_artists(video['artistName'])
+						mv_cover = video['artworkUrl100']
+						mv_is_explicit = not 'not' in video['trackExplicitness']
+						end_time = current_unix_time_ms()
+						videos.append(MusicVideo(
+							service = self.service,
+							url = mv_url,
+							id = mv_id,
+							title = mv_title,
+							artists = mv_artists,
+							is_explicit = mv_is_explicit,
+							thumbnail_url = mv_cover,
+							api_response_time = end_time - start_time,
+							api_http_code = response.status
+						))
+					return filter_mv(service = self.service, videos = videos, query_artists = artists, query_title = title, query_is_explicit = is_explicit)
+				else:
+					return Error(
+						service = self.service,
+						component = self.component,
+						http_code = response.status,
+						error_msg = "HTTP error when searching for music video",
+						request = f'Artists: `{', '.join(artists)}`\nTitle: `{title}`\nIs explicit? `{is_explicit}`'
+					)
+
+
 	
 	async def lookup_song(self, id: str, country_code: str) -> object:
 		async with aiohttp.ClientSession() as session:
@@ -155,6 +207,7 @@ class AppleMusic:
 						api_response_time = end_time - start_time,
 						api_http_code = response.status
 					)
+
 				else:
 					return Error(
 						service = self.service,
@@ -201,6 +254,7 @@ class AppleMusic:
 						api_response_time = end_time - start_time,
 						api_http_code = response.status
 					)
+
 				else:
 					return Error(
 						service = self.service,
@@ -243,6 +297,7 @@ class AppleMusic:
 						api_response_time = end_time - start_time,
 						api_http_code = response.status
 					)
+
 				else:
 					return Error(
 						service = self.service,
@@ -284,6 +339,7 @@ class AppleMusic:
 						api_response_time = end_time - start_time,
 						api_http_code = response.status
 					)
+
 				else:
 					return Error(
 						service = self.service,

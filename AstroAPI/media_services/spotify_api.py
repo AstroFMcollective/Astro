@@ -28,6 +28,7 @@ class Spotify: #balls
 						json_response = await response.json()
 						self.token = json_response['access_token']
 						self.token_expiration_date = current_unix_time() + int(json_response['expires_in'])
+					
 					else:
 						return Error(
 							service = self.service,
@@ -87,6 +88,7 @@ class Spotify: #balls
 							api_http_code = response.status
 						))
 					return filter_song(service = self.service, songs = songs, query_artists = artists, query_title = title, query_song_type = song_type, query_collection = collection, query_is_explicit = is_explicit)
+
 				else:
 					return Error(
 						service = self.service,
@@ -142,6 +144,7 @@ class Spotify: #balls
 							api_http_code = response.status
 						))
 					return filter_collection(service = self.service, collections = collections, query_artists = artists, query_title = title, query_year = year)
+
 				else:
 					return Error(
 						service = self.service,
@@ -186,6 +189,7 @@ class Spotify: #balls
 						api_response_time = end_time - start_time,
 						api_http_code = response.status
 					)
+
 				else:
 					return Error(
 						service = self.service,
@@ -228,6 +232,7 @@ class Spotify: #balls
 						api_response_time = end_time - start_time,
 						api_http_code = response.status
 					)
+
 				else:
 					return Error(
 						service = self.service,

@@ -53,13 +53,57 @@ class YouTubeMusic:
 					api_response_time = end_time - start_time,
 					api_http_code = 200
 				))
-				return filter_song(service = self.service, songs = songs, query_artists = artists, query_title = title, query_song_type = song_type, query_collection = collection, query_is_explicit = is_explicit)
+			return filter_song(service = self.service, songs = songs, query_artists = artists, query_title = title, query_song_type = song_type, query_collection = collection, query_is_explicit = is_explicit)
+
 		except Exception as msg:
 			return Error(
 				service = self.service,
 				component = self.component,
 				error_msg = f'Error when searching for song: "{msg}"',
 				request = f'Artists: `{', '.join(artists)}`\nTitle: `{title}`\nSong type: `{song_type}`\nCollection title: `{collection}`\nIs explicit? `{is_explicit}`'
+			)
+		
+
+	
+	async def search_music_video(self, artists: list, title: str, is_explicit: bool = None) -> object:
+		try:
+			artists = [optimize_for_search(artist) for artist in artists]
+			title = optimize_for_search(replace_with_ascii(title).lower())
+			
+			videos = []
+			start_time = current_unix_time_ms()
+			results = self.ytm.search(
+				query = f'{artists[0]} {title}',
+				filter = 'videos'
+			)
+
+			for video in results:
+				mv_url = f'https://music.youtube.com/watch?v={video['videoId']}'
+				mv_id = video['videoId']
+				mv_title = video['title']
+				mv_artists = [artist['name'] for artist in video['artists']] if video['artists'] != [] else await self.lookup_artist(video_id = video['videoId'])
+				if not isinstance(mv_artists, list): mv_artists = split_artists(mv_artists.name)
+				mv_cover = video['thumbnails'][len(video['thumbnails'])-1]['url']
+				end_time = current_unix_time_ms()
+				videos.append(MusicVideo(
+					service = self.service,
+					url = mv_url,
+					id = mv_id,
+					title = mv_title,
+					artists = mv_artists,
+					is_explicit = None,
+					thumbnail_url = mv_cover,
+					api_response_time = end_time - start_time,
+					api_http_code = 200
+				))
+			return filter_mv(service = self.service, videos = videos, query_artists = artists, query_title = title, query_is_explicit = None)
+
+		except Exception as msg:
+			return Error(
+				service = self.service,
+				component = self.component,
+				error_msg = f'Error when searching for music video: "{msg}"',
+				request = f'Artists: `{', '.join(artists)}`\nTitle: `{title}`'
 			)
 
 
@@ -97,7 +141,8 @@ class YouTubeMusic:
 					api_response_time = end_time - start_time,
 					api_http_code = 200
 				))
-				return filter_collection(service = self.service, collections = collections, query_artists = artists, query_title = title, query_year = year)
+			return filter_collection(service = self.service, collections = collections, query_artists = artists, query_title = title, query_year = year)
+
 		except Exception as msg:
 			return Error(
 				service = self.service,
@@ -199,6 +244,7 @@ class YouTubeMusic:
 							api_response_time = end_time - start_time,
 							api_http_code = 200
 						)
+
 					else:
 						song_title = remove_music_video_declaration(song_title)
 						return MusicVideo(
@@ -206,13 +252,13 @@ class YouTubeMusic:
 							url = song_url,
 							id = song_id,
 							title = song_title,
-							artists = [song_artists.name],
+							artists = song_artists,
 							is_explicit = None,
 							thumbnail_url = song_cover,
 							api_response_time = end_time - start_time,
 							api_http_code = 200
 						)
-			return
+			
 		except Exception as msg:
 			return Error(
 				service = self.service,

@@ -31,6 +31,7 @@ class Tidal:
 						json_response = await response.json()
 						self.token = json_response['access_token']
 						self.token_expiration_date = current_unix_time() + int(json_response['expires_in'])
+
 					else:
 						return Error(
 							service = self.service,
@@ -95,6 +96,7 @@ class Tidal:
 							api_http_code = response.status
 						))
 					return filter_song(service = self.service, songs = songs, query_artists = artists, query_title = title, query_song_type = song_type, query_collection = collection, query_is_explicit = is_explicit)
+
 				else:
 					return Error(
 						service = self.service,
@@ -102,6 +104,65 @@ class Tidal:
 						http_code = response.status,
 						error_msg = "HTTP error when searching for song",
 						request = f'Artists: `{', '.join(artists)}`\nTitle: `{title}`\nSong type: `{song_type}`\nCollection title: `{collection}`\nIs explicit? `{is_explicit}`'
+					)
+	
+
+
+	async def search_music_video(self, artists: list, title: str, is_explicit: bool = None) -> object:
+		async with aiohttp.ClientSession() as session:
+			artists = [optimize_for_search(artist) for artist in artists]
+			title = optimize_for_search(title)
+			
+			videos = []
+			api_url = f'https://openapi.tidal.com/search'
+			api_params = {
+				'query': f'{artists[0]} {title}',
+				'type': 'VIDEOS',
+				'offset': 0,
+				'limit': 100,
+				'countryCode': 'US',
+				'popularity': 'WORLDWIDE'
+			}
+			api_headers = {
+				'accept': 'application/vnd.api+json',
+				'Authorization': f'Bearer {await self.get_token()}',
+				'Content-Type': 'application/vnd.tidal.v1+json'
+			}
+			timeout = aiohttp.ClientTimeout(total = 30)
+			start_time = current_unix_time_ms()
+
+			async with session.get(url = api_url, headers = api_headers, timeout = timeout, params = api_params) as response:
+				if response.status == 207:
+					json_response = await response.json()
+
+					for video in json_response['videos']:
+						mv_url = video['resource']['tidalUrl']
+						mv_id = video['resource']['id']
+						mv_title = video['resource']['title']
+						mv_artists = [artist['name'] for artist in video['resource']['artists']]
+						mv_cover = (video['resource']['image'][1]['url'] if video['resource']['image'] != [] else '')
+						mv_is_explicit = ('explicit' in video['resource']['properties']['content'][0] if 'content' in video['resource']['properties'] else False)
+						end_time = current_unix_time_ms()
+						videos.append(MusicVideo(
+							service = self.service,
+							url = mv_url,
+							id = mv_id,
+							title = mv_title,
+							artists = mv_artists,
+							is_explicit = mv_is_explicit,
+							thumbnail_url = mv_cover,
+							api_response_time = end_time - start_time,
+							api_http_code = response.status
+						))
+					return filter_mv(service = self.service, videos = videos, query_artists = artists, query_title = title, query_is_explicit = is_explicit)
+
+				else:
+					return Error(
+						service = self.service,
+						component = self.component,
+						http_code = response.status,
+						error_msg = "HTTP error when searching for music video",
+						request = f'Artists: `{', '.join(artists)}`\nTitle: `{title}`\nIs explicit? `{is_explicit}`'
 					)
 
 
@@ -155,6 +216,7 @@ class Tidal:
 							api_http_code = response.status
 						))
 					return filter_collection(service = self.service, collections = collections, query_artists = artists, query_title = title, query_year = year)
+
 				else:
 					return Error(
 						service = self.service,
@@ -203,6 +265,7 @@ class Tidal:
 						api_response_time = end_time - start_time,
 						api_http_code = response.status
 					)
+
 				else:
 					return Error(
 						service = self.service,
@@ -249,6 +312,7 @@ class Tidal:
 						api_response_time = end_time - start_time,
 						api_http_code = response.status
 					)
+
 				else:
 					return Error(
 						service = self.service,
@@ -273,14 +337,14 @@ class Tidal:
 
 			async with session.get(url = api_url, headers = api_headers, timeout = timeout) as response:
 				if response.status == 200:
-					mv = await response.json()
+					video = await response.json()
 
-					mv_url = mv['resource']['tidalUrl']
-					mv_id = mv['resource']['id']
-					mv_title = mv['resource']['title']
-					mv_artists = [artist['name'] for artist in mv['resource']['artists']]
-					mv_thumbnail = (mv['resource']['image'][1]['url'] if mv['resource']['image'] != [] else '')
-					mv_is_explicit = ('explicit' in mv['resource']['properties']['content'][0] if 'content' in mv['resource']['properties'] else False)
+					mv_url = video['resource']['tidalUrl']
+					mv_id = video['resource']['id']
+					mv_title = video['resource']['title']
+					mv_artists = [artist['name'] for artist in video['resource']['artists']]
+					mv_thumbnail = (video['resource']['image'][1]['url'] if video['resource']['image'] != [] else '')
+					mv_is_explicit = ('explicit' in video['resource']['properties']['content'][0] if 'content' in video['resource']['properties'] else False)
 					end_time = current_unix_time_ms()
 					return MusicVideo(
 						service = self.service,
@@ -293,6 +357,7 @@ class Tidal:
 						api_response_time = end_time - start_time,
 						api_http_code = response.status
 					)
+
 				else:
 					return Error(
 						service = self.service,
