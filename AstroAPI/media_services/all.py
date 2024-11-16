@@ -64,9 +64,9 @@ class GlobalIO:
 		result_is_explicit = None
 		result_cover = None
 
-		for service in range(len(type_order)):
+		for service_index in range(len(type_order)):
 			if result_type == None:
-				result_type = labeled_results[type_order[service]].type
+				result_type = labeled_results[type_order[service_index]].type
 			if result_urls == {}:
 				for result in unlabeled_results:
 					result_urls[result.service] = result.url[result.service]
@@ -74,19 +74,19 @@ class GlobalIO:
 				for result in unlabeled_results:
 					result_ids[result.service] = result.id[result.service]
 			if result_title == None:
-				result_title = labeled_results[title_order[service]].title
+				result_title = labeled_results[title_order[service_index]].title
 			if result_artists == None:
-				result_artists = labeled_results[artists_order[service]].artists
+				result_artists = labeled_results[artists_order[service_index]].artists
 			if result_collection == None:
-				result_collection = labeled_results[collection_order[service]].collection
+				result_collection = labeled_results[collection_order[service_index]].collection
 			if result_is_explicit == None:
-				result_is_explicit = labeled_results[explicitness_order[service]].is_explicit
+				result_is_explicit = labeled_results[explicitness_order[service_index]].is_explicit
 			if result_cover == None:
-				result_cover = labeled_results[cover_order[service]].cover_url
+				result_cover = labeled_results[cover_order[service_index]].cover_url
 
 		end_time = current_unix_time_ms()
 
-		if result_title != None:
+		if result_type != None:
 			return Song(
 				service = self.service,
 				type = result_type,
@@ -169,19 +169,233 @@ class GlobalIO:
 
 		end_time = current_unix_time_ms()
 
-		return Collection(
-			service = self.service,
-			type = result_type,
-			url = result_urls,
-			id = result_ids,
-			title = result_title,
-			artists = result_artists,
-			release_year = result_year,
-			cover_url = result_cover,
-			api_response_time = end_time - start_time,
-			api_http_code = 200
-		)
+		if result_type != None:
+			return Collection(
+				service = self.service,
+				type = result_type,
+				url = result_urls,
+				id = result_ids,
+				title = result_title,
+				artists = result_artists,
+				release_year = result_year,
+				cover_url = result_cover,
+				api_response_time = end_time - start_time,
+				api_http_code = 200
+			)
+		else:
+			return Empty(
+				service = service,
+				request = f'ID: `{id}`'
+			)
 
+
+
+	async def lookup_song(self, service: object, id: str, country_code: str = None) -> object:
+		start_time = current_unix_time_ms()
+
+		if service == AppleMusic:
+			song = await service.lookup_song(id = id, country_code = country_code)
+		else:
+			song = await service.lookup_song(id = id)
+
+		if song.type != 'track' and song.type != 'single':
+			return song
+
+		service_objects = [Spotify, AppleMusic, YouTubeMusic, Deezer, Tidal]
+		services = [Spotify.service, AppleMusic.service, YouTubeMusic.service, Deezer.service, Tidal.service]
+		service_objects.remove(service)
+
+		type_order = [Spotify.service, AppleMusic.service, YouTubeMusic.service, Deezer.service, Tidal.service]
+		title_order = [Spotify.service, AppleMusic.service, YouTubeMusic.service, Deezer.service, Tidal.service]
+		artists_order = [Spotify.service, Tidal.service, YouTubeMusic.service, Deezer.service, AppleMusic.service]
+		collection_order = [Spotify.service, AppleMusic.service, YouTubeMusic.service, Deezer.service, Tidal.service]
+		explicitness_order = [Spotify.service, AppleMusic.service, YouTubeMusic.service, Deezer.service, Tidal.service]
+		cover_order = [Tidal.service, Deezer.service, Spotify.service, AppleMusic.service, YouTubeMusic.service]
+
+		tasks = []
+		for service_obj in service_objects:
+			tasks.append(
+				asyncio.create_task(service_obj.search_song([' '.join(song.artists)], song.title, song.type, song.collection, song.is_explicit), name = service_obj.service)
+			)
+		
+		unlabeled_results = await asyncio.gather(*tasks)
+		labeled_results = {}
+		full_unlabeled_results = []
+		full_labeled_results = {}
+		for result in unlabeled_results:
+			labeled_results[result.service] = result
+
+		for service in services:
+			if service not in labeled_results:
+				full_labeled_results[service] = song
+				full_unlabeled_results.append(song)
+			else:
+				full_labeled_results[service] = labeled_results[service]
+				full_unlabeled_results.append(labeled_results[service])
+		
+		for service in services:
+			if full_labeled_results[service].type != 'track' and full_labeled_results[service].type != 'single':
+				type_order.remove(service)
+				title_order.remove(service)
+				artists_order.remove(service)
+				collection_order.remove(service)
+				explicitness_order.remove(service)
+				cover_order.remove(service)
+				del full_unlabeled_results[list(full_labeled_results.keys()).index(service)]
+				del full_labeled_results[service]
+
+		result_type = None
+		result_urls = {}
+		result_ids = {}
+		result_title = None
+		result_artists = None
+		result_collection = None
+		result_is_explicit = None
+		result_cover = None
+
+		for service_index in range(len(type_order)):
+			if result_type == None:
+				result_type = full_labeled_results[type_order[service_index]].type
+			if result_urls == {}:
+				for result in full_unlabeled_results:
+					result_urls[result.service] = result.url[result.service]
+			if result_ids == {}:
+				for result in full_unlabeled_results:
+					result_ids[result.service] = result.id[result.service]
+			if result_title == None:
+				result_title = full_labeled_results[title_order[service_index]].title
+			if result_artists == None:
+				result_artists = full_labeled_results[artists_order[service_index]].artists
+			if result_collection == None:
+				result_collection = full_labeled_results[collection_order[service_index]].collection
+			if result_is_explicit == None:
+				result_is_explicit = full_labeled_results[explicitness_order[service_index]].is_explicit
+			if result_cover == None:
+				result_cover = full_labeled_results[cover_order[service_index]].cover_url
+
+		end_time = current_unix_time_ms()
+
+		if result_type != None:
+			return Song(
+				service = self.service,
+				type = result_type,
+				url = result_urls,
+				id = result_ids,
+				title = result_title,
+				artists = result_artists,
+				collection = result_collection,
+				is_explicit = result_is_explicit,
+				cover_url = result_cover,
+				api_response_time = end_time - start_time,
+				api_http_code = 200
+			)
+		else:
+			return Empty(
+				service = service,
+				request = f'ID: `{id}`'
+			)
+		
+
+
+	async def lookup_collection(self, service: object, id: str, country_code: str = None) -> object:
+		start_time = current_unix_time_ms()
+
+		if service == AppleMusic:
+			collection = await service.lookup_collection(id = id, country_code = country_code)
+		else:
+			collection = await service.lookup_collection(id = id)
+
+		if collection.type != 'album' and collection.type != 'ep':
+			return collection
+		
+		service_objects = [Spotify, AppleMusic, YouTubeMusic, Deezer, Tidal]
+		services = [Spotify.service, AppleMusic.service, YouTubeMusic.service, Deezer.service, Tidal.service]
+		service_objects.remove(service)
+
+		type_order = [Spotify.service, AppleMusic.service, YouTubeMusic.service, Deezer.service, Tidal.service]
+		title_order = [Spotify.service, AppleMusic.service, YouTubeMusic.service, Deezer.service, Tidal.service]
+		artists_order = [Spotify.service, Tidal.service, YouTubeMusic.service, Deezer.service, AppleMusic.service]
+		release_year_order = [Spotify.service, AppleMusic.service, YouTubeMusic.service, Deezer.service, Tidal.service]
+		cover_order = [Tidal.service, Deezer.service, Spotify.service, AppleMusic.service, YouTubeMusic.service]
+
+		tasks = []
+		for service_obj in service_objects:
+			tasks.append(
+				asyncio.create_task(service_obj.search_collection([' '.join(collection.artists)], collection.title, collection.release_year), name = service_obj.service)
+			)
+		
+		unlabeled_results = await asyncio.gather(*tasks)
+		labeled_results = {}
+		full_unlabeled_results = []
+		full_labeled_results = {}
+		for result in unlabeled_results:
+			labeled_results[result.service] = result
+
+		for service in services:
+			if service not in labeled_results:
+				full_labeled_results[service] = collection
+				full_unlabeled_results.append(collection)
+			else:
+				full_labeled_results[service] = labeled_results[service]
+				full_unlabeled_results.append(labeled_results[service])
+		
+		for service in services:
+			if full_labeled_results[service].type != 'album' and full_labeled_results[service].type != 'ep':
+				type_order.remove(service)
+				title_order.remove(service)
+				artists_order.remove(service)
+				release_year_order.remove(service)
+				cover_order.remove(service)
+				del full_unlabeled_results[list(full_labeled_results.keys()).index(service)]
+				del full_labeled_results[service]
+
+		result_type = None
+		result_urls = {}
+		result_ids = {}
+		result_title = None
+		result_artists = None
+		result_year = None
+		result_cover = None
+
+		for service in range(len(type_order)):
+			if result_type == None:
+				result_type = full_labeled_results[type_order[service]].type
+			if result_urls == {}:
+				for result in full_unlabeled_results:
+					result_urls[result.service] = result.url[result.service]
+			if result_ids == {}:
+				for result in full_unlabeled_results:
+					result_ids[result.service] = result.id[result.service]
+			if result_title == None:
+				result_title = full_labeled_results[title_order[service]].title
+			if result_artists == None:
+				result_artists = full_labeled_results[artists_order[service]].artists
+			if result_year == None:
+				result_year = full_labeled_results[release_year_order[service]].release_year
+			if result_cover == None:
+				result_cover = full_labeled_results[cover_order[service]].cover_url
+
+		end_time = current_unix_time_ms()
+		
+		if result_type != None:
+			return Collection(
+				service = self.service,
+				type = result_type,
+				url = result_urls,
+				id = result_ids,
+				title = result_title,
+				artists = result_artists,
+				release_year = result_year,
+				cover_url = result_cover,
+				api_response_time = end_time - start_time,
+				api_http_code = 200
+			)
+		else:
+			return Empty(
+				service = service,
+				request = f'ID: `{id}`'
+			)
+	
 
 
 Global = GlobalIO()
