@@ -44,6 +44,7 @@ class GlobalIO:
 		collection_order = [Spotify.service, AppleMusic.service, YouTubeMusic.service, Deezer.service, Tidal.service]
 		explicitness_order = [Spotify.service, AppleMusic.service, YouTubeMusic.service, Deezer.service, Tidal.service]
 		cover_order = [Tidal.service, Deezer.service, Spotify.service, AppleMusic.service, YouTubeMusic.service]
+		cover_single_order = [Spotify.service, Tidal.service, Deezer.service, AppleMusic.service, YouTubeMusic.service]
 
 		for service in services:
 			if labeled_results[service].type != 'track' and labeled_results[service].type != 'single':
@@ -84,6 +85,12 @@ class GlobalIO:
 				result_is_explicit = labeled_results[explicitness_order[service_index]].is_explicit
 			if result_cover == None:
 				result_cover = labeled_results[cover_order[service_index]].cover_url
+
+		if result_type == 'single':
+			result_cover = None
+			for service in range(len(type_order)):
+				if result_cover == None:
+					result_cover = labeled_results[cover_single_order[service]].cover_url
 
 		end_time = current_unix_time_ms()
 
