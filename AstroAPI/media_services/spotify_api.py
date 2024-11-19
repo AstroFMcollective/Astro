@@ -1,4 +1,4 @@
-from AstroAPI.components.all import *
+from AstroAPI.components import *
 from asyncio import run
 import aiohttp
 

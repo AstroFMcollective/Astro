@@ -1,4 +1,4 @@
-from AstroAPI.components.all import *
+from AstroAPI.components import *
 from ytmusicapi import YTMusic
 
 

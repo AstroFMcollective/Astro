@@ -1,4 +1,4 @@
-from AstroAPI.components.all import *
+from AstroAPI.components import *
 from base64 import b64encode
 from asyncio import run
 import aiohttp

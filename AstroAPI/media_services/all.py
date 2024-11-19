@@ -1,6 +1,6 @@
 from AstroAPI.media_services import spotify_api, apple_music_api, youtube_music_api, tidal_api, deezer_api
 from AstroAPI.components.ini import service_keys
-from AstroAPI.components.all import *
+from AstroAPI.components import *
 from asyncio import *
 
 
