@@ -28,6 +28,10 @@ version = 'PRE-a2.0'
 client = Client()
 tree = app_commands.CommandTree(client)
 is_internal = True if config['client']['is_internal'] == 'True' else False
+invalid_responses = [
+	'empty_response',
+	'error'
+]
 
 
 
@@ -60,7 +64,7 @@ async def searchsong(interaction: discord.Interaction, artist: str, title: str, 
 		is_explicit = is_explicit
 	)
 	embed = await interaction.followup.send(
-		embed = media_embed(
+		embed = create_embed(
 			command = 'search',
 			media_object = song,
 			user = interaction.user
@@ -69,7 +73,8 @@ async def searchsong(interaction: discord.Interaction, artist: str, title: str, 
 	end_time = current_unix_time_ms()
 	total_time = end_time - start_time
 	print(f'Finished in {total_time}ms')
-	await add_reactions(embed, ['👍','👎'])
+	if song.type not in invalid_responses:
+		await add_reactions(embed, ['👍','👎'])
 
 
 
@@ -89,7 +94,7 @@ async def searchcollection(interaction: discord.Interaction, artist: str, title:
 		year = year
 	)
 	embed = await interaction.followup.send(
-		embed = media_embed(
+		embed = create_embed(
 			command = 'search',
 			media_object = collection,
 			user = interaction.user
@@ -98,7 +103,74 @@ async def searchcollection(interaction: discord.Interaction, artist: str, title:
 	end_time = current_unix_time_ms()
 	total_time = end_time - start_time
 	print(f'Finished in {total_time}ms')
-	await add_reactions(embed, ['👍','👎'])
+	if collection.type not in invalid_responses:
+		await add_reactions(embed, ['👍','👎'])
+
+
+
+@tree.command(name = 'lookup', description = 'Search a song, music video, album or EP from a query or its link')
+@app_commands.describe(query = 'Query or link of the media you wanna search')
+@app_commands.guild_install()
+@app_commands.user_install()
+@app_commands.allowed_contexts(guilds = True, dms = True, private_channels = True)
+async def lookup(interaction: discord.Interaction, query: str):
+	start_time = current_unix_time_ms()
+	await interaction.response.defer()
+	media_object = await astro.Global.search_query(query = query)
+	embed = await interaction.followup.send(
+		embed = create_embed(
+			command = 'search',
+			media_object = media_object,
+			user = interaction.user
+		)
+	)
+	end_time = current_unix_time_ms()
+	total_time = end_time - start_time
+	print(f'Finished in {total_time}ms')
+	if media_object.type not in invalid_responses:
+		await add_reactions(embed, ['👍','👎'])
+
+
+
+@tree.command(name = 'snoop', description = 'Get the track you or another user is listening to on Spotify')
+@app_commands.describe(user = 'The user you want to snoop on, defaults to you if left empty')
+@app_commands.describe(ephemeral = 'Whether the executed command should be ephemeral (only visible to you), false by default')
+@app_commands.guild_install()
+@app_commands.allowed_contexts(guilds = True, dms = False, private_channels = True)
+async def snoop(interaction: discord.Interaction, user: discord.Member = None, ephemeral: bool = False):
+	start_time = current_unix_time_ms()
+	await interaction.response.defer(ephemeral = ephemeral)
+
+	if user == None:
+		user = interaction.user
+
+	guild = client.get_guild(interaction.guild.id)
+	member = guild.get_member(user.id)
+	replied = False
+
+	for activity in member.activities:
+		if isinstance(activity, Spotify):
+			identifier = str(activity.track_id)
+	
+	song = await astro.Global.lookup_song(
+		service = astro.Spotify,
+		id = identifier
+	)
+	embed = await interaction.followup.send(
+		embed = create_embed(
+			command = 'snoop',
+			media_object = song,
+			user = user
+		)
+	)
+	end_time = current_unix_time_ms()
+	total_time = end_time - start_time
+	print(f'Finished in {total_time}ms')
+	if song.type not in invalid_responses:
+		await add_reactions(embed, ['👍','👎'])
+
+	
+
 
 
 client.run(config['tokens']['internal_token'])
