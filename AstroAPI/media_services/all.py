@@ -23,15 +23,15 @@ class GlobalIO:
 	async def search_song(self, artists: list, title: str, song_type: str = None, collection: str = None, is_explicit: bool = None) -> object:
 		start_time = current_unix_time_ms()
 		tasks = [
-			asyncio.create_task(Spotify.search_song(artists, title, song_type, collection, is_explicit), name = Spotify.service),
-			asyncio.create_task(AppleMusic.search_song(artists, title, song_type, collection, is_explicit), name = AppleMusic.service),
-			asyncio.create_task(YouTubeMusic.search_song(artists, title, song_type, collection, is_explicit), name = YouTubeMusic.service),
-			asyncio.create_task(Deezer.search_song(artists, title, song_type, collection, is_explicit), name = Deezer.service),
-			asyncio.create_task(Tidal.search_song(artists, title, song_type, collection, is_explicit), name = Tidal.service)
+			create_task(Spotify.search_song(artists, title, song_type, collection, is_explicit), name = Spotify.service),
+			create_task(AppleMusic.search_song(artists, title, song_type, collection, is_explicit), name = AppleMusic.service),
+			create_task(YouTubeMusic.search_song(artists, title, song_type, collection, is_explicit), name = YouTubeMusic.service),
+			create_task(Deezer.search_song(artists, title, song_type, collection, is_explicit), name = Deezer.service),
+			create_task(Tidal.search_song(artists, title, song_type, collection, is_explicit), name = Tidal.service)
 
 		]
 
-		unlabeled_results = await asyncio.gather(*tasks)
+		unlabeled_results = await gather(*tasks)
 		labeled_results = {}
 		for result in unlabeled_results:
 			labeled_results[result.service] = result
@@ -119,12 +119,12 @@ class GlobalIO:
 	async def search_music_video(self, artists: list, title: str, is_explicit: bool = None) -> object:
 		start_time = current_unix_time_ms()
 		tasks = [
-			asyncio.create_task(AppleMusic.search_music_video(artists, title, is_explicit), name = AppleMusic.service),
-			asyncio.create_task(YouTubeMusic.search_music_video(artists, title), name = YouTubeMusic.service),
-			asyncio.create_task(Tidal.search_music_video(artists, title, is_explicit), name = Tidal.service),
+			create_task(AppleMusic.search_music_video(artists, title, is_explicit), name = AppleMusic.service),
+			create_task(YouTubeMusic.search_music_video(artists, title), name = YouTubeMusic.service),
+			create_task(Tidal.search_music_video(artists, title, is_explicit), name = Tidal.service),
 		]
 
-		unlabeled_results = await asyncio.gather(*tasks)
+		unlabeled_results = await gather(*tasks)
 		labeled_results = {}
 		for result in unlabeled_results:
 			labeled_results[result.service] = result
@@ -193,15 +193,15 @@ class GlobalIO:
 	async def search_collection(self, artists: list, title: str, year: int = None) -> object:
 		start_time = current_unix_time_ms()
 		tasks = [
-			asyncio.create_task(Spotify.search_collection(artists, title, year), name = Spotify.service),
-			asyncio.create_task(AppleMusic.search_collection(artists, title, year), name = AppleMusic.service),
-			asyncio.create_task(YouTubeMusic.search_collection(artists, title, year), name = YouTubeMusic.service),
-			asyncio.create_task(Deezer.search_collection(artists, title, year), name = Deezer.service),
-			asyncio.create_task(Tidal.search_collection(artists, title, year), name = Tidal.service)
+			create_task(Spotify.search_collection(artists, title, year), name = Spotify.service),
+			create_task(AppleMusic.search_collection(artists, title, year), name = AppleMusic.service),
+			create_task(YouTubeMusic.search_collection(artists, title, year), name = YouTubeMusic.service),
+			create_task(Deezer.search_collection(artists, title, year), name = Deezer.service),
+			create_task(Tidal.search_collection(artists, title, year), name = Tidal.service)
 
 		]
 
-		unlabeled_results = await asyncio.gather(*tasks)
+		unlabeled_results = await gather(*tasks)
 		labeled_results = {}
 		for result in unlabeled_results:
 			labeled_results[result.service] = result
@@ -318,10 +318,10 @@ class GlobalIO:
 		tasks = []
 		for service_obj in service_objects:
 			tasks.append(
-				asyncio.create_task(service_obj.search_song([' '.join(song.artists)], song.title, song.type, song.collection, song.is_explicit), name = service_obj.service)
+				create_task(service_obj.search_song([' '.join(song.artists)], song.title, song.type, song.collection, song.is_explicit), name = service_obj.service)
 			)
 		
-		unlabeled_results = await asyncio.gather(*tasks)
+		unlabeled_results = await gather(*tasks)
 		labeled_results = {}
 		full_unlabeled_results = []
 		full_labeled_results = {}
@@ -425,10 +425,10 @@ class GlobalIO:
 		tasks = []
 		for service_obj in service_objects:
 			tasks.append(
-				asyncio.create_task(service_obj.search_music_video([' '.join(video.artists)], video.title, video.is_explicit), name = service_obj.service)
+				create_task(service_obj.search_music_video([' '.join(video.artists)], video.title, video.is_explicit), name = service_obj.service)
 			)
 		
-		unlabeled_results = await asyncio.gather(*tasks)
+		unlabeled_results = await gather(*tasks)
 		labeled_results = {}
 		full_unlabeled_results = []
 		full_labeled_results = {}
@@ -521,10 +521,10 @@ class GlobalIO:
 		tasks = []
 		for service_obj in service_objects:
 			tasks.append(
-				asyncio.create_task(service_obj.search_collection([' '.join(collection.artists)], collection.title, collection.release_year), name = service_obj.service)
+				create_task(service_obj.search_collection([' '.join(collection.artists)], collection.title, collection.release_year), name = service_obj.service)
 			)
 		
-		unlabeled_results = await asyncio.gather(*tasks)
+		unlabeled_results = await gather(*tasks)
 		labeled_results = {}
 		full_unlabeled_results = []
 		full_labeled_results = {}
