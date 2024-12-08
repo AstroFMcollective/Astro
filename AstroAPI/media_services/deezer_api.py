@@ -54,16 +54,18 @@ class Deezer:
 								api_response_time = end_time - start_time,
 								api_http_code = result.status
 							))
-					return filter_song(service = self.service, songs = songs, query_artists = artists, query_title = title, query_song_type = song_type, query_collection = collection, query_is_explicit = is_explicit)
+					return await filter_song(service = self.service, songs = songs, query_artists = artists, query_title = title, query_song_type = song_type, query_collection = collection, query_is_explicit = is_explicit)
 				
 				else:
-					return Error(
+					error = Error(
 						service = self.service,
 						component = self.component,
 						http_code = response.status,
 						error_msg = "HTTP error when searching for song",
 						request = f'Artists: `{', '.join(artists)}`\nTitle: `{title}`\nSong type: `{song_type}`\nCollection title: `{collection}`\nIs explicit? `{is_explicit}`'
 					)
+					await log(error)
+					return error
 
 
 
@@ -110,16 +112,18 @@ class Deezer:
 								api_response_time = end_time - start_time,
 								api_http_code = result.status
 							))
-					return filter_collection(service = self.service, collections = collections, query_artists = artists, query_title = title, query_year = year)
+					return await filter_collection(service = self.service, collections = collections, query_artists = artists, query_title = title, query_year = year)
 				
 				else:
-					return Error(
+					error = Error(
 						service = self.service,
 						component = self.component,
 						http_code = response.status,
 						error_msg = "HTTP error when searching for collection",
 						request = f'Artists: `{', '.join(artists)}`\nTitle: `{title}`\nYear: `{year}`'
 					)
+					await log(error)
+					return error
 
 
 	
@@ -160,13 +164,15 @@ class Deezer:
 					)
 				
 				else:
-					return Error(
+					error = Error(
 						service = self.service,
 						component = self.component,
 						http_code = response.status,
 						error_msg = "HTTP error when looking up song ID",
 						request = f'ID: `{id}`\n[Open Song URL](https://tidal.com/browse/track/{id})'
 					)
+					await log(error)
+					return error
 				
 
 
@@ -205,10 +211,12 @@ class Deezer:
 					)
 				
 				else:
-					return Error(
+					error = Error(
 						service = self.service,
 						component = self.component,
 						http_code = response.status,
 						error_msg = "HTTP error when looking up collection ID",
 						request = f'ID: `{id}`\n[Open Collection URL](https://tidal.com/browse/album/{id})'
 					)
+					await log(error)
+					return error

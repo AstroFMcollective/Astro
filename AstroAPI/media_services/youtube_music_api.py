@@ -53,15 +53,17 @@ class YouTubeMusic:
 					api_response_time = end_time - start_time,
 					api_http_code = 200
 				))
-			return filter_song(service = self.service, songs = songs, query_artists = artists, query_title = title, query_song_type = song_type, query_collection = collection, query_is_explicit = is_explicit)
+			return await filter_song(service = self.service, songs = songs, query_artists = artists, query_title = title, query_song_type = song_type, query_collection = collection, query_is_explicit = is_explicit)
 
 		except Exception as msg:
-			return Error(
+			error = Error(
 				service = self.service,
 				component = self.component,
 				error_msg = f'Error when searching for song: "{msg}"',
 				request = f'Artists: `{', '.join(artists)}`\nTitle: `{title}`\nSong type: `{song_type}`\nCollection title: `{collection}`\nIs explicit? `{is_explicit}`'
 			)
+			await log(error)
+			return error
 		
 
 	
@@ -96,15 +98,17 @@ class YouTubeMusic:
 					api_response_time = end_time - start_time,
 					api_http_code = 200
 				))
-			return filter_mv(service = self.service, videos = videos, query_artists = artists, query_title = title, query_is_explicit = None)
+			return await filter_mv(service = self.service, videos = videos, query_artists = artists, query_title = title, query_is_explicit = is_explicit)
 
 		except Exception as msg:
-			return Error(
+			error = Error(
 				service = self.service,
 				component = self.component,
 				error_msg = f'Error when searching for music video: "{msg}"',
-				request = f'Artists: `{', '.join(artists)}`\nTitle: `{title}`'
+				request = f'Artists: `{', '.join(artists)}`\nTitle: `{title}`\nIs explicit? `{is_explicit}`'
 			)
+			await log(error)
+			return error
 
 
 
@@ -141,15 +145,17 @@ class YouTubeMusic:
 					api_response_time = end_time - start_time,
 					api_http_code = 200
 				))
-			return filter_collection(service = self.service, collections = collections, query_artists = artists, query_title = title, query_year = year)
+			return await filter_collection(service = self.service, collections = collections, query_artists = artists, query_title = title, query_year = year)
 
 		except Exception as msg:
-			return Error(
+			error = Error(
 				service = self.service,
 				component = self.component,
 				error_msg = f'Error when searching for collection: "{msg}"',
 				request = f'Artists: `{', '.join(artists)}`\nTitle: `{title}`\nYear: `{year}`'
 			)
+			await log(error)
+			return error
 	
 
 
@@ -202,17 +208,21 @@ class YouTubeMusic:
 					api_http_code = 200
 				)
 			else:
-				return Empty(
+				empty_response = Empty(
 					service = self.service,
 					request = f'Query: `{query}`'
 				)
+				await log(empty_response)
+				return empty_response
 		except Exception as msg:
-			return Error(
+			error = Error(
 				service = self.service,
 				component = self.component,
 				error_msg = f'Error when doing general query search: "{msg}"',
 				request = f'Query: `{query}`'
 			)
+			await log(error)
+			return error
 
 
 
@@ -260,12 +270,14 @@ class YouTubeMusic:
 						)
 			
 		except Exception as msg:
-			return Error(
+			error = Error(
 				service = self.service,
 				component = self.component,
 				error_msg = f'Error when looking up song: "{msg}"',
 				request = f'ID: `{id}`\n[Open Song URL](https://music.youtube.com/watch?v={id})'
 			)
+			await log(error)
+			return error
 
 
 
@@ -297,12 +309,14 @@ class YouTubeMusic:
 			)
 			
 		except Exception as msg:
-			return Error(
+			error = Error(
 				service = self.service,
 				component = self.component,
 				error_msg = f'Error when looking up collection: "{msg}"',
 				request = f'ID: `{id}`\n[Open Collection URL](https://music.youtube.com/playlist?list={id})'
 			)
+			await log(error)
+			return error
 	
 
 
@@ -347,10 +361,12 @@ class YouTubeMusic:
 					api_http_code = 200
 				)
 		except Exception as msg:
-			return Error(
+			error = Error(
 				service = self.service,
 				component = self.component,
 				error_msg = f'Error when looking up artist: "{msg}"',
 				request = f'ID: `{id}`\nVideo ID: `{video_id}`\n[Open Artist URL](https://www.youtube.com/channel/{id})\n[Open Video URL](https://music.youtube.com/watch?v={id})'
 			)
+			await log(error)
+			return error
 		

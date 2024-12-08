@@ -1,9 +1,10 @@
 from AstroAPI.components.media import *
+from AstroAPI.components.logging import *
 from AstroAPI.components.text_manipulation import *
 
 
 
-def filter_song(service: str, songs: list, query_artists: list, query_title: str, query_song_type: str = None, query_collection: str = None, query_is_explicit: bool = None) -> Song:
+async def filter_song(service: str, songs: list, query_artists: list, query_title: str, query_song_type: str = None, query_collection: str = None, query_is_explicit: bool = None) -> Song:
 	max_score = 2000
 	if query_collection != None:
 		max_score += 1000
@@ -51,19 +52,23 @@ def filter_song(service: str, songs: list, query_artists: list, query_title: str
 		if percentage(max_score, data_with_similarity[0][0]) > 30:
 			return data_with_similarity[0][1]
 		else:
-			return Empty(
+			response = Empty(
 				service = service,
 				request = f'Artists: `{', '.join(query_artists)}`\nTitle: `{query_title}`\nSong type: `{query_song_type}`\nCollection title: `{query_collection}`\nIs explicit? `{query_is_explicit}`'
 			)
+			await log(response)
+			return response
 	else:
-		return Empty(
+		response = Empty(
 			service = service,
 			request = f'Artists: `{', '.join(query_artists)}`\nTitle: `{query_title}`\nSong type: `{query_song_type}`\nCollection title: `{query_collection}`\nIs explicit? `{query_is_explicit}`'
 		)
+		await log(response)
+		return response
 
 
 
-def filter_mv(service: str, videos: list, query_artists: list, query_title: str, query_is_explicit: bool = None) -> Song:
+async def filter_mv(service: str, videos: list, query_artists: list, query_title: str, query_is_explicit: bool = None) -> Song:
 	max_score = 2000
 	if query_is_explicit != None:
 		max_score += 500
@@ -98,19 +103,23 @@ def filter_mv(service: str, videos: list, query_artists: list, query_title: str,
 		if percentage(max_score, data_with_similarity[0][0]) > 30:
 			return data_with_similarity[0][1]
 		else:
-			return Empty(
+			empty_response = Empty(
 				service = service,
 				request = f'Artists: `{', '.join(query_artists)}`\nTitle: `{query_title}`\nIs explicit? `{query_is_explicit}`'
 			)
+			await log(empty_response)
+			return empty_response
 	else:
-		return Empty(
+		empty_response = Empty(
 			service = service,
 			request = f'Artists: `{', '.join(query_artists)}`\nTitle: `{query_title}`\nIs explicit? `{query_is_explicit}`'
 		)
+		await log(empty_response)
+		return empty_response
 
 
 
-def filter_collection(service: str, collections: list, query_artists: list, query_title: str, query_year: str = None) -> Collection:
+async def filter_collection(service: str, collections: list, query_artists: list, query_title: str, query_year: str = None) -> Collection:
 	max_score = 2000
 	if query_year != None:
 		max_score += 1000
@@ -145,12 +154,16 @@ def filter_collection(service: str, collections: list, query_artists: list, quer
 		if percentage(max_score, data_with_similarity[0][0]) > 30:
 			return data_with_similarity[0][1]
 		else:
-			return Empty(
+			empty_response = Empty(
 				service = service,
 				request = f'Artists: `{', '.join(query_artists)}`\nTitle: `{query_title}`\nYear: `{query_year}`'
 			)
+			await log(empty_response)
+			return empty_response
 	else:
-		return Empty(
+		empty_response = Empty(
 			service = service,
 			request = f'Artists: `{', '.join(query_artists)}`\nTitle: `{query_title}`\nYear: `{query_year}`'
 		)
+		await log(empty_response)
+		return empty_response

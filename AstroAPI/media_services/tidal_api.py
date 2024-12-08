@@ -33,12 +33,14 @@ class Tidal:
 						self.token_expiration_date = current_unix_time() + int(json_response['expires_in'])
 
 					else:
-						return Error(
+						error = Error(
 							service = self.service,
 							component = self.component,
 							http_code = response.status,
 							error_msg = "HTTP error when getting token"
 						)
+						await log(error)
+						return error
 
 		return self.token
 	
@@ -95,16 +97,18 @@ class Tidal:
 							api_response_time = end_time - start_time,
 							api_http_code = response.status
 						))
-					return filter_song(service = self.service, songs = songs, query_artists = artists, query_title = title, query_song_type = song_type, query_collection = collection, query_is_explicit = is_explicit)
+					return await filter_song(service = self.service, songs = songs, query_artists = artists, query_title = title, query_song_type = song_type, query_collection = collection, query_is_explicit = is_explicit)
 
 				else:
-					return Error(
+					error = Error(
 						service = self.service,
 						component = self.component,
 						http_code = response.status,
 						error_msg = "HTTP error when searching for song",
 						request = f'Artists: `{', '.join(artists)}`\nTitle: `{title}`\nSong type: `{song_type}`\nCollection title: `{collection}`\nIs explicit? `{is_explicit}`'
 					)
+					await log(error)
+					return error
 	
 
 
@@ -154,16 +158,18 @@ class Tidal:
 							api_response_time = end_time - start_time,
 							api_http_code = response.status
 						))
-					return filter_mv(service = self.service, videos = videos, query_artists = artists, query_title = title, query_is_explicit = is_explicit)
+					return await filter_mv(service = self.service, videos = videos, query_artists = artists, query_title = title, query_is_explicit = is_explicit)
 
 				else:
-					return Error(
+					error = Error(
 						service = self.service,
 						component = self.component,
 						http_code = response.status,
 						error_msg = "HTTP error when searching for music video",
 						request = f'Artists: `{', '.join(artists)}`\nTitle: `{title}`\nIs explicit? `{is_explicit}`'
 					)
+					await log(error)
+					return error
 
 
 
@@ -215,16 +221,18 @@ class Tidal:
 							api_response_time = end_time - start_time,
 							api_http_code = response.status
 						))
-					return filter_collection(service = self.service, collections = collections, query_artists = artists, query_title = title, query_year = year)
+					return await filter_collection(service = self.service, collections = collections, query_artists = artists, query_title = title, query_year = year)
 
 				else:
-					return Error(
+					error = Error(
 						service = self.service,
 						component = self.component,
 						http_code = response.status,
 						error_msg = "HTTP error when searching for collection",
 						request = f'Artists: `{', '.join(artists)}`\nTitle: `{title}`\nYear: `{year}`'
 					)
+					await log(error)
+					return error
 
 
 	
@@ -267,13 +275,15 @@ class Tidal:
 					)
 
 				else:
-					return Error(
+					error = Error(
 						service = self.service,
 						component = self.component,
 						http_code = response.status,
 						error_msg = "HTTP error when looking up song ID",
 						request = f'ID: `{id}`\n[Open Song URL](https://tidal.com/browse/track/{id})'
 					)
+					await log(error)
+					return error
 				
 
 
@@ -314,13 +324,15 @@ class Tidal:
 					)
 
 				else:
-					return Error(
+					error = Error(
 						service = self.service,
 						component = self.component,
 						http_code = response.status,
 						error_msg = "HTTP error when looking up collection ID",
 						request = f'ID: `{id}`\n[Open Collection URL](https://tidal.com/browse/album/{id})'
 					)
+					await log(error)
+					return error
 
 
 
@@ -359,10 +371,12 @@ class Tidal:
 					)
 
 				else:
-					return Error(
+					error = Error(
 						service = self.service,
 						component = self.component,
 						http_code = response.status,
 						error_msg = "HTTP error when looking up music video ID",
 						request = f'ID: `{id}`\n[Open MV URL](https://tidal.com/browse/video/{id})'
 					)
+					await log(error)
+					return error
