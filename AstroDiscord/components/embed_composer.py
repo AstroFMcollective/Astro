@@ -31,18 +31,22 @@ def create_embed(command: str, media_object: object, user: object):
 
         return embed
     
+    if len(media_object.url) == 1 and command == 'link':
+        return
+    
     data = [', '.join(media_object.artists)]
     cover = media_object.cover_url if media_object.type != 'music_video' else media_object.thumbnail_url
     is_explicit = None
 
     if media_object.type == 'track':
-        data.append(media_object.collection)
+        if media_object.collection != None:
+            data.append(media_object.collection)
         is_explicit = media_object.is_explicit
     elif media_object.type == 'single':
         data.append('Single')
         is_explicit = media_object.is_explicit
     elif media_object.type == 'music_video':
-        data.append('Music Video')
+        data.append('Music video')
         is_explicit = media_object.is_explicit
     elif media_object.type == 'album' or media_object.type == 'ep':
         data.append(str(media_object.release_year))
