@@ -1,7 +1,10 @@
 import configparser
 
+tokens = configparser.ConfigParser()
+tokens.read('AstroDiscord/tokens.ini')
+
 text = configparser.ConfigParser()
-text.read('AstroDiscord/components/text.ini')
+text.read('AstroDiscord/text.ini')
 
 config = configparser.ConfigParser()
-config.read('AstroDiscord/components/config.ini')
+config.read('AstroDiscord/config.ini')
