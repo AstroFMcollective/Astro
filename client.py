@@ -8,7 +8,7 @@ from asyncio import *
 import AstroAPI as astro
 from AstroAPI.components.time import *
 
-from AstroDiscord.components.ini import config
+from AstroDiscord.components.ini import config, tokens
 from AstroDiscord.components import *
 from AstroDiscord.components.url_tools import types 
 
@@ -17,21 +17,23 @@ class Client(discord.AutoShardedClient):
 	def __init__(self, *args, **kwargs):
 		super().__init__(*args, **kwargs)
 		self.synced = False
-
+	
 
 
 version = 'PRE-a2.0'
+deployment_channel = config['client']['deployment_channel']
 intents = discord.Intents.all()
 intents.message_content = True
 intents.presences = True
 intents.members = True
 client = Client(shard_count = int(config['client']['shards']), intents = intents)
 tree = app_commands.CommandTree(client)
-is_internal = True if config['client']['is_internal'] == 'True' else False
 invalid_responses = [
 	'empty_response',
 	'error'
 ]
+
+
 
 link_lookup_functions = [
 	astro.Global.lookup_song,
@@ -47,6 +49,7 @@ link_lookup_functions = [
 	astro.Global.lookup_collection,
 	astro.Global.lookup_song
 ]
+
 link_lookup_function_objects = [
 	astro.Spotify,
 	astro.Spotify,
@@ -61,6 +64,7 @@ link_lookup_function_objects = [
 	astro.Tidal,
 	astro.Tidal
 ]
+
 
 
 @client.event
@@ -84,25 +88,36 @@ async def on_message(message):
 		tasks = []
 
 		if data != []:
-			#await add_reactions(message, ['❗'])
-			#await message.channel.typing()
-			for entry in data:
-				media_type = entry['media']
-				media_id = entry['id']
-				media_country_code = entry['country_code']
-				tasks.append(
-					create_task(link_lookup_functions[types.index(media_type)](link_lookup_function_objects[types.index(media_type)], media_id, media_country_code))
-				)
-				
-			results = await gather(*tasks)
-			for result in results:
+			if len(data) == 1:
+				media_type = data[0]['media']
+				media_id = data[0]['id']
+				media_country_code = data[0]['country_code']
+				media_object = await link_lookup_functions[types.index(media_type)](link_lookup_function_objects[types.index(media_type)], media_id, media_country_code)
 				embeds.append(
-				create_embed(
-					command = 'link',
-					media_object = result,
-					user = message.author
+					create_embed(
+						command = 'link',
+						media_object = media_object,
+						user = message.author
+					)
 				)
-			)
+			else:
+				for entry in data:
+					media_type = entry['media']
+					media_id = entry['id']
+					media_country_code = entry['country_code']
+					tasks.append(
+						create_task(link_lookup_functions[types.index(media_type)](link_lookup_function_objects[types.index(media_type)], media_id, media_country_code))
+					)
+					
+				results = await gather(*tasks)
+				for result in results:
+					embeds.append(
+					create_embed(
+						command = 'link',
+						media_object = result,
+						user = message.author
+					)
+				)
 
 		else:
 			return
@@ -253,8 +268,6 @@ async def snoop(interaction: discord.Interaction, user: discord.Member = None, e
 	if song.type not in invalid_responses:
 		await add_reactions(embed, ['👍','👎'])
 
-	
 
 
-
-client.run(config['tokens']['internal_token'])
+client.run(tokens['tokens'][deployment_channel])
