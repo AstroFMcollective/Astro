@@ -54,6 +54,7 @@ class GlobalIO:
 				collection_order.remove(service)
 				explicitness_order.remove(service)
 				cover_order.remove(service)
+				cover_single_order.remove(service)
 				del unlabeled_results[list(labeled_results.keys()).index(service)]
 				del labeled_results[service]
 
@@ -301,7 +302,7 @@ class GlobalIO:
 		else:
 			song = await service.lookup_song(id = id)
 
-		if song.type != 'track' and song.type != 'single':
+		if song.type != 'track' and song.type != 'single' and song.type != 'music_video':
 			return song
 
 		service_objects = [Spotify, AppleMusic, YouTubeMusic, Deezer, Tidal]
@@ -314,11 +315,15 @@ class GlobalIO:
 		collection_order = [Spotify.service, AppleMusic.service, YouTubeMusic.service, Deezer.service, Tidal.service]
 		explicitness_order = [Spotify.service, AppleMusic.service, YouTubeMusic.service, Deezer.service, Tidal.service]
 		cover_order = [Tidal.service, Deezer.service, Spotify.service, AppleMusic.service, YouTubeMusic.service]
+		cover_single_order = [Spotify.service, Tidal.service, Deezer.service, AppleMusic.service, YouTubeMusic.service]
+
 
 		tasks = []
 		for service_obj in service_objects:
 			tasks.append(
-				create_task(service_obj.search_song([' '.join(song.artists)], song.title, song.type, song.collection, song.is_explicit), name = service_obj.service)
+				create_task(service_obj.search_song(song.artists, remove_feat(song.title), song.type, song.collection, song.is_explicit), name = service_obj.service)
+				if song.type == 'track' or song.type == 'single' else
+				create_task(service_obj.search_song(song.artists, remove_feat(song.title), song.type, is_explicit = song.is_explicit), name = service_obj.service)
 			)
 		
 		unlabeled_results = await gather(*tasks)
@@ -337,13 +342,14 @@ class GlobalIO:
 				full_unlabeled_results.append(labeled_results[service])
 		
 		for service in services:
-			if full_labeled_results[service].type != 'track' and full_labeled_results[service].type != 'single':
+			if full_labeled_results[service].type != 'track' and full_labeled_results[service].type != 'single' and full_labeled_results[service].type != 'music_video':
 				type_order.remove(service)
 				title_order.remove(service)
 				artists_order.remove(service)
 				collection_order.remove(service)
 				explicitness_order.remove(service)
 				cover_order.remove(service)
+				cover_single_order.remove(service)
 				del full_unlabeled_results[list(full_labeled_results.keys()).index(service)]
 				del full_labeled_results[service]
 
@@ -375,6 +381,12 @@ class GlobalIO:
 				result_is_explicit = full_labeled_results[explicitness_order[service_index]].is_explicit
 			if result_cover == None:
 				result_cover = full_labeled_results[cover_order[service_index]].cover_url
+
+		if result_type == 'single':
+			result_cover = None
+			for service in range(len(type_order)):
+				if result_cover == None:
+					result_cover = labeled_results[cover_single_order[service]].cover_url
 
 		end_time = current_unix_time_ms()
 
@@ -425,7 +437,7 @@ class GlobalIO:
 		tasks = []
 		for service_obj in service_objects:
 			tasks.append(
-				create_task(service_obj.search_music_video([' '.join(video.artists)], video.title, video.is_explicit), name = service_obj.service)
+				create_task(service_obj.search_music_video(video.artists, video.title, video.is_explicit), name = service_obj.service)
 			)
 		
 		unlabeled_results = await gather(*tasks)
