@@ -2,30 +2,30 @@ import discord as discord
 from discord import app_commands
 from discord import Spotify
 from discord.ext import tasks
-from AstroAPI.components.time import *
-from AstroDiscord.components.ini import config
-from AstroDiscord.components import *
-import asyncio
 
 from random import randint
-
-from AstroAPI.components.time import *
+from asyncio import *
 import AstroAPI as astro
+from AstroAPI.components.time import *
+
+from AstroDiscord.components.ini import config
+from AstroDiscord.components import *
+from AstroDiscord.components.url_tools import types 
 
 
-class Client(discord.Client):
-	def __init__(self):
-		discordintents = discord.Intents.all()
-		discordintents.message_content = True
-		discordintents.presences = True
-		discordintents.members = True
-		super().__init__(intents = discordintents)
+class Client(discord.AutoShardedClient):
+	def __init__(self, *args, **kwargs):
+		super().__init__(*args, **kwargs)
 		self.synced = False
 
 
 
 version = 'PRE-a2.0'
-client = Client()
+intents = discord.Intents.all()
+intents.message_content = True
+intents.presences = True
+intents.members = True
+client = Client(shard_count = int(config['client']['shards']), intents = intents)
 tree = app_commands.CommandTree(client)
 is_internal = True if config['client']['is_internal'] == 'True' else False
 invalid_responses = [
@@ -33,6 +33,34 @@ invalid_responses = [
 	'error'
 ]
 
+link_lookup_functions = [
+	astro.Global.lookup_song,
+	astro.Global.lookup_collection,
+	astro.Global.lookup_song,
+	astro.Global.lookup_collection,
+	astro.Global.lookup_song,
+	astro.Global.lookup_song,
+	astro.Global.lookup_collection,
+	astro.Global.lookup_song,
+	astro.Global.lookup_collection,
+	astro.Global.lookup_song,
+	astro.Global.lookup_collection,
+	astro.Global.lookup_song
+]
+link_lookup_function_objects = [
+	astro.Spotify,
+	astro.Spotify,
+	astro.AppleMusic,
+	astro.AppleMusic,
+	astro.AppleMusic,
+	astro.YouTubeMusic,
+	astro.YouTubeMusic,
+	astro.Deezer,
+	astro.Deezer,
+	astro.Tidal,
+	astro.Tidal,
+	astro.Tidal
+]
 
 
 @client.event
@@ -43,6 +71,53 @@ async def on_ready():
 		client.synced = True
 
 
+
+@client.event
+async def on_message(message):
+	if message.author != client.user:
+		start_time = current_unix_time_ms()
+		urls = find_urls(message.content)
+		data = get_data_from_urls(urls)
+
+		embeds = []
+		
+		tasks = []
+
+		if data != []:
+			#await add_reactions(message, ['❗'])
+			#await message.channel.typing()
+			for entry in data:
+				media_type = entry['media']
+				media_id = entry['id']
+				media_country_code = entry['country_code']
+				tasks.append(
+					create_task(link_lookup_functions[types.index(media_type)](link_lookup_function_objects[types.index(media_type)], media_id, media_country_code))
+				)
+				
+			results = await gather(*tasks)
+			for result in results:
+				embeds.append(
+				create_embed(
+					command = 'link',
+					media_object = result,
+					user = message.author
+				)
+			)
+
+		else:
+			return
+		
+		while None in embeds:
+			embeds.remove(None)
+		
+		if embeds != []:
+			message_embed = await message.reply(embeds = embeds, mention_author = False)
+			end_time = current_unix_time_ms()
+			total_time = end_time - start_time
+			print(f'Finished in {total_time}ms')
+			await add_reactions(message_embed, ['👍','👎'])
+		else:
+			await add_reactions(message, ['🤷'])
 
 
 
@@ -109,20 +184,29 @@ async def searchcollection(interaction: discord.Interaction, artist: str, title:
 
 
 @tree.command(name = 'lookup', description = 'Search a song, music video, album or EP from a query or its link')
-@app_commands.describe(query = 'Query or link of the media you wanna search')
+@app_commands.describe(query = 'Search query or the link of the media you want to search')
 @app_commands.guild_install()
 @app_commands.user_install()
 @app_commands.allowed_contexts(guilds = True, dms = True, private_channels = True)
 async def lookup(interaction: discord.Interaction, query: str):
 	start_time = current_unix_time_ms()
 	await interaction.response.defer()
-	media_object = await astro.Global.search_query(query = query)
+	urls = find_urls(query)
+	data = get_data_from_urls(urls)
+	if data == []:
+		media_object = await astro.Global.search_query(query = query)
+	else:
+		media_type = data[0]['media']
+		media_id = data[0]['id']
+		media_country_code = data[0]['country_code']
+		media_object = await link_lookup_functions[types.index(media_type)](link_lookup_function_objects[types.index(media_type)], media_id, media_country_code)
+	embed = create_embed(
+		command = 'search',
+		media_object = media_object,
+		user = interaction.user
+	)
 	embed = await interaction.followup.send(
-		embed = create_embed(
-			command = 'search',
-			media_object = media_object,
-			user = interaction.user
-		)
+		embed = embed
 	)
 	end_time = current_unix_time_ms()
 	total_time = end_time - start_time

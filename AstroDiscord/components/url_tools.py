@@ -44,6 +44,10 @@ tidal_urls = [
 	'https://tidal.com'
 ]
 
+deferred_urls = [
+	'https://deezer.page.link'
+]
+
 all_urls = [
 	spotify_urls,
 	apple_music_urls,
@@ -52,7 +56,7 @@ all_urls = [
 	tidal_urls
 ]
 
-def find_urls(string: str):
+def find_urls(string: str) -> list:
 	words = string.split()
 	urls = []
 	for word in words:
@@ -61,7 +65,7 @@ def find_urls(string: str):
 			urls.append(word)
 	return urls
 
-def get_regular_url(deferred_url: str):
+def get_regular_url(deferred_url: str) -> str:
 	try:
 		data = request.urlopen(deferred_url)
 	except:
@@ -69,7 +73,7 @@ def get_regular_url(deferred_url: str):
 	regular_url = data.geturl()
 	return regular_url
 
-def get_data_from_urls(urls: list):
+def get_data_from_urls(urls: list) -> list:
 	new_urls = []
 	for url in urls:
 		if url[len(url)-1] == '/':
@@ -98,13 +102,17 @@ def get_data_from_urls(urls: list):
 				if '/track/' in url:
 					if '?' in url:
 						results.append(template(types[0], url[url.index('/track/')+7:url.index('?')]))
+						break
 					else:
 						results.append(template(types[0], url[url.index('/track/')+7:]))
+						break
 				elif '/album/' in url:
 					if '?' in url:
 						results.append(template(types[1], url[url.index('/album/')+7:url.index('?')]))
+						break
 					else:
 						results.append(template(types[1], url[url.index('/album/')+7:]))
+						break
 
 		for base_url in apple_music_urls:
 			if base_url in url:
@@ -115,28 +123,38 @@ def get_data_from_urls(urls: list):
 					while url[index] != '/':
 						index -= 1
 					results.append(template(types[2], url[index+1:], country_code))
+					break
 				elif '/album/' in url:
 					if '?i=' in url:
 						if '&uo=' in url:
 							results.append(template(types[2], url[url.index('?i=')+3:url.index('&uo=')], country_code))
+							break
+						elif '&l=' in url:
+							results.append(template(types[2], url[url.index('?i=')+3:url.index('&l=')], country_code))
+							break
 						else:
 							results.append(template(types[2], url[url.index('?i=')+3:], country_code))
+							break
 					else:
 						index = len(url) - 1
 						while url[index] != '/':
 							index -= 1
 						if '?uo' in url:
 							results.append(template(types[3], url[index+1:url.index('?uo')], country_code))
+							break
 						else:
 							results.append(template(types[3], url[index+1:], country_code))
+							break
 				elif '/music-video/' in url:
 					index = len(url) - 1
 					while url[index] != '/':
 						index -= 1
 					if '?uo' in url:
 						results.append(template(types[4], url[index+1:url.index('?uo')], country_code))
+						break
 					else:
 						results.append(template(types[4], url[index+1:], country_code))
+						break
 
 		for base_url in youtube_urls:
 			if base_url in url:
@@ -145,15 +163,62 @@ def get_data_from_urls(urls: list):
 					index = url.index('v=') + 2
 					if '&' in url:
 						results.append(template(types[5], url[index:url.index('&')]))
+						break
 					else:
 						results.append(template(types[5], url[index:]))
+						break
 				elif '?si' in url:
 					results.append(template(types[5], url[:url.index('?si')]))
 				elif 'list=OLAK5' in url:
 					index = url.index('?list=') + 6
 					if url.find('&si') >= 0:
 						results.append(template(types[6], url[index:url.index('&si')]))
+						break
 					else:
-						results.append(template(types[6], url[index:]))	
+						results.append(template(types[6], url[index:]))
+						break
+
+		for base_url in deezer_urls:
+			if base_url in url:
+				for deferred_url in deferred_urls:
+					if deferred_url in url:
+						url = get_regular_url(url)
+						break
+				url = url.replace(base_url, '')
+				if '/track/' in url:
+					if url.find('?') >= 0:
+						results.append(template(types[7], url[url.index('/track/')+7:url.index('?')]))
+						break
+					else:
+						results.append(template(types[7], url[url.index('/track/')+7:]))
+						break
+				elif '/album/' in url:
+					if url.find('?') >= 0:
+						results.append(template(types[8], url[url.index('/album/')+7:url.index('?')]))
+						break
+					else:
+						results.append(template(types[8], url[url.index('/album/')+7:]))
+						break
+		
+		for base_url in tidal_urls:
+			if base_url in url:
+				url = url.replace(base_url, '')
+				if '/track/' in url:
+					if '?u' in url:
+						results.append(template(types[9], url[url.index('/track/') + 7:url.index('?u')]))
+						break
+					else:
+						results.append(template(types[9], url[url.index('/track/') + 7:]))
+						break
+				elif '/album/' in url:
+					if '?u' in url:
+						results.append(template(types[10], url[url.index('/album/') + 7:url.index('?u')]))
+					else:
+						results.append(template(types[10], url[url.index('/album/') + 7:]))
+				elif '/video/' in url:
+					if '?u' in url:
+						results.append(template(types[11], url[url.index('/video/') + 7:url.index('?u')]))
+					else:
+						results.append(template(types[11], url[url.index('/video/') + 7:]))
 
 	return results
