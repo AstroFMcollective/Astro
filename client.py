@@ -8,7 +8,7 @@ from asyncio import *
 import AstroAPI as astro
 from AstroAPI.components.time import *
 
-from AstroDiscord.components.ini import config, tokens
+from AstroDiscord.components.ini import config, tokens, text
 from AstroDiscord.components import *
 from AstroDiscord.components.url_tools import types 
 
@@ -21,6 +21,8 @@ class Client(discord.AutoShardedClient):
 
 
 version = 'PRE-a2.0'
+service = 'discord'
+component = 'Discord Client'
 deployment_channel = config['client']['deployment_channel']
 intents = discord.Intents.all()
 intents.message_content = True
@@ -93,13 +95,12 @@ async def on_message(message):
 				media_id = data[0]['id']
 				media_country_code = data[0]['country_code']
 				media_object = await link_lookup_functions[types.index(media_type)](link_lookup_function_objects[types.index(media_type)], media_id, media_country_code)
-				embeds.append(
-					create_embed(
-						command = 'link',
-						media_object = media_object,
-						user = message.author
-					)
+				embed = Embed(
+					command = 'link',
+					media_object = media_object,
+					user = message.author
 				)
+				embeds.append(embed.embed)
 			else:
 				for entry in data:
 					media_type = entry['media']
@@ -111,13 +112,12 @@ async def on_message(message):
 					
 				results = await gather(*tasks)
 				for result in results:
-					embeds.append(
-					create_embed(
+					embed = Embed(
 						command = 'link',
-						media_object = result,
+						media_object = media_object,
 						user = message.author
 					)
-				)
+					embeds.append(embed.embed)
 
 		else:
 			return
@@ -137,9 +137,9 @@ async def on_message(message):
 
 
 @tree.command(name = 'searchsong', description = 'Search for a song on all major platforms')
-@app_commands.describe(artist = 'The name of the artist of the song you want to search (ex. "Billie Eilish")')
-@app_commands.describe(title = 'The title of the song you want to search (ex. "LUNCH")')
-@app_commands.describe(from_album = 'The album, EP or collection of the song you want to search, helps with precision (ex. "HIT ME HARD AND SOFT")')
+@app_commands.describe(artist = 'The name of the artist of the song you want to search (ex. "Tyler, The Creator")')
+@app_commands.describe(title = 'The title of the song you want to search (ex. "NEW MAGIC WAND")')
+@app_commands.describe(from_album = 'The album, EP or collection of the song you want to search, helps with precision (ex. "IGOR")')
 @app_commands.describe(is_explicit = 'Whether the song you want to search has explicit content (has the little [E] badge next to its name on streaming platforms), helps with precision')
 @app_commands.guild_install()
 @app_commands.user_install()
@@ -153,12 +153,13 @@ async def searchsong(interaction: discord.Interaction, artist: str, title: str, 
 		collection = from_album,
 		is_explicit = is_explicit
 	)
+	embeds = Embed(
+		command = 'search',
+		media_object = song,
+		user = interaction.user
+	)
 	embed = await interaction.followup.send(
-		embed = create_embed(
-			command = 'search',
-			media_object = song,
-			user = interaction.user
-		)
+		embed = embeds.embed
 	)
 	end_time = current_unix_time_ms()
 	total_time = end_time - start_time
@@ -183,12 +184,13 @@ async def searchcollection(interaction: discord.Interaction, artist: str, title:
 		title = title,
 		year = year
 	)
+	embeds = Embed(
+		command = 'search',
+		media_object = collection,
+		user = interaction.user
+	)
 	embed = await interaction.followup.send(
-		embed = create_embed(
-			command = 'search',
-			media_object = collection,
-			user = interaction.user
-		)
+		embed = embeds.embed
 	)
 	end_time = current_unix_time_ms()
 	total_time = end_time - start_time
@@ -215,13 +217,13 @@ async def lookup(interaction: discord.Interaction, query: str):
 		media_id = data[0]['id']
 		media_country_code = data[0]['country_code']
 		media_object = await link_lookup_functions[types.index(media_type)](link_lookup_function_objects[types.index(media_type)], media_id, media_country_code)
-	embed = create_embed(
+	embeds = Embed(
 		command = 'search',
 		media_object = media_object,
 		user = interaction.user
 	)
 	embed = await interaction.followup.send(
-		embed = embed
+		embed = embeds.embed
 	)
 	end_time = current_unix_time_ms()
 	total_time = end_time - start_time
@@ -243,24 +245,39 @@ async def snoop(interaction: discord.Interaction, user: discord.Member = None, e
 	if user == None:
 		user = interaction.user
 
+	identifier = None
+
 	guild = client.get_guild(interaction.guild.id)
 	member = guild.get_member(user.id)
-	replied = False
 
 	for activity in member.activities:
 		if isinstance(activity, Spotify):
 			identifier = str(activity.track_id)
+			break
 	
-	song = await astro.Global.lookup_song(
-		service = astro.Spotify,
-		id = identifier
+	if identifier == None:
+		if user == interaction.user:
+			error_msg = text['embed']['snoop_you_errormsg']
+		else:
+			error_msg = text['embed']['snoop_someone_errormsg']
+		song = astro.Error(
+			service = service,
+			component = '`/snoop`',
+			error_msg = error_msg
+		)
+	else:
+		song = await astro.Global.lookup_song(
+			service = astro.Spotify,
+			id = identifier
+		)
+
+	embeds = Embed(
+		command = 'snoop',
+		media_object = song,
+		user = user
 	)
 	embed = await interaction.followup.send(
-		embed = create_embed(
-			command = 'snoop',
-			media_object = song,
-			user = user
-		)
+		embed = embeds.embed
 	)
 	end_time = current_unix_time_ms()
 	total_time = end_time - start_time
@@ -270,4 +287,47 @@ async def snoop(interaction: discord.Interaction, user: discord.Member = None, e
 
 
 
+@tree.command(name = 'coverart', description = 'Get the cover art of a track or album')
+@app_commands.describe(link = 'The link of the track or album you want to retrieve the cover art from')
+@app_commands.guild_install()
+@app_commands.user_install()
+@app_commands.allowed_contexts(guilds = True, dms = True, private_channels = True)
+async def coverart(interaction: discord.Interaction, link: str):
+	start_time = current_unix_time_ms()
+	await interaction.response.defer()
+	data = get_data_from_urls(link)
+
+	if data == []:
+		media_object = astro.Error(
+			service = service,
+			component = '`/coverart`',
+			error_msg = text['embed']['cover_errormsg'],
+			request = f'URL: `{link}`'
+		)
+	else:
+		media_type = data[0]['media']
+		media_id = data[0]['id']
+		media_country_code = data[0]['country_code']
+		media_object = await link_lookup_functions[types.index(media_type)](link_lookup_function_objects[types.index(media_type)], media_id, media_country_code)
+
+	embeds = Embed(
+		command = 'cover',
+		media_object = media_object,
+		user = interaction.user
+	)
+	embed = await interaction.followup.send(
+		embed = embeds.embed
+	)
+	end_time = current_unix_time_ms()
+	total_time = end_time - start_time
+	print(f'Finished in {total_time}ms')
+	if media_object.type not in invalid_responses:
+		await add_reactions(embed, ['🔥','🗑️'])
+	
+	
+
+
+	
+
+	
 client.run(tokens['tokens'][deployment_channel])

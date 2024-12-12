@@ -73,7 +73,9 @@ def get_regular_url(deferred_url: str) -> str:
 	regular_url = data.geturl()
 	return regular_url
 
-def get_data_from_urls(urls: list) -> list:
+def get_data_from_urls(urls: str | list) -> list:
+	if isinstance(urls, str):
+		urls = [urls]
 	new_urls = []
 	for url in urls:
 		if url[len(url)-1] == '/':

@@ -1,5 +1,5 @@
 from AstroAPI.components.media import *
-from AstroAPI.components.logging import *
+from AstroAPI.components.log import *
 from AstroAPI.components.text_manipulation import *
 
 
