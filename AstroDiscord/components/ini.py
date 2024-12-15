@@ -1,5 +1,7 @@
 import configparser
 
+presence = open('AstroDiscord/components/presence.txt','r').readlines()
+
 tokens = configparser.ConfigParser()
 tokens.read('AstroDiscord/tokens.ini')
 

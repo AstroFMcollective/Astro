@@ -10,6 +10,7 @@ class Deezer:
 
 	async def search_song(self, artists: list, title: str, song_type: str = None, collection: str = None, is_explicit: bool = None) -> object:
 		async with aiohttp.ClientSession() as session:
+			request = 'search_song'
 			artists = [optimize_for_search(artist) for artist in artists]
 			title = optimize_for_search(title)
 			collection = clean_up_collection_title(optimize_for_search(collection)) if collection != None else None
@@ -52,9 +53,10 @@ class Deezer:
 								is_explicit = song_is_explicit,
 								cover_url = song_cover,
 								api_response_time = end_time - start_time,
-								api_http_code = result.status
+								api_http_code = result.status,
+								request = {'request': request, 'artists': artists, 'title': title, 'song_type': song_type, 'collection': collection, 'is_explicit': is_explicit}
 							))
-					return await filter_song(service = self.service, songs = songs, query_artists = artists, query_title = title, query_song_type = song_type, query_collection = collection, query_is_explicit = is_explicit)
+					return await filter_song(service = self.service, query_request = request, songs = songs, query_artists = artists, query_title = title, query_song_type = song_type, query_collection = collection, query_is_explicit = is_explicit)
 				
 				else:
 					error = Error(
@@ -62,7 +64,7 @@ class Deezer:
 						component = self.component,
 						http_code = response.status,
 						error_msg = "HTTP error when searching for song",
-						request = f'Artists: `{', '.join(artists)}`\nTitle: `{title}`\nSong type: `{song_type}`\nCollection title: `{collection}`\nIs explicit? `{is_explicit}`'
+						request = {'request': request, 'artists': artists, 'title': title, 'song_type': song_type, 'collection': collection, 'is_explicit': is_explicit}
 					)
 					await log(error)
 					return error
@@ -71,6 +73,7 @@ class Deezer:
 
 	async def search_collection(self, artists: list, title: str, year: int = None) -> object:
 		async with aiohttp.ClientSession() as session:
+			request = 'search_collection'
 			artists = [optimize_for_search(artist) for artist in artists]
 			title = clean_up_collection_title(optimize_for_search(title))
 			
@@ -110,9 +113,10 @@ class Deezer:
 								release_year = collection_year,
 								cover_url = collection_cover,
 								api_response_time = end_time - start_time,
-								api_http_code = result.status
+								api_http_code = result.status,
+								request = {'request': request, 'artists': artists, 'title': title, 'year': year}
 							))
-					return await filter_collection(service = self.service, collections = collections, query_artists = artists, query_title = title, query_year = year)
+					return await filter_collection(service = self.service, query_request = request, collections = collections, query_artists = artists, query_title = title, query_year = year)
 				
 				else:
 					error = Error(
@@ -120,7 +124,7 @@ class Deezer:
 						component = self.component,
 						http_code = response.status,
 						error_msg = "HTTP error when searching for collection",
-						request = f'Artists: `{', '.join(artists)}`\nTitle: `{title}`\nYear: `{year}`'
+						request = {'request': request, 'artists': artists, 'title': title, 'year': year}
 					)
 					await log(error)
 					return error
@@ -129,6 +133,7 @@ class Deezer:
 	
 	async def lookup_song(self, id: str) -> object:
 		async with aiohttp.ClientSession() as session:
+			request = 'lookup_song'
 			api_url = f'https://api.deezer.com/track/{id}'
 			api_headers = {
 				'Content-Type': 'application/json'
@@ -160,7 +165,8 @@ class Deezer:
 						is_explicit = song_is_explicit,
 						cover_url = song_cover,
 						api_response_time = end_time - start_time,
-						api_http_code = response.status
+						api_http_code = response.status,
+						request = {'request': request, 'id': id, 'url': f'https://www.deezer.com/track/{id}'}
 					)
 				
 				else:
@@ -169,7 +175,7 @@ class Deezer:
 						component = self.component,
 						http_code = response.status,
 						error_msg = "HTTP error when looking up song ID",
-						request = f'ID: `{id}`\n[Open Song URL](https://tidal.com/browse/track/{id})'
+						request = {'request': request, 'id': id, 'url': f'https://www.deezer.com/track/{id}'}
 					)
 					await log(error)
 					return error
@@ -178,6 +184,7 @@ class Deezer:
 
 	async def lookup_collection(self, id: str) -> object:
 		async with aiohttp.ClientSession() as session:
+			request = 'lookup_collection'
 			api_url = f'https://api.deezer.com/album/{id}'
 			api_headers = {
 				'Content-Type': 'application/json'
@@ -207,7 +214,8 @@ class Deezer:
 						release_year = collection_year,
 						cover_url = collection_cover,
 						api_response_time = end_time - start_time,
-						api_http_code = response.status
+						api_http_code = response.status,
+						request = {'request': request, 'id': id, 'url': f'https://www.deezer.com/album/{id}'}
 					)
 				
 				else:
@@ -216,7 +224,7 @@ class Deezer:
 						component = self.component,
 						http_code = response.status,
 						error_msg = "HTTP error when looking up collection ID",
-						request = f'ID: `{id}`\n[Open Collection URL](https://tidal.com/browse/album/{id})'
+						request = {'request': request, 'id': id, 'url': f'https://www.deezer.com/album/{id}'}
 					)
 					await log(error)
 					return error

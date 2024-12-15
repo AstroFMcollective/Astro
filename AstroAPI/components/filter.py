@@ -4,7 +4,7 @@ from AstroAPI.components.text_manipulation import *
 
 
 
-async def filter_song(service: str, songs: list, query_artists: list, query_title: str, query_song_type: str = None, query_collection: str = None, query_is_explicit: bool = None) -> Song:
+async def filter_song(service: str, query_request: str, songs: list, query_artists: list, query_title: str, query_song_type: str = None, query_collection: str = None, query_is_explicit: bool = None) -> Song:
 	max_score = 2000
 	if query_collection != None:
 		max_score += 1000
@@ -17,7 +17,7 @@ async def filter_song(service: str, songs: list, query_artists: list, query_titl
 	for data in songs:
 		song_similarity = 0
 		
-		artist_input = bare_bones(query_artists[0])
+		artist_input = ' '.join([bare_bones(artist) for artist in query_artists])
 		artists_reference = data.artists
 		artists_with_similarity = []
 		for artist_name in artists_reference:
@@ -54,21 +54,21 @@ async def filter_song(service: str, songs: list, query_artists: list, query_titl
 		else:
 			response = Empty(
 				service = service,
-				request = f'Artists: `{', '.join(query_artists)}`\nTitle: `{query_title}`\nSong type: `{query_song_type}`\nCollection title: `{query_collection}`\nIs explicit? `{query_is_explicit}`'
+				request = {'request': query_request, 'artists': query_artists, 'title': query_title, 'song_type': query_song_type, 'collection': query_collection, 'is_explicit': query_is_explicit}
 			)
 			await log(response)
 			return response
 	else:
 		response = Empty(
 			service = service,
-			request = f'Artists: `{', '.join(query_artists)}`\nTitle: `{query_title}`\nSong type: `{query_song_type}`\nCollection title: `{query_collection}`\nIs explicit? `{query_is_explicit}`'
+			request = {'request': query_request, 'artists': query_artists, 'title': query_title, 'song_type': query_song_type, 'collection': query_collection, 'is_explicit': query_is_explicit}
 		)
 		await log(response)
 		return response
 
 
 
-async def filter_mv(service: str, videos: list, query_artists: list, query_title: str, query_is_explicit: bool = None) -> Song:
+async def filter_mv(service: str, query_request: str, videos: list, query_artists: list, query_title: str, query_is_explicit: bool = None) -> Song:
 	max_score = 2000
 	if query_is_explicit != None:
 		max_score += 500
@@ -77,7 +77,7 @@ async def filter_mv(service: str, videos: list, query_artists: list, query_title
 	for data in videos:
 		song_similarity = 0
 		
-		artist_input = bare_bones(query_artists[0])
+		artist_input = ' '.join([bare_bones(artist) for artist in query_artists])
 		artists_reference = data.artists
 		artists_with_similarity = []
 		for artist_name in artists_reference:
@@ -105,21 +105,21 @@ async def filter_mv(service: str, videos: list, query_artists: list, query_title
 		else:
 			empty_response = Empty(
 				service = service,
-				request = f'Artists: `{', '.join(query_artists)}`\nTitle: `{query_title}`\nIs explicit? `{query_is_explicit}`'
+				request = {'request': query_request, 'artists': query_artists, 'title': query_title, 'is_explicit': query_is_explicit}
 			)
 			await log(empty_response)
 			return empty_response
 	else:
 		empty_response = Empty(
 			service = service,
-			request = f'Artists: `{', '.join(query_artists)}`\nTitle: `{query_title}`\nIs explicit? `{query_is_explicit}`'
+			request = {'request': query_request, 'artists': query_artists, 'title': query_title, 'is_explicit': query_is_explicit}
 		)
 		await log(empty_response)
 		return empty_response
 
 
 
-async def filter_collection(service: str, collections: list, query_artists: list, query_title: str, query_year: str = None) -> Collection:
+async def filter_collection(service: str, query_request: str, collections: list, query_artists: list, query_title: str, query_year: str = None) -> Collection:
 	max_score = 2000
 	if query_year != None:
 		max_score += 1000
@@ -128,7 +128,7 @@ async def filter_collection(service: str, collections: list, query_artists: list
 	for data in collections:
 		collection_similarity = 0
 
-		artist_input = bare_bones(query_artists[0])
+		artist_input = ' '.join([bare_bones(artist) for artist in query_artists])
 		artists_reference = data.artists
 		artists_with_similarity = []
 		for artist_name in artists_reference:
@@ -156,14 +156,14 @@ async def filter_collection(service: str, collections: list, query_artists: list
 		else:
 			empty_response = Empty(
 				service = service,
-				request = f'Artists: `{', '.join(query_artists)}`\nTitle: `{query_title}`\nYear: `{query_year}`'
+				request = {'request': query_request, 'artists': query_artists, 'title': query_title, 'year': query_year}
 			)
 			await log(empty_response)
 			return empty_response
 	else:
 		empty_response = Empty(
 			service = service,
-			request = f'Artists: `{', '.join(query_artists)}`\nTitle: `{query_title}`\nYear: `{query_year}`'
+			request = {'request': query_request, 'artists': query_artists, 'title': query_title, 'year': query_year}
 		)
 		await log(empty_response)
 		return empty_response

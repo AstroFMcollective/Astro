@@ -5,24 +5,24 @@ from AstroDiscord.components.image_hex import image_hex
 
 
 class Embed:
-    def __init__(self, command: str, media_object: object, user: object):
+    def __init__(self, command: str, media_object: object, user: object, censored: bool = False):
         self.custom_errors = [
             text['embed']['snoop_you_errormsg'],
             text['embed']['snoop_someone_errormsg'],
             text['embed']['cover_errormsg'],
+            text['embed']['context_menu_link_lookup_errormsg'],
         ]
 
         if media_object.type != 'empty_response' and media_object.type != 'error':
             self.cover = media_object.cover_url if media_object.type != 'music_video' else media_object.thumbnail_url
             self.embed_color = image_hex(self.cover)
         
-        self.embed = self.create_embed(command = command, media_object = media_object, user = user, censor = False, anonymous = False)
-        self.censored_embed = self.create_embed(command = command, media_object = media_object, user = user, censor = True, anonymous = False)
-        self.log_embed = self.create_embed(command = command, media_object = media_object, user = user, censor = False, anonymous = True)
+        self.embed = self.create_embed(command = command, media_object = media_object, user = user, censored = censored, anonymous = False)
+        self.log_embed = self.create_embed(command = command, media_object = media_object, user = user, censored = False, anonymous = True)
 
     
 
-    def create_embed(self, command: str, media_object: object, user: object, censor: bool, anonymous: bool):
+    def create_embed(self, command: str, media_object: object, user: object, censored: bool, anonymous: bool):
         if media_object.type == 'empty_response' or media_object.type == 'error':
             embed = discord.Embed(
                 title = text['embed']['errortitle'],

@@ -21,6 +21,7 @@ class GlobalIO:
 
 
 	async def search_song(self, artists: list, title: str, song_type: str = None, collection: str = None, is_explicit: bool = None) -> object:
+		request = 'search_song'
 		try:
 			start_time = current_unix_time_ms()
 			tasks = [
@@ -107,13 +108,14 @@ class GlobalIO:
 					is_explicit = result_is_explicit,
 					cover_url = result_cover,
 					api_response_time = end_time - start_time,
-					api_http_code = 200
+					api_http_code = 200,
+					request = {'request': request, 'artists': artists, 'title': title, 'song_type': song_type, 'collection': collection, 'is_explicit': is_explicit}
 				)
 
 			else:
 				empty_response = Empty(
 					service = self.service,
-					request = f'Artists: `{', '.join(artists)}`\nTitle: `{title}`\nSong type: `{song_type}`\nCollection title: `{collection}`\nIs explicit? `{is_explicit}`'
+					request = {'request': request, 'artists': artists, 'title': title, 'song_type': song_type, 'collection': collection, 'is_explicit': is_explicit}
 				)
 				await log(empty_response)
 				return empty_response
@@ -123,7 +125,7 @@ class GlobalIO:
 				service = self.service,
 				component = self.component,
 				error_msg = f'Error when searching for song: "{msg}"',
-				request = f'Artists: `{', '.join(artists)}`\nTitle: `{title}`\nSong type: `{song_type}`\nCollection title: `{collection}`\nIs explicit? `{is_explicit}`'
+				request = {'request': request, 'artists': artists, 'title': title, 'song_type': song_type, 'collection': collection, 'is_explicit': is_explicit}
 			)
 			await log(error)
 			return error
@@ -131,6 +133,7 @@ class GlobalIO:
 
 	
 	async def search_music_video(self, artists: list, title: str, is_explicit: bool = None) -> object:
+		request = 'search_music_video'
 		try:
 			start_time = current_unix_time_ms()
 			tasks = [
@@ -195,13 +198,15 @@ class GlobalIO:
 					is_explicit = result_is_explicit,
 					thumbnail_url = result_cover,
 					api_response_time = end_time - start_time,
-					api_http_code = 200
+					api_http_code = 200,
+					request = {'request': request, 'artists': artists, 'title': title, 'is_explicit': is_explicit}
+
 				)
 
 			else:
 				return Empty(
 					service = self.service,
-					request = f'Artists: `{', '.join(artists)}`\nTitle: `{title}`\nIs explicit? `{is_explicit}`'
+					request = {'request': request, 'artists': artists, 'title': title, 'is_explicit': is_explicit}
 				)
 
 		except Exception as msg:
@@ -209,7 +214,7 @@ class GlobalIO:
 				service = self.service,
 				component = self.component,
 				error_msg = f'Error when searching for music video: "{msg}"',
-				request = f'Artists: `{', '.join(artists)}`\nTitle: `{title}`\nIs explicit? `{is_explicit}`'
+				request = {'request': request, 'artists': artists, 'title': title, 'is_explicit': is_explicit}
 			)
 			await log(error)
 			return error
@@ -217,6 +222,7 @@ class GlobalIO:
 
 
 	async def search_collection(self, artists: list, title: str, year: int = None) -> object:
+		request = 'search_collection'
 		try:
 			start_time = current_unix_time_ms()
 			tasks = [
@@ -290,13 +296,14 @@ class GlobalIO:
 					release_year = result_year,
 					cover_url = result_cover,
 					api_response_time = end_time - start_time,
-					api_http_code = 200
+					api_http_code = 200,
+					request = {'request': request, 'artists': artists, 'title': title, 'year': year}
 				)
 
 			else:
 				empty_response = Empty(
 					service = service,
-					request = f'Artists: `{', '.join(artists)}`\nTitle: `{title}`\nYear: `{year}`'
+					request = {'request': request, 'artists': artists, 'title': title, 'year': year}
 				)
 				await log(empty_response)
 				return empty_response
@@ -306,7 +313,7 @@ class GlobalIO:
 				service = self.service,
 				component = self.component,
 				error_msg = f'Error when searching for collection: "{msg}"',
-				request = f'Artists: `{', '.join(artists)}`\nTitle: `{title}`\nYear: `{year}`'
+				request = {'request': request, 'artists': artists, 'title': title, 'year': year}
 			)
 			await log(error)
 			return error
@@ -315,6 +322,7 @@ class GlobalIO:
 
 	async def search_query(self, query: str) -> object:
 		try:
+			request = 'search_query'
 			result = await YouTubeMusic.search_query(query)
 
 			if result.type == 'track' or result.type == 'single':
@@ -329,7 +337,7 @@ class GlobalIO:
 			else:
 				empty_response = Empty(
 					service = self.service,
-					request = f'Query: `{query}`'
+					request = {'request': request, 'query': query}
 				)
 				await log(empty_response)
 				return empty_response
@@ -339,7 +347,8 @@ class GlobalIO:
 				service = self.service,
 				component = self.component,
 				error_msg = f'Error when doing general query search: "{msg}"',
-				request = f'Query: `{query}`'
+				request = {'request': request, 'query': query}
+
 			)
 			await log(error)
 			return error
@@ -347,6 +356,7 @@ class GlobalIO:
 
 
 	async def lookup_song(self, service: object, id: str, country_code: str = None) -> object:
+		request = 'lookup_song'
 		try:
 			start_time = current_unix_time_ms()
 
@@ -455,13 +465,14 @@ class GlobalIO:
 					is_explicit = result_is_explicit,
 					cover_url = result_cover,
 					api_response_time = end_time - start_time,
-					api_http_code = 200
+					api_http_code = 200,
+					request = {'request': request, 'id': id, 'country_code': country_code}
 				)
 
 			else:
 				empty_response = Empty(
 					service = self.service,
-					request = f'Service: `{service.component}\n`ID: `{id}`\nCountry code: `{country_code}`'
+					request = {'request': request, 'id': id, 'country_code': country_code}
 				)
 				await log(empty_response)
 				return empty_response
@@ -471,7 +482,7 @@ class GlobalIO:
 				service = self.service,
 				component = self.component,
 				error_msg = f'Error when looking up song: "{msg}"',
-				request = f'Service: `{service.component}\n`ID: `{id}`\nCountry code: `{country_code}`'
+				request = {'request': request, 'id': id, 'country_code': country_code}
 			)
 			await log(error)
 			return error
@@ -479,7 +490,8 @@ class GlobalIO:
 
 
 	async def lookup_music_video(self, service: object, id: str, country_code: str = None) -> object:
-		try:
+			request = 'lookup_music_video'
+		#try:
 			start_time = current_unix_time_ms()
 
 			if service == AppleMusic:
@@ -566,28 +578,30 @@ class GlobalIO:
 					is_explicit = result_is_explicit,
 					thumbnail_url = result_cover,
 					api_response_time = end_time - start_time,
-					api_http_code = 200
+					api_http_code = 200,
+					request = {'request': request, 'id': id, 'country_code': country_code}
 				)
 
 			else:
 				return Empty(
 					service = self.service,
-					request = f'Service: `{service.component}\n`ID: `{id}`\nCountry code: `{country_code}`'
+					request = {'request': request, 'id': id, 'country_code': country_code}
 				)
 
-		except Exception as msg:
-			error = Error(
-				service = self.service,
-				component = self.component,
-				error_msg = f'Error when looking up music video: "{msg}"',
-				request = f'Service: `{service.component}\n`ID: `{id}`\nCountry code: `{country_code}`'
-			)
-			await log(error)
-			return error
+		#except Exception as msg:
+		#	error = Error(
+		#		service = self.service,
+		#		component = self.component,
+		#		error_msg = f'Error when looking up music video: "{msg}"',
+		#		request = {'request': request, 'id': id, 'country_code': country_code}
+		#	)
+		#	await log(error)
+		#	return error
 		
 
 
 	async def lookup_collection(self, service: object, id: str, country_code: str = None) -> object:
+		request = 'lookup_collection'
 		try:
 			start_time = current_unix_time_ms()
 
@@ -679,13 +693,14 @@ class GlobalIO:
 					release_year = result_year,
 					cover_url = result_cover,
 					api_response_time = end_time - start_time,
-					api_http_code = 200
+					api_http_code = 200,
+					request = {'request': request, 'id': id, 'country_code': country_code}
 				)
 
 			else:
 				return Empty(
 					service = self.service,
-					request = f'Service: `{service.component}\n`ID: `{id}`\nCountry code: `{country_code}`'
+					request = {'request': request, 'id': id, 'country_code': country_code}
 				)
 
 		except Exception as msg:
@@ -693,7 +708,7 @@ class GlobalIO:
 				service = self.service,
 				component = self.component,
 				error_msg = f'Error when looking up collection: "{msg}"',
-				request = f'Service: `{service.component}\n`ID: `{id}`\nCountry code: `{country_code}`'
+				request = {'request': request, 'id': id, 'country_code': country_code}
 			)
 			await log(error)
 			return error

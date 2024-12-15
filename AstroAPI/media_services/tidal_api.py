@@ -19,6 +19,7 @@ class Tidal:
 
 	async def get_token(self) -> str:
 		if self.token == None or (self.token_expiration_date == None or current_unix_time() > self.token_expiration_date):
+			request = 'get_token'
 			credentials = f'{self.client_id}:{self.client_secret}'
 			encoded_credentials = b64encode(credentials.encode('utf-8')).decode('utf-8')
 			async with aiohttp.ClientSession() as session:
@@ -37,7 +38,8 @@ class Tidal:
 							service = self.service,
 							component = self.component,
 							http_code = response.status,
-							error_msg = "HTTP error when getting token"
+							error_msg = "HTTP error when getting token",
+							request = {'request': request}
 						)
 						await log(error)
 						return error
@@ -48,6 +50,7 @@ class Tidal:
 
 	async def search_song(self, artists: list, title: str, song_type: str = None, collection: str = None, is_explicit: bool = None) -> object:
 		async with aiohttp.ClientSession() as session:
+			request = 'search_song'
 			artists = [optimize_for_search(artist) for artist in artists]
 			title = optimize_for_search(title)
 			collection = clean_up_collection_title(optimize_for_search(collection)) if collection != None else None
@@ -95,9 +98,11 @@ class Tidal:
 							is_explicit = song_is_explicit,
 							cover_url = song_cover,
 							api_response_time = end_time - start_time,
-							api_http_code = response.status
+							api_http_code = response.status,
+							request = {'request': request, 'artists': artists, 'title': title, 'song_type': song_type, 'collection': collection, 'is_explicit': is_explicit}
+
 						))
-					return await filter_song(service = self.service, songs = songs, query_artists = artists, query_title = title, query_song_type = song_type, query_collection = collection, query_is_explicit = is_explicit)
+					return await filter_song(service = self.service, query_request = request, songs = songs, query_artists = artists, query_title = title, query_song_type = song_type, query_collection = collection, query_is_explicit = is_explicit)
 
 				else:
 					error = Error(
@@ -105,7 +110,7 @@ class Tidal:
 						component = self.component,
 						http_code = response.status,
 						error_msg = "HTTP error when searching for song",
-						request = f'Artists: `{', '.join(artists)}`\nTitle: `{title}`\nSong type: `{song_type}`\nCollection title: `{collection}`\nIs explicit? `{is_explicit}`'
+						request = {'request': request, 'artists': artists, 'title': title, 'song_type': song_type, 'collection': collection, 'is_explicit': is_explicit}
 					)
 					await log(error)
 					return error
@@ -114,6 +119,7 @@ class Tidal:
 
 	async def search_music_video(self, artists: list, title: str, is_explicit: bool = None) -> object:
 		async with aiohttp.ClientSession() as session:
+			request = 'search_music_video'
 			artists = [optimize_for_search(artist) for artist in artists]
 			title = optimize_for_search(title)
 			
@@ -156,9 +162,11 @@ class Tidal:
 							is_explicit = mv_is_explicit,
 							thumbnail_url = mv_cover,
 							api_response_time = end_time - start_time,
-							api_http_code = response.status
+							api_http_code = response.status,
+							request = {'request': request, 'artists': artists, 'title': title, 'is_explicit': is_explicit}
+							
 						))
-					return await filter_mv(service = self.service, videos = videos, query_artists = artists, query_title = title, query_is_explicit = is_explicit)
+					return await filter_mv(service = self.service, query_request = request, videos = videos, query_artists = artists, query_title = title, query_is_explicit = is_explicit)
 
 				else:
 					error = Error(
@@ -166,7 +174,7 @@ class Tidal:
 						component = self.component,
 						http_code = response.status,
 						error_msg = "HTTP error when searching for music video",
-						request = f'Artists: `{', '.join(artists)}`\nTitle: `{title}`\nIs explicit? `{is_explicit}`'
+						request = {'request': request, 'artists': artists, 'title': title, 'is_explicit': is_explicit}
 					)
 					await log(error)
 					return error
@@ -175,6 +183,7 @@ class Tidal:
 
 	async def search_collection(self, artists: list, title: str, year: int = None) -> object:
 		async with aiohttp.ClientSession() as session:
+			request = 'search_collection'
 			artists = [optimize_for_search(artist) for artist in artists]
 			title = clean_up_collection_title(optimize_for_search(title))
 			
@@ -219,9 +228,10 @@ class Tidal:
 							release_year = collection_year,
 							cover_url = collection_cover,
 							api_response_time = end_time - start_time,
-							api_http_code = response.status
+							api_http_code = response.status,
+							request = {'request': request, 'artists': artists, 'title': title, 'year': year}
 						))
-					return await filter_collection(service = self.service, collections = collections, query_artists = artists, query_title = title, query_year = year)
+					return await filter_collection(service = self.service, query_request = request, collections = collections, query_artists = artists, query_title = title, query_year = year)
 
 				else:
 					error = Error(
@@ -229,7 +239,7 @@ class Tidal:
 						component = self.component,
 						http_code = response.status,
 						error_msg = "HTTP error when searching for collection",
-						request = f'Artists: `{', '.join(artists)}`\nTitle: `{title}`\nYear: `{year}`'
+						request = {'request': request, 'artists': artists, 'title': title, 'year': year}
 					)
 					await log(error)
 					return error
@@ -238,6 +248,7 @@ class Tidal:
 	
 	async def lookup_song(self, id: str) -> object:
 		async with aiohttp.ClientSession() as session:
+			request = 'lookup_song'
 			api_url = f'https://openapi.tidal.com/tracks/{id}?countryCode=US'
 			api_headers = {
 				'accept': 'application/vnd.api+json',
@@ -271,7 +282,9 @@ class Tidal:
 						is_explicit = song_is_explicit,
 						cover_url = song_cover,
 						api_response_time = end_time - start_time,
-						api_http_code = response.status
+						api_http_code = response.status,
+						request = {'request': request, 'id': id, 'url': f'https://tidal.com/browse/track/{id}'}
+
 					)
 
 				else:
@@ -280,7 +293,7 @@ class Tidal:
 						component = self.component,
 						http_code = response.status,
 						error_msg = "HTTP error when looking up song ID",
-						request = f'ID: `{id}`\n[Open Song URL](https://tidal.com/browse/track/{id})'
+						request = {'request': request, 'id': id, 'url': f'https://tidal.com/browse/track/{id}'}
 					)
 					await log(error)
 					return error
@@ -289,6 +302,7 @@ class Tidal:
 
 	async def lookup_collection(self, id: str) -> object:
 		async with aiohttp.ClientSession() as session:
+			request = 'lookup_collection'
 			api_url = f'https://openapi.tidal.com/albums/{id}?countryCode=US'
 			api_headers = {
 				'accept': 'application/vnd.api+json',
@@ -320,7 +334,9 @@ class Tidal:
 						release_year = collection_year,
 						cover_url = collection_cover,
 						api_response_time = end_time - start_time,
-						api_http_code = response.status
+						api_http_code = response.status,
+						request = {'request': request, 'id': id, 'url': f'https://tidal.com/browse/album/{id}'}
+
 					)
 
 				else:
@@ -329,7 +345,7 @@ class Tidal:
 						component = self.component,
 						http_code = response.status,
 						error_msg = "HTTP error when looking up collection ID",
-						request = f'ID: `{id}`\n[Open Collection URL](https://tidal.com/browse/album/{id})'
+						request = {'request': request, 'id': id, 'url': f'https://tidal.com/browse/album/{id}'}
 					)
 					await log(error)
 					return error
@@ -338,6 +354,7 @@ class Tidal:
 
 	async def lookup_music_video(self, id: str) -> object:
 		async with aiohttp.ClientSession() as session:
+			request = 'lookup_music_video'
 			api_url = f'https://openapi.tidal.com/videos/{id}?countryCode=US'
 			api_headers = {
 				'accept': 'application/vnd.api+json',
@@ -367,7 +384,9 @@ class Tidal:
 						is_explicit = mv_is_explicit,
 						thumbnail_url = mv_thumbnail,
 						api_response_time = end_time - start_time,
-						api_http_code = response.status
+						api_http_code = response.status,
+						request = {'request': request, 'id': id, 'url': f'https://tidal.com/browse/video/{id}'}
+
 					)
 
 				else:
@@ -376,7 +395,7 @@ class Tidal:
 						component = self.component,
 						http_code = response.status,
 						error_msg = "HTTP error when looking up music video ID",
-						request = f'ID: `{id}`\n[Open MV URL](https://tidal.com/browse/video/{id})'
+						request = {'request': request, 'id': id, 'url': f'https://tidal.com/browse/video/{id}'}
 					)
 					await log(error)
 					return error

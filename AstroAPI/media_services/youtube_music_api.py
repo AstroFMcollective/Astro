@@ -18,6 +18,7 @@ class YouTubeMusic:
 
 	async def search_song(self, artists: list, title: str, song_type: str = None, collection: str = None, is_explicit: bool = None) -> object:
 		try:
+			request = 'search_song'
 			artists = [optimize_for_search(artist) for artist in artists]
 			title = optimize_for_search(replace_with_ascii(title).lower())
 			collection = clean_up_collection_title(optimize_for_search(collection)) if collection != None else None
@@ -51,16 +52,17 @@ class YouTubeMusic:
 					is_explicit = song_is_explicit,
 					cover_url = song_cover,
 					api_response_time = end_time - start_time,
-					api_http_code = 200
+					api_http_code = 200,
+					request = {'request': request, 'artists': artists, 'title': title, 'song_type': song_type, 'collection': collection, 'is_explicit': is_explicit}
 				))
-			return await filter_song(service = self.service, songs = songs, query_artists = artists, query_title = title, query_song_type = song_type, query_collection = collection, query_is_explicit = is_explicit)
+			return await filter_song(service = self.service, query_request = request, songs = songs, query_artists = artists, query_title = title, query_song_type = song_type, query_collection = collection, query_is_explicit = is_explicit)
 
 		except Exception as msg:
 			error = Error(
 				service = self.service,
 				component = self.component,
 				error_msg = f'Error when searching for song: "{msg}"',
-				request = f'Artists: `{', '.join(artists)}`\nTitle: `{title}`\nSong type: `{song_type}`\nCollection title: `{collection}`\nIs explicit? `{is_explicit}`'
+				request = {'request': request, 'artists': artists, 'title': title, 'song_type': song_type, 'collection': collection, 'is_explicit': is_explicit}
 			)
 			await log(error)
 			return error
@@ -69,6 +71,7 @@ class YouTubeMusic:
 	
 	async def search_music_video(self, artists: list, title: str, is_explicit: bool = None) -> object:
 		try:
+			request = 'search_music_video'
 			artists = [optimize_for_search(artist) for artist in artists]
 			title = optimize_for_search(replace_with_ascii(title).lower())
 			
@@ -96,16 +99,17 @@ class YouTubeMusic:
 					is_explicit = None,
 					thumbnail_url = mv_cover,
 					api_response_time = end_time - start_time,
-					api_http_code = 200
+					api_http_code = 200,
+					request = {'request': request, 'artists': artists, 'title': title, 'is_explicit': is_explicit}
 				))
-			return await filter_mv(service = self.service, videos = videos, query_artists = artists, query_title = title, query_is_explicit = is_explicit)
+			return await filter_mv(service = self.service, query_request = request, videos = videos, query_artists = artists, query_title = title, query_is_explicit = is_explicit)
 
 		except Exception as msg:
 			error = Error(
 				service = self.service,
 				component = self.component,
 				error_msg = f'Error when searching for music video: "{msg}"',
-				request = f'Artists: `{', '.join(artists)}`\nTitle: `{title}`\nIs explicit? `{is_explicit}`'
+				request = {'request': request, 'artists': artists, 'title': title, 'is_explicit': is_explicit}
 			)
 			await log(error)
 			return error
@@ -114,6 +118,7 @@ class YouTubeMusic:
 
 	async def search_collection(self, artists: list, title: str, year: int = None) -> object:
 		try:
+			request = 'search_collection'
 			artists = [optimize_for_search(artist) for artist in artists]
 			title = optimize_for_search(title)
 
@@ -143,16 +148,17 @@ class YouTubeMusic:
 					release_year = collection_year,
 					cover_url = collection_cover,
 					api_response_time = end_time - start_time,
-					api_http_code = 200
+					api_http_code = 200,
+					request = {'request': request, 'artists': artists, 'title': title, 'year': year}
 				))
-			return await filter_collection(service = self.service, collections = collections, query_artists = artists, query_title = title, query_year = year)
+			return await filter_collection(service = self.service, query_request = request, collections = collections, query_artists = artists, query_title = title, query_year = year)
 
 		except Exception as msg:
 			error = Error(
 				service = self.service,
 				component = self.component,
 				error_msg = f'Error when searching for collection: "{msg}"',
-				request = f'Artists: `{', '.join(artists)}`\nTitle: `{title}`\nYear: `{year}`'
+				request = {'request': request, 'artists': artists, 'title': title, 'year': year}
 			)
 			await log(error)
 			return error
@@ -161,6 +167,7 @@ class YouTubeMusic:
 
 	async def search_query(self, query: str):
 		try:
+			request = 'search_query'
 			start_time = current_unix_time_ms()
 			results = self.ytm.search(
 				query = query,
@@ -176,11 +183,12 @@ class YouTubeMusic:
 					id = result['videoId'],
 					title = result['title'],
 					artists = [artist['name'] for artist in result['artists']],
-					collection = result['album']['name'],
+					collection = None,
 					is_explicit = None,
 					cover_url = result['thumbnails'][len(result['thumbnails'])-1]['url'],
 					api_response_time = current_unix_time_ms() - start_time,
-					api_http_code = 200
+					api_http_code = 200,
+					request = {'request': request, 'query': query}
 				)
 			elif result_type == 'album':
 				return Collection(
@@ -193,7 +201,8 @@ class YouTubeMusic:
 					release_year = None,
 					cover_url = result['thumbnails'][len(result['thumbnails'])-1]['url'],
 					api_response_time = current_unix_time_ms() - start_time,
-					api_http_code = 200
+					api_http_code = 200,
+					request = {'request': request, 'query': query}
 				)
 			elif result_type == 'video':
 				return MusicVideo(
@@ -205,12 +214,13 @@ class YouTubeMusic:
 					is_explicit = None,
 					thumbnail_url = result['thumbnails'][len(result['thumbnails'])-1]['url'],
 					api_response_time = current_unix_time_ms() - start_time,
-					api_http_code = 200
+					api_http_code = 200,
+					request = {'request': request, 'query': query}
 				)
 			else:
 				empty_response = Empty(
 					service = self.service,
-					request = f'Query: `{query}`'
+					request = {'request': request, 'query': query}
 				)
 				await log(empty_response)
 				return empty_response
@@ -219,7 +229,7 @@ class YouTubeMusic:
 				service = self.service,
 				component = self.component,
 				error_msg = f'Error when doing general query search: "{msg}"',
-				request = f'Query: `{query}`'
+				request = {'request': request, 'query': query}
 			)
 			await log(error)
 			return error
@@ -228,6 +238,7 @@ class YouTubeMusic:
 
 	async def lookup_song(self, id: str):
 		try:
+			request = 'lookup_song'
 			start_time = current_unix_time_ms()
 			song = self.ytm.get_song(id)['videoDetails']
 
@@ -252,7 +263,8 @@ class YouTubeMusic:
 							is_explicit = None,
 							cover_url = song_cover,
 							api_response_time = end_time - start_time,
-							api_http_code = 200
+							api_http_code = 200,
+							request = {'request': request, 'id': id, 'url': f'https://music.youtube.com/watch?v={id}'}
 						)
 
 					else:
@@ -266,7 +278,8 @@ class YouTubeMusic:
 							is_explicit = None,
 							thumbnail_url = song_cover,
 							api_response_time = end_time - start_time,
-							api_http_code = 200
+							api_http_code = 200,
+							request = {'request': request, 'id': id, 'url': f'https://music.youtube.com/watch?v={id}'}
 						)
 			
 		except Exception as msg:
@@ -274,7 +287,7 @@ class YouTubeMusic:
 				service = self.service,
 				component = self.component,
 				error_msg = f'Error when looking up song: "{msg}"',
-				request = f'ID: `{id}`\n[Open Song URL](https://music.youtube.com/watch?v={id})'
+				request = {'request': request, 'id': id, 'url': f'https://music.youtube.com/watch?v={id}'}
 			)
 			await log(error)
 			return error
@@ -283,6 +296,7 @@ class YouTubeMusic:
 
 	async def lookup_collection(self, id: str):
 		try:
+			request = 'lookup_collection'
 			start_time = current_unix_time_ms()
 			browse_id = self.ytm.get_album_browse_id(id)
 			collection = self.ytm.get_album(browse_id)
@@ -305,7 +319,8 @@ class YouTubeMusic:
 				release_year = collection_year,
 				cover_url = collection_cover,
 				api_response_time = end_time - start_time,
-				api_http_code = 200
+				api_http_code = 200,
+				request = {'request': request, 'id': id, 'url': f'https://music.youtube.com/playlist?list={id}'}
 			)
 			
 		except Exception as msg:
@@ -313,7 +328,7 @@ class YouTubeMusic:
 				service = self.service,
 				component = self.component,
 				error_msg = f'Error when looking up collection: "{msg}"',
-				request = f'ID: `{id}`\n[Open Collection URL](https://music.youtube.com/playlist?list={id})'
+				request = {'request': request, 'id': id, 'url': f'https://music.youtube.com/playlist?list={id}'}
 			)
 			await log(error)
 			return error
@@ -322,6 +337,7 @@ class YouTubeMusic:
 
 	async def lookup_artist(self, id: str = None, video_id: str = None):
 		try:
+			request = 'lookup_artist'
 			start_time = current_unix_time_ms()
 			try:
 				if video_id == None and id == None:
@@ -343,7 +359,8 @@ class YouTubeMusic:
 					id = artist_id,
 					name = artist_name,
 					api_response_time = end_time - start_time,
-					api_http_code = 200
+					api_http_code = 200,
+					request = {'request': request, 'id': id, 'url': f'https://www.youtube.com/channel/{id}'}
 				)
 			except:
 				artist = self.ytm.get_song(video_id)['videoDetails']
@@ -358,14 +375,15 @@ class YouTubeMusic:
 					id = artist_id,
 					name = artist_name,
 					api_response_time = end_time - start_time,
-					api_http_code = 200
+					api_http_code = 200,
+					request = {'request': request, 'id': id, 'url': f'https://www.youtube.com/channel/{id}'}
 				)
 		except Exception as msg:
 			error = Error(
 				service = self.service,
 				component = self.component,
 				error_msg = f'Error when looking up artist: "{msg}"',
-				request = f'ID: `{id}`\nVideo ID: `{video_id}`\n[Open Artist URL](https://www.youtube.com/channel/{id})\n[Open Video URL](https://music.youtube.com/watch?v={id})'
+				request = {'request': request, 'id': id, 'url': f'https://www.youtube.com/channel/{id}'}
 			)
 			await log(error)
 			return error
