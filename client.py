@@ -21,10 +21,11 @@ class Client(discord.AutoShardedClient):
 	
 
 
-version = 'PRE-a2.0'
+version = config['client']['version']
 service = 'discord'
 component = 'Discord Client'
 deployment_channel = config['client']['deployment_channel']
+app_start_time = current_unix_time()
 intents = discord.Intents.all()
 intents.message_content = True
 intents.presences = True
@@ -73,11 +74,14 @@ link_lookup_function_objects = [
 @client.event
 async def on_ready():
 	await client.wait_until_ready()
+	last_on_ready_time = current_unix_time()
 	if not client.synced:
 		await tree.sync()
 		client.synced = True
 	if not discord_presence.is_running():
 		discord_presence.start()
+	#if not dashboard.is_running():
+	#	dashboard.start(last_on_ready_time)
 
 
 
@@ -193,7 +197,7 @@ async def searchsong(interaction: discord.Interaction, artist: str, title: str, 
 		log_embeds = [embeds.log_embed],
 		media = [song],
 		command = 'searchalbum',
-		parameters = f'artist:{artist} title:{title} from_album:{from_album} is_explicit:{is_explicit}',
+		parameters = f'artist:`{artist}` title:`{title}` from_album:`{from_album}` is_explicit:`{is_explicit}`',
 		latency = total_time
 	)
 
@@ -232,7 +236,7 @@ async def searchcollection(interaction: discord.Interaction, artist: str, title:
 		log_embeds = [embeds.log_embed],
 		media = [collection],
 		command = 'searchalbum',
-		parameters = f'artist:{artist} title:{title} year:{year}',
+		parameters = f'artist:`{artist}` title:`{title}` year:`{year}`',
 		latency = total_time
 	)
 
@@ -337,7 +341,7 @@ async def snoop(interaction: discord.Interaction, user: discord.Member = None, e
 		log_embeds = [embeds.log_embed],
 		media = [song],
 		command = 'snoop',
-		parameters = f'self_snoop:{(True if user == interaction.user else False)}',
+		parameters = f'self_snoop:`{(True if user == interaction.user else False)}`',
 		latency = total_time
 	)
 
@@ -461,11 +465,12 @@ async def context_menu_lookup(interaction: discord.Interaction, message: discord
 		embeds.remove(None)
 
 	message_embed = await interaction.followup.send(embeds = embeds)
-	if media_object.type not in invalid_responses:
-		await add_reactions(message_embed, ['👍','👎'])
 
 	end_time = current_unix_time_ms()
 	total_time = end_time - start_time
+
+	if media_object.type not in invalid_responses:
+		await add_reactions(message_embed, ['👍','👎'])
 
 	await log(
 		log_embeds = log_embeds,
@@ -483,7 +488,47 @@ async def discord_presence():
 		type = discord.ActivityType.listening,
 		name = presence[randint(0, len(presence)-1)],
 	))
+
+
+
+@tasks.loop(seconds = 1800)
+async def dashboard(on_ready_time: int):
+	embed = discord.Embed(
+		title="ASTRO DASHBOARD",
+        colour=0x6ae70e
+	)
+
+	embed.add_field(
+		name="About",
+		value=f"Version: `{version}`\nDeployment channel: `{deployment_channel}`\nShards: `{config['client']['shards']}`",
+		inline=False
+	)
+	embed.add_field(
+		name="Stats",
+		value=f"Servers: `{len(client.guilds)}`\nAccessible users: `{len(client.users)}`",
+		inline=False
+	)
+	embed.add_field(
+		name="Start time",
+		value=f"<t:{app_start_time}:F>",
+		inline=True
+	)
+	embed.add_field(
+		name="Last `on_ready()`",
+		value=f"<t:{last_on_ready_time}:F>",
+		inline=True
+	)
+	embed.add_field(
+		name="Hourly latency",
+		value="API time: `TIME` ms\nClient time: `TIME` ms",
+		inline=False
+	)
+	embed.add_field(
+		name="Requests today",
+		value="`REQUEST COUNT` requests\nSuccesses: `COUNT`\nFailures: `COUNT`",
+		inline=True
+	)
 	
 
-	
+
 client.run(tokens['tokens'][deployment_channel])
