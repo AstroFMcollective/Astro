@@ -17,7 +17,8 @@ async def filter_song(service: str, query_request: str, songs: list, query_artis
 	for data in songs:
 		song_similarity = 0
 		
-		artist_input = ' '.join([bare_bones(artist) for artist in query_artists])
+		#artist_input = ' '.join([bare_bones(artist) for artist in query_artists])
+		artist_input = bare_bones(query_artists[0])
 		artists_reference = data.artists
 		artists_with_similarity = []
 		for artist_name in artists_reference:
@@ -77,7 +78,7 @@ async def filter_mv(service: str, query_request: str, videos: list, query_artist
 	for data in videos:
 		song_similarity = 0
 		
-		artist_input = ' '.join([bare_bones(artist) for artist in query_artists])
+		artist_input = bare_bones(query_artists[0])
 		artists_reference = data.artists
 		artists_with_similarity = []
 		for artist_name in artists_reference:
@@ -128,7 +129,7 @@ async def filter_collection(service: str, query_request: str, collections: list,
 	for data in collections:
 		collection_similarity = 0
 
-		artist_input = ' '.join([bare_bones(artist) for artist in query_artists])
+		artist_input = bare_bones(query_artists[0])
 		artists_reference = data.artists
 		artists_with_similarity = []
 		for artist_name in artists_reference:
