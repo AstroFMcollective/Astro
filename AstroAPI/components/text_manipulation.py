@@ -59,13 +59,13 @@ def remove_feat(string: str):
 		if string[string.lower().index('feat. ')-1] == '[':
 			first_bracket = string.lower().index('feat. ')-1
 			second_bracket = string.lower().index('feat. ')-1
-			while string[second_bracket] != ']':
+			while string[second_bracket-1] != ']':
 				second_bracket += 1
 			string = string.replace(string[first_bracket:second_bracket],'')
 		elif string[string.lower().index('feat. ')-1] == '(':
 			first_bracket = string.lower().index('feat. ')-1
 			second_bracket = string.lower().index('feat. ')-1
-			while string[second_bracket] != ')':
+			while string[second_bracket-1] != ')':
 				second_bracket += 1
 			string = string.replace(string[first_bracket:second_bracket],'')
 		elif string[string.lower().index('feat. ')-1] == ' ':
@@ -74,15 +74,17 @@ def remove_feat(string: str):
 		if string[string.lower().index('with ')-1] == '[':
 			first_bracket = string.lower().index('with ')-1
 			second_bracket = string.lower().index('with ')-1
-			while string[second_bracket] != ']':
+			while string[second_bracket-1] != ']':
 				second_bracket += 1
 			string = string.replace(string[first_bracket:second_bracket],'')
 		elif string[string.lower().index('with ')-1] == '(':
 			first_bracket = string.lower().index('with ')-1
 			second_bracket = string.lower().index('with ')-1
-			while string[second_bracket] != ')':
+			while string[second_bracket-1] != ')':
 				second_bracket += 1
 			string = string.replace(string[first_bracket:second_bracket],'')
+	if string[len(string)-1] == ' ':
+		string = string[:len(string)-1]
 	return string
 
 def optimize_string(string: str):
@@ -109,6 +111,9 @@ def optimize_for_search(string: str):
 	optimized_string = optimized_string.replace('#','')
 	if optimized_string[0] == '&':
 		optimized_string = optimized_string[1:]
+	if ' l ' in optimized_string:
+		for instances in range(optimized_string.count(' l ')):
+			optimized_string = optimized_string.replace(' l ', ' | ')
 	return optimized_string
 
 def has_music_video_declaration(string: str):
