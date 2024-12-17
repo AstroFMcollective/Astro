@@ -14,12 +14,11 @@ class AppleMusic:
 			artists = [optimize_for_search(artist) for artist in artists]
 			title = optimize_for_search(replace_with_ascii(title).lower())
 			collection = clean_up_collection_title(optimize_for_search(collection)) if collection != None else None
-			collection = f'{collection} - Single' if song_type == 'single' else collection
 			
 			songs = []
 			api_url = f'https://itunes.apple.com/search'
 			api_params = {
-				'term': (f'{artists[0]} "{title}"' if collection == None else f'{artists[0]} "{title}" {collection}'),
+				'term': (f'{artists[0]} "{title}"' if collection == None or song_type == 'single' else f'{artists[0]} "{title}" {collection}'),
 				'entity': 'song',
 				'limit': 200,
 				'country': 'us'
