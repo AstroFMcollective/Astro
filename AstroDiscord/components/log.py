@@ -24,7 +24,7 @@ async def log(log_embeds: list[discord.Embed], media: list[object], command: str
 		report_type = 'failure'
 
 		for obj in media:
-			if obj.type not in invalid_responses:
+			if obj.type not in invalid_responses and len(obj.url) > 1:
 				report_type = 'success'
 				break
 
@@ -50,7 +50,8 @@ async def log(log_embeds: list[discord.Embed], media: list[object], command: str
 
 		if report_type == 'success':
 			for objects in log_embeds:
-				embeds.append(objects)
+				if len(media[log_embeds.index(objects)].url) > 1:
+					embeds.append(objects)
 			
 		webhook = Webhook.from_url(url = keys['webhooks'][f'{deployment_channel}_logs'], session = session)
 		await webhook.send(embeds = embeds, username = 'Astro Client', avatar_url = config['images']['astro_bg'])
