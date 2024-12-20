@@ -5,8 +5,9 @@ from discord.ext import tasks
 
 from random import randint
 from asyncio import *
-import AstroAPI as astro
 from AstroAPI.components.time import *
+
+import AstroAPI as astro
 
 from AstroDiscord.components.ini import config, tokens, text, presence
 from AstroDiscord.components import *
@@ -26,6 +27,7 @@ service = 'discord'
 component = 'Discord Client'
 deployment_channel = config['client']['deployment_channel']
 app_start_time = current_unix_time()
+total_requests = []
 intents = discord.Intents.all()
 intents.message_content = True
 intents.presences = True
@@ -71,17 +73,23 @@ link_lookup_function_objects = [
 
 
 
+def log_request(api_latency: int, client_latency: int, request_result_type: str):
+	total_requests.append({'api_latency': api_latency, 'client_latency': client_latency, 'request_result_type': request_result_type})
+
+
+
 @client.event
 async def on_ready():
 	await client.wait_until_ready()
-	last_on_ready_time = current_unix_time()
 	if not client.synced:
 		await tree.sync()
 		client.synced = True
 	if not discord_presence.is_running():
 		discord_presence.start()
-	#if not dashboard.is_running():
-	#	dashboard.start(last_on_ready_time)
+	if not dashboard.is_running():
+		dashboard.start()
+	if not reset_requests.is_running():
+		reset_requests.start()
 
 
 
@@ -97,7 +105,6 @@ async def on_message(message):
 		log_embeds = []
 		
 		tasks = []
-
 
 		if data != []:
 			if len(data) == 1:
@@ -142,14 +149,22 @@ async def on_message(message):
 			embeds.remove(None)
 
 		if embeds != []:
+			api_request_latency = 0
+			for obj in media_objects:
+				if obj.type not in invalid_responses:
+					api_request_latency += obj.api_response_time
+			api_request_latency = api_request_latency // len(media_objects)
 			message_embed = await message.reply(embeds = embeds, mention_author = False)
 
 		end_time = current_unix_time_ms()
 		total_time = end_time - start_time
 
 		if embeds != []:
+			log_request(api_request_latency, total_time - api_request_latency, 'success')
 			await add_reactions(message_embed, ['👍','👎'])
+			
 		else:
+			log_request(api_request_latency, total_time - api_request_latency, 'failure')
 			await add_reactions(message, ['🤷'])
 
 		await log(
@@ -191,7 +206,10 @@ async def searchsong(interaction: discord.Interaction, artist: str, title: str, 
 	total_time = end_time - start_time
 
 	if song.type not in invalid_responses:
+		log_request(song.api_response_time, total_time - song.api_response_time, 'success')
 		await add_reactions(embed, ['👍','👎'])
+	else:
+		log_request(song.api_response_time, total_time - song.api_response_time, 'failure')
 
 	await log(
 		log_embeds = [embeds.log_embed],
@@ -230,7 +248,10 @@ async def searchcollection(interaction: discord.Interaction, artist: str, title:
 	total_time = end_time - start_time
 
 	if collection.type not in invalid_responses:
+		log_request(collection.api_response_time, total_time - collection.api_response_time, 'success')
 		await add_reactions(embed, ['👍','👎'])
+	else:
+		log_request(collection.api_response_time, total_time - collection.api_response_time, 'failure')
 
 	await log(
 		log_embeds = [embeds.log_embed],
@@ -271,7 +292,10 @@ async def lookup(interaction: discord.Interaction, query: str):
 	total_time = end_time - start_time
 
 	if media_object.type not in invalid_responses:
+		log_request(media_object.api_response_time, total_time - media_object.api_response_time, 'success')
 		await add_reactions(embed, ['👍','👎'])
+	else:
+		log_request(media_object.api_response_time, total_time - media_object.api_response_time, 'failure')
 
 	await log(
 		log_embeds = [embeds.log_embed],
@@ -335,7 +359,10 @@ async def snoop(interaction: discord.Interaction, user: discord.Member = None, e
 	total_time = end_time - start_time
 
 	if song.type not in invalid_responses:
+		log_request(song.api_response_time, total_time - song.api_response_time, 'success')
 		await add_reactions(embed, ['👍','👎'])
+	else:
+		log_request(song.api_response_time, total_time - song.api_response_time, 'failure')
 
 	await log(
 		log_embeds = [embeds.log_embed],
@@ -383,7 +410,10 @@ async def coverart(interaction: discord.Interaction, link: str):
 	total_time = end_time - start_time
 
 	if media_object.type not in invalid_responses:
+		log_request(media_object.api_response_time, total_time - media_object.api_response_time, 'success')
 		await add_reactions(embed, ['🔥','🗑️'])
+	else:
+		log_request(media_object.api_response_time, total_time - media_object.api_response_time, 'failure')
 
 	await log(
 		log_embeds = [embeds.log_embed],
@@ -469,8 +499,17 @@ async def context_menu_lookup(interaction: discord.Interaction, message: discord
 	end_time = current_unix_time_ms()
 	total_time = end_time - start_time
 
+	api_request_latency = 0
+	for obj in media_objects:
+		if obj.type not in invalid_responses:
+			api_request_latency += obj.api_response_time
+	api_request_latency = api_request_latency // len(media_objects)
+
 	if media_object.type not in invalid_responses:
+		log_request(api_request_latency, total_time - api_request_latency, 'success')
 		await add_reactions(message_embed, ['👍','👎'])
+	else:
+		log_request(api_request_latency, total_time - api_request_latency, 'failure')
 
 	await log(
 		log_embeds = log_embeds,
@@ -491,8 +530,25 @@ async def discord_presence():
 
 
 
-@tasks.loop(seconds = 1800)
-async def dashboard(on_ready_time: int):
+@tasks.loop(seconds = 60)
+async def dashboard():
+	api_latency = 0
+	client_latency = 0
+	successful_requests = 0
+	failed_requests = 0
+
+	for request in total_requests:
+		api_latency += request['api_latency']
+		client_latency += request['client_latency']
+		successful_requests += 1 if request['request_result_type'] == 'success' else 0
+		failed_requests += 1 if request['request_result_type'] == 'failure' else 0
+
+	if api_latency != 0:
+		api_latency = api_latency // len(total_requests)
+	
+	if client_latency != 0:
+		client_latency = client_latency // len(total_requests)
+
 	embed = discord.Embed(
 		title="ASTRO DASHBOARD",
         colour=0x6ae70e
@@ -514,20 +570,38 @@ async def dashboard(on_ready_time: int):
 		inline=True
 	)
 	embed.add_field(
-		name="Last `on_ready()`",
-		value=f"<t:{last_on_ready_time}:F>",
+		name="Last refreshed",
+		value=f"<t:{current_unix_time()}:F>",
 		inline=True
 	)
 	embed.add_field(
-		name="Hourly latency",
-		value="API time: `TIME` ms\nClient time: `TIME` ms",
+		name="Average latency today",
+		value=f"API latency: `{api_latency}` ms\nClient latency: `{client_latency}` ms",
 		inline=False
 	)
 	embed.add_field(
 		name="Requests today",
-		value="`REQUEST COUNT` requests\nSuccesses: `COUNT`\nFailures: `COUNT`",
+		value=f"Total requests: `{len(total_requests)}`\nSuccessful requests: `{successful_requests}`\nFailed requests: `{failed_requests}`",
 		inline=True
 	)
+	try:
+		server = await client.fetch_guild(tokens['dashboard']['astro_server_id'])
+		channel = await server.fetch_channel(tokens['dashboard']['dashboard_channel_id'])
+		dash = await channel.fetch_message(str(tokens['dashboard']['dashboard_message_id']))
+		await dash.edit(embed = embed)
+	except:
+		server = await client.fetch_guild(tokens['dashboard']['astro_server_id'])
+		channel = await server.fetch_channel(tokens['dashboard']['dashboard_channel_id'])
+		message = await channel.send(embed = embed)
+		tokens.set('dashboard', 'dashboard_message_id', str(message.id))
+		with open('AstroDiscord/tokens.ini', 'w') as token_file:
+			tokens.write(token_file)
+
+
+
+@tasks.loop(seconds = 86400)
+async def reset_requests():
+	total_requests.clear()
 	
 
 
