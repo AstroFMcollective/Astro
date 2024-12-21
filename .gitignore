@@ -3,3 +3,4 @@ tokens.ini
 __pycache__
 test.py
 save_json_data.json
+.DS_Store
