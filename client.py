@@ -148,8 +148,8 @@ async def on_message(message):
 		while None in embeds:
 			embeds.remove(None)
 
+		api_request_latency = 0
 		if embeds != []:
-			api_request_latency = 0
 			for obj in media_objects:
 				if obj.type not in invalid_responses:
 					api_request_latency += obj.api_response_time
@@ -209,7 +209,7 @@ async def searchsong(interaction: discord.Interaction, artist: str, title: str, 
 		log_request(song.api_response_time, total_time - song.api_response_time, 'success')
 		await add_reactions(embed, ['👍','👎'])
 	else:
-		log_request(song.api_response_time, total_time - song.api_response_time, 'failure')
+		log_request(0, total_time, 'failure')
 
 	await log(
 		log_embeds = [embeds.log_embed],
@@ -251,7 +251,7 @@ async def searchcollection(interaction: discord.Interaction, artist: str, title:
 		log_request(collection.api_response_time, total_time - collection.api_response_time, 'success')
 		await add_reactions(embed, ['👍','👎'])
 	else:
-		log_request(collection.api_response_time, total_time - collection.api_response_time, 'failure')
+		log_request(0, total_time, 'failure')
 
 	await log(
 		log_embeds = [embeds.log_embed],
@@ -295,7 +295,7 @@ async def lookup(interaction: discord.Interaction, query: str):
 		log_request(media_object.api_response_time, total_time - media_object.api_response_time, 'success')
 		await add_reactions(embed, ['👍','👎'])
 	else:
-		log_request(media_object.api_response_time, total_time - media_object.api_response_time, 'failure')
+		log_request(0, total_time, 'failure')
 
 	await log(
 		log_embeds = [embeds.log_embed],
@@ -362,7 +362,7 @@ async def snoop(interaction: discord.Interaction, user: discord.Member = None, e
 		log_request(song.api_response_time, total_time - song.api_response_time, 'success')
 		await add_reactions(embed, ['👍','👎'])
 	else:
-		log_request(song.api_response_time, total_time - song.api_response_time, 'failure')
+		log_request(0, total_time, 'failure')
 
 	await log(
 		log_embeds = [embeds.log_embed],
@@ -413,7 +413,7 @@ async def coverart(interaction: discord.Interaction, link: str):
 		log_request(media_object.api_response_time, total_time - media_object.api_response_time, 'success')
 		await add_reactions(embed, ['🔥','🗑️'])
 	else:
-		log_request(media_object.api_response_time, total_time - media_object.api_response_time, 'failure')
+		log_request(0, total_time, 'failure')
 
 	await log(
 		log_embeds = [embeds.log_embed],
