@@ -91,12 +91,6 @@ def get_data_from_urls(urls: str | list) -> list:
 		}
 	results = []
 
-	spotify_url_string = ' '.join(spotify_urls)
-	apple_music_url_string = ' '.join(apple_music_urls)
-	youtube_url_string = ' '.join(youtube_urls)
-	deezer_url_string = ' '.join(deezer_urls)
-	tidal_url_string = ' '.join(tidal_urls)
-
 	for url in urls:
 		for base_url in spotify_urls:
 			if base_url in url:
@@ -133,6 +127,9 @@ def get_data_from_urls(urls: str | list) -> list:
 							break
 						elif '&l=' in url:
 							results.append(template(types[2], url[url.index('?i=')+3:url.index('&l=')], country_code))
+							break
+						elif '&ls' in url:
+							results.append(template(types[2], url[url.index('?i=')+3:url.index('&ls')], country_code))
 							break
 						else:
 							results.append(template(types[2], url[url.index('?i=')+3:], country_code))
