@@ -4,7 +4,7 @@ import aiohttp
 
 
 
-class Spotify: #balls
+class Spotify:
 	def __init__(self, client_id: str, client_secret: str):
 		self.service = 'spotify'
 		self.component = 'Spotify API'
