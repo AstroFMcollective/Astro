@@ -370,7 +370,8 @@ class GlobalIO:
 
 			service_objects = [Spotify, AppleMusic, YouTubeMusic, Deezer, Tidal]
 			services = [Spotify.service, AppleMusic.service, YouTubeMusic.service, Deezer.service, Tidal.service]
-			service_objects.remove(service)
+			if service != YouTubeMusic:
+				service_objects.remove(service)
 
 			type_order = [Spotify.service, AppleMusic.service, YouTubeMusic.service, Deezer.service, Tidal.service]
 			title_order = [Spotify.service, AppleMusic.service, YouTubeMusic.service, Deezer.service, Tidal.service]
