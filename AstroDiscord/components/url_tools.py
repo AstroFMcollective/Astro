@@ -1,6 +1,8 @@
 from urllib.parse import urlparse
 from urllib import request
 
+import AstroAPI as astro
+
 
 
 types = [
@@ -73,7 +75,8 @@ def get_regular_url(deferred_url: str) -> str:
 	regular_url = data.geturl()
 	return regular_url
 
-def get_data_from_urls(urls: str | list) -> list:
+async def get_data_from_urls(urls: str | list) -> list:
+	youtube_id = {}
 	if isinstance(urls, str):
 		urls = [urls]
 	new_urls = []
@@ -161,21 +164,31 @@ def get_data_from_urls(urls: str | list) -> list:
 				if 'v=' in url:
 					index = url.index('v=') + 2
 					if '&' in url:
-						results.append(template(types[5], url[index:url.index('&')]))
+						youtube_id = template(types[5], url[index:url.index('&')])
 						break
 					else:
-						results.append(template(types[5], url[index:]))
+						youtube_id = template(types[5], url[index:])
 						break
 				elif '?si' in url:
-					results.append(template(types[5], url[:url.index('?si')]))
+					youtube_id = template(types[5], url[:url.index('?si')])
+					break
 				elif 'list=OLAK5' in url:
 					index = url.index('?list=') + 6
 					if url.find('&si') >= 0:
-						results.append(template(types[6], url[index:url.index('&si')]))
+						youtube_id = template(types[6], url[index:url.index('&si')])
 						break
 					else:
-						results.append(template(types[6], url[index:]))
+						youtube_id = template(types[6], url[index:])
 						break
+		if youtube_id != {}:
+			if youtube_id['media'] == 'youtube_music_song':
+				song = await astro.YouTubeMusic.lookup_song(youtube_id['id'])
+				if song.type != 'empty_response':
+					results.append(youtube_id)
+			elif youtube_id['media'] == 'youtube_music_collection':
+				collection = await astro.YouTubeMusic.lookup_collection(youtube_id['id'])
+				if collection.type != 'empty_response':
+					results.append(youtube_id)
 
 		for base_url in deezer_urls:
 			if base_url in url:

@@ -248,7 +248,7 @@ class YouTubeMusic:
 					song_id = song['videoId']
 					song_title = song['title']
 					song_artists = await self.lookup_artist(video_id = song['videoId'])
-					if not isinstance(song_artists, list): song_artists = split_artists(song_artists.name)
+					if not isinstance(song_artists, list): song_artists = [song_artists.name]
 					song_cover = song['thumbnail']['thumbnails'][len(song['thumbnail']['thumbnails'])-1]['url']
 					end_time = current_unix_time_ms()
 					if song['musicVideoType'] == 'MUSIC_VIDEO_TYPE_ATV':
@@ -281,6 +281,11 @@ class YouTubeMusic:
 							api_http_code = 200,
 							request = {'request': request, 'id': id, 'url': f'https://music.youtube.com/watch?v={id}'}
 						)
+			else:
+				return Empty(
+					service = self.service,
+					request = {'request': request, 'id': id, 'url': f'https://music.youtube.com/watch?v={id}'}
+				)
 			
 		except Exception as msg:
 			error = Error(

@@ -98,7 +98,7 @@ async def on_message(message):
 	if message.author != client.user:
 		start_time = current_unix_time_ms()
 		urls = find_urls(message.content)
-		data = get_data_from_urls(urls)
+		data = await get_data_from_urls(urls)
 
 		media_objects = []
 		embeds = []
@@ -272,7 +272,7 @@ async def lookup(interaction: discord.Interaction, query: str):
 	start_time = current_unix_time_ms()
 	await interaction.response.defer()
 	urls = find_urls(query)
-	data = get_data_from_urls(urls)
+	data = await get_data_from_urls(urls)
 	if data == []:
 		media_object = await astro.Global.search_query(query = query)
 	else:
@@ -383,7 +383,7 @@ async def coverart(interaction: discord.Interaction, link: str):
 	request = '/coverart'
 	start_time = current_unix_time_ms()
 	await interaction.response.defer()
-	data = get_data_from_urls(link)
+	data = await get_data_from_urls(link)
 
 	if data == []:
 		media_object = astro.Error(
@@ -434,7 +434,7 @@ async def context_menu_lookup(interaction: discord.Interaction, message: discord
 	start_time = current_unix_time_ms()
 	await interaction.response.defer()
 	urls = find_urls(message.content)
-	data = get_data_from_urls(urls)
+	data = await get_data_from_urls(urls)
 
 	media_objects = []
 	embeds = []
