@@ -55,6 +55,7 @@ class Embed:
             return
         
         data = [', '.join(media_object.artists)]
+        genius_url = media_object.url['genius'] if 'genius' in media_object.url else None
         is_explicit = None
 
         if media_object.type == 'track':
@@ -72,6 +73,7 @@ class Embed:
             
         embed = discord.Embed(
             title = f'{discord.utils.escape_markdown(f'{media_object.title}')}  {'`E`' if is_explicit != None and is_explicit != False else ''}',
+            url = genius_url,
             description = discord.utils.escape_markdown(f'{' • '.join(data)}'),
             color = self.embed_color
         )

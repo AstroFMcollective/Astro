@@ -1,4 +1,4 @@
-from AstroAPI.media_services import spotify_api, apple_music_api, youtube_music_api, tidal_api, deezer_api
+from AstroAPI.media_services import spotify_api, apple_music_api, youtube_music_api, tidal_api, deezer_api, genius_api
 from AstroAPI.components.ini import keys
 from AstroAPI.components import *
 from asyncio import *
@@ -10,6 +10,7 @@ AppleMusic = apple_music_api.AppleMusic()
 YouTubeMusic = youtube_music_api.YouTubeMusic()
 Tidal = tidal_api.Tidal(client_id = keys['tidal']['id'], client_secret = f'{keys['tidal']['secret']}=')
 Deezer = deezer_api.Deezer()
+Genius = genius_api.Genius()
 
 
 
@@ -29,7 +30,8 @@ class GlobalIO:
 				create_task(AppleMusic.search_song(artists, title, song_type, collection, is_explicit), name = AppleMusic.service),
 				create_task(YouTubeMusic.search_song(artists, title, song_type, collection, is_explicit), name = YouTubeMusic.service),
 				create_task(Deezer.search_song(artists, title, song_type, collection, is_explicit), name = Deezer.service),
-				create_task(Tidal.search_song(artists, title, song_type, collection, is_explicit), name = Tidal.service)
+				create_task(Tidal.search_song(artists, title, song_type, collection, is_explicit), name = Tidal.service),
+				create_task(Genius.search_song(artists, title, song_type, collection, is_explicit), name = Genius.service)
 			]
 
 			unlabeled_results = await gather(*tasks)
@@ -37,15 +39,15 @@ class GlobalIO:
 			for result in unlabeled_results:
 				labeled_results[result.service] = result
 			
-			services = [Spotify.service, AppleMusic.service, YouTubeMusic.service, Deezer.service, Tidal.service]
+			services = [Spotify.service, AppleMusic.service, YouTubeMusic.service, Deezer.service, Tidal.service, Genius.service]
 
-			type_order = [Spotify.service, AppleMusic.service, YouTubeMusic.service, Deezer.service, Tidal.service]
-			title_order = [Spotify.service, AppleMusic.service, YouTubeMusic.service, Deezer.service, Tidal.service]
-			artists_order = [Spotify.service, Tidal.service, YouTubeMusic.service, Deezer.service, AppleMusic.service]
-			collection_order = [Spotify.service, AppleMusic.service, YouTubeMusic.service, Deezer.service, Tidal.service]
-			explicitness_order = [Spotify.service, AppleMusic.service, YouTubeMusic.service, Deezer.service, Tidal.service]
-			cover_order = [Spotify.service, Tidal.service, Deezer.service, AppleMusic.service, YouTubeMusic.service]
-			cover_single_order = [Spotify.service, Tidal.service, Deezer.service, AppleMusic.service, YouTubeMusic.service]
+			type_order = [Spotify.service, AppleMusic.service, YouTubeMusic.service, Deezer.service, Tidal.service, Genius.service]
+			title_order = [Spotify.service, AppleMusic.service, YouTubeMusic.service, Deezer.service, Tidal.service, Genius.service]
+			artists_order = [Spotify.service, Tidal.service, YouTubeMusic.service, Deezer.service, AppleMusic.service, Genius.service]
+			collection_order = [Spotify.service, AppleMusic.service, YouTubeMusic.service, Deezer.service, Tidal.service, Genius.service]
+			explicitness_order = [Spotify.service, AppleMusic.service, YouTubeMusic.service, Deezer.service, Tidal.service, Genius.service]
+			cover_order = [Spotify.service, Tidal.service, Deezer.service, AppleMusic.service, YouTubeMusic.service, Genius.service]
+			cover_single_order = [Spotify.service, Tidal.service, Deezer.service, AppleMusic.service, YouTubeMusic.service, Genius.service]
 
 			for service in services:
 				if labeled_results[service].type != 'track' and labeled_results[service].type != 'single':
@@ -368,18 +370,18 @@ class GlobalIO:
 			if song.type != 'track' and song.type != 'single' and song.type != 'music_video':
 				return song
 
-			service_objects = [Spotify, AppleMusic, YouTubeMusic, Deezer, Tidal]
-			services = [Spotify.service, AppleMusic.service, YouTubeMusic.service, Deezer.service, Tidal.service]
+			service_objects = [Spotify, AppleMusic, YouTubeMusic, Deezer, Tidal, Genius]
+			services = [Spotify.service, AppleMusic.service, YouTubeMusic.service, Deezer.service, Tidal.service, Genius.service]
 			if service != YouTubeMusic:
 				service_objects.remove(service)
 
-			type_order = [Spotify.service, AppleMusic.service, YouTubeMusic.service, Deezer.service, Tidal.service]
-			title_order = [Spotify.service, AppleMusic.service, YouTubeMusic.service, Deezer.service, Tidal.service]
-			artists_order = [Spotify.service, Tidal.service, YouTubeMusic.service, Deezer.service, AppleMusic.service]
-			collection_order = [Spotify.service, AppleMusic.service, YouTubeMusic.service, Deezer.service, Tidal.service]
-			explicitness_order = [Spotify.service, AppleMusic.service, YouTubeMusic.service, Deezer.service, Tidal.service]
-			cover_order = [Spotify.service, Tidal.service, Deezer.service, AppleMusic.service, YouTubeMusic.service]
-			cover_single_order = [Spotify.service, Tidal.service, Deezer.service, AppleMusic.service, YouTubeMusic.service]
+			type_order = [Spotify.service, AppleMusic.service, YouTubeMusic.service, Deezer.service, Tidal.service, Genius.service]
+			title_order = [Spotify.service, AppleMusic.service, YouTubeMusic.service, Deezer.service, Tidal.service, Genius.service]
+			artists_order = [Spotify.service, Tidal.service, YouTubeMusic.service, Deezer.service, AppleMusic.service, Genius.service]
+			collection_order = [Spotify.service, AppleMusic.service, YouTubeMusic.service, Deezer.service, Tidal.service, Genius.service]
+			explicitness_order = [Spotify.service, AppleMusic.service, YouTubeMusic.service, Deezer.service, Tidal.service, Genius.service]
+			cover_order = [Spotify.service, Tidal.service, Deezer.service, AppleMusic.service, YouTubeMusic.service, Genius.service]
+			cover_single_order = [Spotify.service, Tidal.service, Deezer.service, AppleMusic.service, YouTubeMusic.service, Genius.service]
 
 
 			tasks = []
