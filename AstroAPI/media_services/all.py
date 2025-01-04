@@ -232,8 +232,8 @@ class GlobalIO:
 				create_task(AppleMusic.search_collection(artists, title, year), name = AppleMusic.service),
 				create_task(YouTubeMusic.search_collection(artists, title, year), name = YouTubeMusic.service),
 				create_task(Deezer.search_collection(artists, title, year), name = Deezer.service),
-				create_task(Tidal.search_collection(artists, title, year), name = Tidal.service)
-
+				create_task(Tidal.search_collection(artists, title, year), name = Tidal.service),
+				create_task(Genius.search_collection(artists, title, year), name = Genius.service)
 			]
 
 			unlabeled_results = await gather(*tasks)
@@ -241,13 +241,13 @@ class GlobalIO:
 			for result in unlabeled_results:
 				labeled_results[result.service] = result
 
-			services = [Spotify.service, AppleMusic.service, YouTubeMusic.service, Deezer.service, Tidal.service]
+			services = [Spotify.service, AppleMusic.service, YouTubeMusic.service, Deezer.service, Tidal.service, Genius.service]
 			
-			type_order = [Spotify.service, AppleMusic.service, YouTubeMusic.service, Deezer.service, Tidal.service]
-			title_order = [Spotify.service, AppleMusic.service, YouTubeMusic.service, Deezer.service, Tidal.service]
-			artists_order = [Spotify.service, Tidal.service, YouTubeMusic.service, Deezer.service, AppleMusic.service]
-			release_year_order = [Spotify.service, AppleMusic.service, YouTubeMusic.service, Deezer.service, Tidal.service]
-			cover_order = [Tidal.service, Deezer.service, Spotify.service, AppleMusic.service, YouTubeMusic.service]
+			type_order = [Spotify.service, AppleMusic.service, YouTubeMusic.service, Deezer.service, Tidal.service, Genius.service]
+			title_order = [Spotify.service, AppleMusic.service, YouTubeMusic.service, Deezer.service, Tidal.service, Genius.service]
+			artists_order = [Spotify.service, Tidal.service, YouTubeMusic.service, Deezer.service, AppleMusic.service, Genius.service]
+			release_year_order = [Spotify.service, AppleMusic.service, YouTubeMusic.service, Deezer.service, Tidal.service, Genius.service]
+			cover_order = [Tidal.service, Deezer.service, Spotify.service, AppleMusic.service, YouTubeMusic.service, Genius.service]
 
 			for service in services:
 				if labeled_results[service].type != 'album' and labeled_results[service].type != 'ep':
@@ -616,15 +616,15 @@ class GlobalIO:
 			if collection.type != 'album' and collection.type != 'ep':
 				return collection
 			
-			service_objects = [Spotify, AppleMusic, YouTubeMusic, Deezer, Tidal]
-			services = [Spotify.service, AppleMusic.service, YouTubeMusic.service, Deezer.service, Tidal.service]
+			service_objects = [Spotify, AppleMusic, YouTubeMusic, Deezer, Tidal, Genius]
+			services = [Spotify.service, AppleMusic.service, YouTubeMusic.service, Deezer.service, Tidal.service, Genius.service]
 			service_objects.remove(service)
 
-			type_order = [Spotify.service, AppleMusic.service, YouTubeMusic.service, Deezer.service, Tidal.service]
-			title_order = [Spotify.service, AppleMusic.service, YouTubeMusic.service, Deezer.service, Tidal.service]
-			artists_order = [Spotify.service, Tidal.service, YouTubeMusic.service, Deezer.service, AppleMusic.service]
-			release_year_order = [Spotify.service, AppleMusic.service, YouTubeMusic.service, Deezer.service, Tidal.service]
-			cover_order = [Tidal.service, Deezer.service, Spotify.service, AppleMusic.service, YouTubeMusic.service]
+			type_order = [Spotify.service, AppleMusic.service, YouTubeMusic.service, Deezer.service, Tidal.service, Genius.service]
+			title_order = [Spotify.service, AppleMusic.service, YouTubeMusic.service, Deezer.service, Tidal.service, Genius.service]
+			artists_order = [Spotify.service, Tidal.service, YouTubeMusic.service, Deezer.service, AppleMusic.service, Genius.service]
+			release_year_order = [Spotify.service, AppleMusic.service, YouTubeMusic.service, Deezer.service, Tidal.service, Genius.service]
+			cover_order = [Tidal.service, Deezer.service, Spotify.service, AppleMusic.service, YouTubeMusic.service, Genius.service]
 
 			tasks = []
 			for service_obj in service_objects:
