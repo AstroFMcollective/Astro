@@ -8,7 +8,7 @@ class AppleMusic:
 		self.service = 'apple_music'
 		self.component = 'Apple Music API'
 
-	async def search_song(self, artists: list, title: str, song_type: str = None, collection: str = None, is_explicit: bool = None) -> object:
+	async def search_song(self, artists: list, title: str, song_type: str = None, collection: str = None, is_explicit: bool = None, country_code: str = 'us') -> object:
 		async with aiohttp.ClientSession() as session:
 			request = 'search_song'
 			artists = [optimize_for_search(artist) for artist in artists]
@@ -21,7 +21,7 @@ class AppleMusic:
 				'term': (f'{artists[0]} "{title}"' if collection == None or song_type == 'single' else f'{artists[0]} "{title}" {collection}'),
 				'entity': 'song',
 				'limit': 200,
-				'country': 'us'
+				'country': country_code.lower()
 			}
 			timeout = aiohttp.ClientTimeout(total = 30)
 			start_time = current_unix_time_ms()
@@ -54,7 +54,7 @@ class AppleMusic:
 							api_http_code = response.status,
 							request = {'request': request, 'artists': artists, 'title': title, 'song_type': song_type, 'collection': collection, 'is_explicit': is_explicit}
 						))
-					return await filter_song(service = self.service, query_request = request, songs = songs, query_artists = artists, query_title = title, query_song_type = song_type, query_collection = collection, query_is_explicit = is_explicit)
+					return await filter_song(service = self.service, query_request = request, songs = songs, query_artists = artists, query_title = title, query_song_type = song_type, query_collection = collection, query_is_explicit = is_explicit, query_country_code = country_code)
 				else:
 					error = Error(
 						service = self.service,
@@ -68,7 +68,7 @@ class AppleMusic:
 
 
 
-	async def search_music_video(self, artists: list, title: str, is_explicit: bool = None) -> object:
+	async def search_music_video(self, artists: list, title: str, is_explicit: bool = None, country_code: str = 'us') -> object:
 		async with aiohttp.ClientSession() as session:
 			request = 'search_music_video'
 			artists = [optimize_for_search(artist) for artist in artists]
@@ -80,7 +80,7 @@ class AppleMusic:
 				'term': f'{artists[0]} "{title}"',
 				'entity': 'musicVideo',
 				'limit': 200,
-				'country': 'us'
+				'country': country_code.lower()
 			}
 			timeout = aiohttp.ClientTimeout(total = 30)
 			start_time = current_unix_time_ms()
@@ -107,23 +107,23 @@ class AppleMusic:
 							thumbnail_url = mv_cover,
 							api_response_time = end_time - start_time,
 							api_http_code = response.status,
-							request = {'request': request, 'artists': artists, 'title': title, 'is_explicit': is_explicit}
+							request = {'request': request, 'artists': artists, 'title': title, 'is_explicit': is_explicit, 'country_code': country_code}
 						))
-					return await filter_mv(service = self.service, query_request = request, videos = videos, query_artists = artists, query_title = title, query_is_explicit = is_explicit)
+					return await filter_mv(service = self.service, query_request = request, videos = videos, query_artists = artists, query_title = title, query_is_explicit = is_explicit, query_country_code = country_code)
 				else:
 					error = Error(
 						service = self.service,
 						component = self.component,
 						http_code = response.status,
 						error_msg = "HTTP error when searching for music video",
-						request = {'request': request, 'artists': artists, 'title': title, 'is_explicit': is_explicit}
+						request = {'request': request, 'artists': artists, 'title': title, 'is_explicit': is_explicit, 'country_code': country_code}
 					)
 					await log(error)
 					return error
 
 
 
-	async def search_collection(self, artists: list, title: str, year: int = None) -> object:
+	async def search_collection(self, artists: list, title: str, year: int = None, country_code: str = 'us') -> object:
 		async with aiohttp.ClientSession() as session:
 			request = 'search_collection'
 			artists = [optimize_for_search(artist) for artist in artists]
@@ -135,7 +135,7 @@ class AppleMusic:
 				'term': f'{artists[0]} "{title}"',
 				'entity': 'album',
 				'limit': 200,
-				'country': 'us'
+				'country': country_code.lower()
 			}
 
 			timeout = aiohttp.ClientTimeout(total = 30)
@@ -165,29 +165,29 @@ class AppleMusic:
 							cover_url = collection_cover,
 							api_response_time = end_time - start_time,
 							api_http_code = response.status,
-							request = {'request': request, 'artists': artists, 'title': title, 'year': year}
+							request = {'request': request, 'artists': artists, 'title': title, 'year': year, 'country_code': country_code}
 						))
-					return await filter_collection(service = self.service, query_request = request, collections = collections, query_artists = artists, query_title = title, query_year = year)
+					return await filter_collection(service = self.service, query_request = request, collections = collections, query_artists = artists, query_title = title, query_year = year, query_country_code = country_code)
 				else:
 					error = Error(
 						service = self.service,
 						component = self.component,
 						http_code = response.status,
 						error_msg = "HTTP error when searching for collection",
-						request = {'request': request, 'artists': artists, 'title': title, 'year': year}
+						request = {'request': request, 'artists': artists, 'title': title, 'year': year, 'country_code': country_code}
 					)
 					await log(error)
 					return error
 
 
 	
-	async def lookup_song(self, id: str, country_code: str) -> object:
+	async def lookup_song(self, id: str, country_code: str = 'us') -> object:
 		async with aiohttp.ClientSession() as session:
 			request = 'lookup_song'
 			api_url = f'https://itunes.apple.com/lookup'
 			api_params = {
 				'id': id,
-				'country': country_code
+				'country': country_code.lower()
 			}
 			timeout = aiohttp.ClientTimeout(total = 30)
 			start_time = current_unix_time_ms()
@@ -234,13 +234,13 @@ class AppleMusic:
 				
 
 
-	async def lookup_music_video(self, id: str, country_code: str) -> object:
+	async def lookup_music_video(self, id: str, country_code: str = 'us') -> object:
 		async with aiohttp.ClientSession() as session:
 			request = 'lookup_music_video'
 			api_url = f'https://itunes.apple.com/lookup'
 			api_params = {
 				'id': id,
-				'country': country_code
+				'country': country_code.lower()
 			}
 			timeout = aiohttp.ClientTimeout(total = 30)
 			start_time = current_unix_time_ms()
@@ -284,13 +284,13 @@ class AppleMusic:
 
 
 
-	async def lookup_collection(self, id: str, country_code: str) -> object:
+	async def lookup_collection(self, id: str, country_code: str = 'us') -> object:
 		async with aiohttp.ClientSession() as session:
 			request = 'lookup_collection'
 			api_url = f'https://itunes.apple.com/lookup'
 			api_params = {
 				'id': id,
-				'country': country_code
+				'country': country_code.lower()
 			}
 			timeout = aiohttp.ClientTimeout(total = 30)
 			start_time = current_unix_time_ms()
@@ -300,27 +300,52 @@ class AppleMusic:
 					collection = await response.json(content_type = 'text/javascript')
 					collection = collection['results'][0]
 
-					collection_type = ('album' if ' - EP' not in collection['collectionName'] else 'ep')
-					collection_url = collection['collectionViewUrl']
-					collection_id = collection['collectionId']
-					collection_title = clean_up_collection_title(collection['collectionName'])
-					collection_artists = await self.lookup_artist(id = collection['artistId'], country_code = country_code)
-					collection_year = collection['releaseDate'][:4]
-					collection_cover = collection['artworkUrl100']
-					end_time = current_unix_time_ms()
-					return Collection(
-						service = self.service,
-						type = collection_type,
-						url = collection_url,
-						id = collection_id,
-						title = collection_title,
-						artists = [collection_artists.name],
-						release_year = collection_year,
-						cover_url = collection_cover,
-						api_response_time = end_time - start_time,
-						api_http_code = response.status,
-						request = {'request': request, 'id': id, 'url': f'https://music.apple.com/{country_code}/album/{id}'}
-					)
+					if ' - Single' not in collection['collectionName']:
+						collection_type = ('album' if ' - EP' not in collection['collectionName'] else 'ep')
+						collection_url = collection['collectionViewUrl']
+						collection_id = collection['collectionId']
+						collection_title = clean_up_collection_title(collection['collectionName'])
+						collection_artists = await self.lookup_artist(id = collection['artistId'], country_code = country_code)
+						collection_year = collection['releaseDate'][:4]
+						collection_cover = collection['artworkUrl100']
+						end_time = current_unix_time_ms()
+						return Collection(
+							service = self.service,
+							type = collection_type,
+							url = collection_url,
+							id = collection_id,
+							title = collection_title,
+							artists = [collection_artists.name],
+							release_year = collection_year,
+							cover_url = collection_cover,
+							api_response_time = end_time - start_time,
+							api_http_code = response.status,
+							request = {'request': request, 'id': id, 'url': f'https://music.apple.com/{country_code}/album/{id}'}
+						)
+					else:
+						song_type = 'single'
+						song_url = collection['collectionViewUrl']
+						song_id = collection['collectionId']
+						song_title = collection['collectionName'].replace(' - Single', '')
+						song_artists = await self.lookup_artist(id = collection['artistId'], country_code = country_code)
+						song_cover = collection['artworkUrl100']
+						song_is_explicit = not 'not' in collection['collectionExplicitness']
+						song_collection = remove_feat(clean_up_collection_title(collection['collectionName']))
+						end_time = current_unix_time_ms()
+						return Song(
+							service = self.service,
+							type = song_type,
+							url = song_url,
+							id = song_id,
+							title = song_title,
+							artists = [song_artists.name],
+							collection = song_collection,
+							is_explicit = song_is_explicit,
+							cover_url = song_cover,
+							api_response_time = end_time - start_time,
+							api_http_code = response.status,
+							request = {'request': request, 'id': id, 'country_code': country_code, 'url': f'https://music.apple.com/{country_code}/album/{id}'}
+						)
 
 				else:
 					error = Error(
@@ -335,13 +360,13 @@ class AppleMusic:
 	
 
 
-	async def lookup_artist(self, id: str, country_code: str) -> object:
+	async def lookup_artist(self, id: str, country_code: str = 'us') -> object:
 		async with aiohttp.ClientSession() as session:
 			request = 'lookup_artist'
 			api_url = f'https://itunes.apple.com/lookup'
 			api_params = {
 				'id': id,
-				'country': country_code
+				'country': country_code.lower()
 			}
 			timeout = aiohttp.ClientTimeout(total = 30)
 			start_time = current_unix_time_ms()

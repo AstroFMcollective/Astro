@@ -86,7 +86,7 @@ async def get_data_from_urls(urls: str | list) -> list:
 		else:
 			new_urls.append(url)
 	urls = new_urls
-	def template(media: str, id: str, country_code: str = None):
+	def template(media: str, id: str, country_code: str = 'us'):
 		return {
 			'media': media,
 			'id': id,
@@ -232,5 +232,4 @@ async def get_data_from_urls(urls: str | list) -> list:
 						results.append(template(types[11], url[url.index('/video/') + 7:url.index('?u')]))
 					else:
 						results.append(template(types[11], url[url.index('/video/') + 7:]))
-
 	return results

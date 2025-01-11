@@ -4,7 +4,7 @@ from AstroAPI.components.text_manipulation import *
 
 
 
-async def filter_song(service: str, query_request: str, songs: list, query_artists: list, query_title: str, query_song_type: str = None, query_collection: str = None, query_is_explicit: bool = None) -> Song:
+async def filter_song(service: str, query_request: str, songs: list, query_artists: list, query_title: str, query_song_type: str = None, query_collection: str = None, query_is_explicit: bool = None, query_country_code: str = None) -> Song:
 	max_score = 2000
 	if query_collection != None:
 		max_score += 1000
@@ -55,21 +55,21 @@ async def filter_song(service: str, query_request: str, songs: list, query_artis
 		else:
 			response = Empty(
 				service = service,
-				request = {'request': query_request, 'artists': query_artists, 'title': query_title, 'song_type': query_song_type, 'collection': query_collection, 'is_explicit': query_is_explicit}
+				request = {'request': query_request, 'artists': query_artists, 'title': query_title, 'song_type': query_song_type, 'collection': query_collection, 'is_explicit': query_is_explicit, 'country_code': query_country_code}
 			)
 			await log(response)
 			return response
 	else:
 		response = Empty(
 			service = service,
-			request = {'request': query_request, 'artists': query_artists, 'title': query_title, 'song_type': query_song_type, 'collection': query_collection, 'is_explicit': query_is_explicit}
+			request = {'request': query_request, 'artists': query_artists, 'title': query_title, 'song_type': query_song_type, 'collection': query_collection, 'is_explicit': query_is_explicit, 'country_code': query_country_code}
 		)
 		await log(response)
 		return response
 
 
 
-async def filter_mv(service: str, query_request: str, videos: list, query_artists: list, query_title: str, query_is_explicit: bool = None) -> Song:
+async def filter_mv(service: str, query_request: str, videos: list, query_artists: list, query_title: str, query_is_explicit: bool = None, query_country_code: str = None) -> Song:
 	max_score = 2000
 	if query_is_explicit != None:
 		max_score += 500
@@ -106,21 +106,21 @@ async def filter_mv(service: str, query_request: str, videos: list, query_artist
 		else:
 			empty_response = Empty(
 				service = service,
-				request = {'request': query_request, 'artists': query_artists, 'title': query_title, 'is_explicit': query_is_explicit}
+				request = {'request': query_request, 'artists': query_artists, 'title': query_title, 'is_explicit': query_is_explicit, 'country_code': query_country_code}
 			)
 			await log(empty_response)
 			return empty_response
 	else:
 		empty_response = Empty(
 			service = service,
-			request = {'request': query_request, 'artists': query_artists, 'title': query_title, 'is_explicit': query_is_explicit}
+			request = {'request': query_request, 'artists': query_artists, 'title': query_title, 'is_explicit': query_is_explicit, 'country_code': query_country_code}
 		)
 		await log(empty_response)
 		return empty_response
 
 
 
-async def filter_collection(service: str, query_request: str, collections: list, query_artists: list, query_title: str, query_year: str = None) -> Collection:
+async def filter_collection(service: str, query_request: str, collections: list, query_artists: list, query_title: str, query_year: str = None, query_country_code: str = None) -> Collection:
 	max_score = 2000
 	if query_year != None:
 		max_score += 1000
@@ -157,14 +157,14 @@ async def filter_collection(service: str, query_request: str, collections: list,
 		else:
 			empty_response = Empty(
 				service = service,
-				request = {'request': query_request, 'artists': query_artists, 'title': query_title, 'year': query_year}
+				request = {'request': query_request, 'artists': query_artists, 'title': query_title, 'year': query_year, 'country_code': query_country_code}
 			)
 			await log(empty_response)
 			return empty_response
 	else:
 		empty_response = Empty(
 			service = service,
-			request = {'request': query_request, 'artists': query_artists, 'title': query_title, 'year': query_year}
+			request = {'request': query_request, 'artists': query_artists, 'title': query_title, 'year': query_year, 'country_code': query_country_code}
 		)
 		await log(empty_response)
 		return empty_response

@@ -21,17 +21,17 @@ class GlobalIO:
 
 
 
-	async def search_song(self, artists: list, title: str, song_type: str = None, collection: str = None, is_explicit: bool = None) -> object:
+	async def search_song(self, artists: list, title: str, song_type: str = None, collection: str = None, is_explicit: bool = None, country_code: str = 'us') -> object:
 		request = 'search_song'
 		try:
 			start_time = current_unix_time_ms()
 			tasks = [
-				create_task(Spotify.search_song(artists, title, song_type, collection, is_explicit), name = Spotify.service),
-				create_task(AppleMusic.search_song(artists, title, song_type, collection, is_explicit), name = AppleMusic.service),
-				create_task(YouTubeMusic.search_song(artists, title, song_type, collection, is_explicit), name = YouTubeMusic.service),
-				create_task(Deezer.search_song(artists, title, song_type, collection, is_explicit), name = Deezer.service),
-				create_task(Tidal.search_song(artists, title, song_type, collection, is_explicit), name = Tidal.service),
-				create_task(Genius.search_song(artists, title, song_type, collection, is_explicit), name = Genius.service)
+				create_task(Spotify.search_song(artists, title, song_type, collection, is_explicit, country_code), name = Spotify.service),
+				create_task(AppleMusic.search_song(artists, title, song_type, collection, is_explicit, country_code), name = AppleMusic.service),
+				create_task(YouTubeMusic.search_song(artists, title, song_type, collection, is_explicit, country_code), name = YouTubeMusic.service),
+				create_task(Deezer.search_song(artists, title, song_type, collection, is_explicit, country_code), name = Deezer.service),
+				create_task(Tidal.search_song(artists, title, song_type, collection, is_explicit, country_code), name = Tidal.service),
+				create_task(Genius.search_song(artists, title, song_type, collection, is_explicit, country_code), name = Genius.service)
 			]
 
 			unlabeled_results = await gather(*tasks)
@@ -111,13 +111,13 @@ class GlobalIO:
 					cover_url = result_cover,
 					api_response_time = end_time - start_time,
 					api_http_code = 200,
-					request = {'request': request, 'artists': artists, 'title': title, 'song_type': song_type, 'collection': collection, 'is_explicit': is_explicit}
+					request = {'request': request, 'artists': artists, 'title': title, 'song_type': song_type, 'collection': collection, 'is_explicit': is_explicit, 'country_code': country_code}
 				)
 
 			else:
 				empty_response = Empty(
 					service = self.service,
-					request = {'request': request, 'artists': artists, 'title': title, 'song_type': song_type, 'collection': collection, 'is_explicit': is_explicit}
+					request = {'request': request, 'artists': artists, 'title': title, 'song_type': song_type, 'collection': collection, 'is_explicit': is_explicit, 'country_code': country_code}
 				)
 				await log(empty_response)
 				return empty_response
@@ -127,21 +127,21 @@ class GlobalIO:
 				service = self.service,
 				component = self.component,
 				error_msg = f'Error when searching for song: "{msg}"',
-				request = {'request': request, 'artists': artists, 'title': title, 'song_type': song_type, 'collection': collection, 'is_explicit': is_explicit}
+				request = {'request': request, 'artists': artists, 'title': title, 'song_type': song_type, 'collection': collection, 'is_explicit': is_explicit, 'country_code': country_code}
 			)
 			await log(error)
 			return error
 
 
 	
-	async def search_music_video(self, artists: list, title: str, is_explicit: bool = None) -> object:
+	async def search_music_video(self, artists: list, title: str, is_explicit: bool = None, country_code: str = 'us') -> object:
 		request = 'search_music_video'
 		try:
 			start_time = current_unix_time_ms()
 			tasks = [
-				create_task(AppleMusic.search_music_video(artists, title, is_explicit), name = AppleMusic.service),
-				create_task(YouTubeMusic.search_music_video(artists, title), name = YouTubeMusic.service),
-				create_task(Tidal.search_music_video(artists, title, is_explicit), name = Tidal.service),
+				create_task(AppleMusic.search_music_video(artists, title, is_explicit, country_code), name = AppleMusic.service),
+				create_task(YouTubeMusic.search_music_video(artists, title, is_explicit, country_code), name = YouTubeMusic.service),
+				create_task(Tidal.search_music_video(artists, title, is_explicit, country_code), name = Tidal.service),
 			]
 
 			unlabeled_results = await gather(*tasks)
@@ -201,14 +201,14 @@ class GlobalIO:
 					thumbnail_url = result_cover,
 					api_response_time = end_time - start_time,
 					api_http_code = 200,
-					request = {'request': request, 'artists': artists, 'title': title, 'is_explicit': is_explicit}
+					request = {'request': request, 'artists': artists, 'title': title, 'is_explicit': is_explicit, 'country_code': country_code}
 
 				)
 
 			else:
 				return Empty(
 					service = self.service,
-					request = {'request': request, 'artists': artists, 'title': title, 'is_explicit': is_explicit}
+					request = {'request': request, 'artists': artists, 'title': title, 'is_explicit': is_explicit, 'country_code': country_code}
 				)
 
 		except Exception as msg:
@@ -216,24 +216,23 @@ class GlobalIO:
 				service = self.service,
 				component = self.component,
 				error_msg = f'Error when searching for music video: "{msg}"',
-				request = {'request': request, 'artists': artists, 'title': title, 'is_explicit': is_explicit}
+				request = {'request': request, 'artists': artists, 'title': title, 'is_explicit': is_explicit, 'country_code': country_code}
 			)
 			await log(error)
 			return error
 
 
 
-	async def search_collection(self, artists: list, title: str, year: int = None) -> object:
+	async def search_collection(self, artists: list, title: str, year: int = None, country_code: str = 'us') -> object:
 		request = 'search_collection'
 		try:
 			start_time = current_unix_time_ms()
 			tasks = [
-				create_task(Spotify.search_collection(artists, title, year), name = Spotify.service),
-				create_task(AppleMusic.search_collection(artists, title, year), name = AppleMusic.service),
-				create_task(YouTubeMusic.search_collection(artists, title, year), name = YouTubeMusic.service),
-				create_task(Deezer.search_collection(artists, title, year), name = Deezer.service),
-				create_task(Tidal.search_collection(artists, title, year), name = Tidal.service),
-				create_task(Genius.search_collection(artists, title, year), name = Genius.service)
+				create_task(Spotify.search_collection(artists, title, year, country_code), name = Spotify.service),
+				create_task(AppleMusic.search_collection(artists, title, year, country_code), name = AppleMusic.service),
+				create_task(YouTubeMusic.search_collection(artists, title, year, country_code), name = YouTubeMusic.service),
+				create_task(Deezer.search_collection(artists, title, year, country_code), name = Deezer.service),
+				create_task(Tidal.search_collection(artists, title, year, country_code), name = Tidal.service),
 			]
 
 			unlabeled_results = await gather(*tasks)
@@ -241,13 +240,13 @@ class GlobalIO:
 			for result in unlabeled_results:
 				labeled_results[result.service] = result
 
-			services = [Spotify.service, AppleMusic.service, YouTubeMusic.service, Deezer.service, Tidal.service, Genius.service]
+			services = [Spotify.service, AppleMusic.service, YouTubeMusic.service, Deezer.service, Tidal.service]
 			
-			type_order = [Spotify.service, AppleMusic.service, YouTubeMusic.service, Deezer.service, Tidal.service, Genius.service]
-			title_order = [Spotify.service, AppleMusic.service, YouTubeMusic.service, Deezer.service, Tidal.service, Genius.service]
-			artists_order = [Spotify.service, Tidal.service, YouTubeMusic.service, Deezer.service, AppleMusic.service, Genius.service]
-			release_year_order = [Spotify.service, AppleMusic.service, YouTubeMusic.service, Deezer.service, Tidal.service, Genius.service]
-			cover_order = [Tidal.service, Deezer.service, Spotify.service, AppleMusic.service, YouTubeMusic.service, Genius.service]
+			type_order = [Spotify.service, AppleMusic.service, YouTubeMusic.service, Deezer.service, Tidal.service]
+			title_order = [Spotify.service, AppleMusic.service, YouTubeMusic.service, Deezer.service, Tidal.service]
+			artists_order = [Spotify.service, Tidal.service, YouTubeMusic.service, Deezer.service, AppleMusic.service]
+			release_year_order = [Spotify.service, AppleMusic.service, YouTubeMusic.service, Deezer.service, Tidal.service]
+			cover_order = [Tidal.service, Deezer.service, Spotify.service, AppleMusic.service, YouTubeMusic.service]
 
 			for service in services:
 				if labeled_results[service].type != 'album' and labeled_results[service].type != 'ep':
@@ -299,13 +298,13 @@ class GlobalIO:
 					cover_url = result_cover,
 					api_response_time = end_time - start_time,
 					api_http_code = 200,
-					request = {'request': request, 'artists': artists, 'title': title, 'year': year}
+					request = {'request': request, 'artists': artists, 'title': title, 'year': year, 'country_code': country_code}
 				)
 
 			else:
 				empty_response = Empty(
 					service = service,
-					request = {'request': request, 'artists': artists, 'title': title, 'year': year}
+					request = {'request': request, 'artists': artists, 'title': title, 'year': year, 'country_code': country_code}
 				)
 				await log(empty_response)
 				return empty_response
@@ -315,31 +314,31 @@ class GlobalIO:
 				service = self.service,
 				component = self.component,
 				error_msg = f'Error when searching for collection: "{msg}"',
-				request = {'request': request, 'artists': artists, 'title': title, 'year': year}
+				request = {'request': request, 'artists': artists, 'title': title, 'year': year, 'country_code': country_code}
 			)
 			await log(error)
 			return error
 
 
 
-	async def search_query(self, query: str) -> object:
+	async def search_query(self, query: str, country_code: str = 'us') -> object:
 		try:
 			request = 'search_query'
 			result = await YouTubeMusic.search_query(query)
 
 			if result.type == 'track' or result.type == 'single':
-				return await self.search_song([' '.join(result.artists)], result.title, result.type, result.collection, result.is_explicit)
+				return await self.search_song(result.artists, result.title, result.type, result.collection, result.is_explicit, country_code)
 			
 			elif result.type == 'album' or result.type == 'ep':
-				return await self.search_collection([' '.join(result.artists)], result.title, result.release_year)
+				return await self.search_collection(result.artists, result.title, result.release_year, country_code)
 			
 			elif result.type == 'music_video':
-				return await self.search_music_video([' '.join(result.artists)], result.title, result.is_explicit)
+				return await self.search_music_video(result.artists, result.title, result.is_explicit, country_code)
 			
 			else:
 				empty_response = Empty(
 					service = self.service,
-					request = {'request': request, 'query': query}
+					request = {'request': request, 'query': query, 'country_code': country_code}
 				)
 				await log(empty_response)
 				return empty_response
@@ -349,7 +348,7 @@ class GlobalIO:
 				service = self.service,
 				component = self.component,
 				error_msg = f'Error when doing general query search: "{msg}"',
-				request = {'request': request, 'query': query}
+				request = {'request': request, 'query': query, 'country_code': country_code}
 
 			)
 			await log(error)
@@ -357,13 +356,13 @@ class GlobalIO:
 
 
 
-	async def lookup_song(self, service: object, id: str, country_code: str = None) -> object:
+	async def lookup_song(self, service: object, id: str, song_country_code: str = None, lookup_country_code: str = 'us') -> object:
 		request = 'lookup_song'
 		try:
 			start_time = current_unix_time_ms()
 
 			if service == AppleMusic:
-				song = await service.lookup_song(id = id, country_code = country_code)
+				song = await service.lookup_song(id = id, country_code = song_country_code)
 			else:
 				song = await service.lookup_song(id = id)
 
@@ -387,9 +386,9 @@ class GlobalIO:
 			tasks = []
 			for service_obj in service_objects:
 				tasks.append(
-					create_task(service_obj.search_song(song.artists, remove_feat(song.title), song.type, song.collection, song.is_explicit), name = service_obj.service)
+					create_task(service_obj.search_song(song.artists, remove_feat(song.title), song.type, song.collection, song.is_explicit, lookup_country_code), name = service_obj.service)
 					if song.type == 'track' or song.type == 'single' else
-					create_task(service_obj.search_song(song.artists, remove_feat(song.title), song.type, is_explicit = song.is_explicit), name = service_obj.service)
+					create_task(service_obj.search_song(song.artists, remove_feat(song.title), song.type, is_explicit = song.is_explicit, country_code = lookup_country_code), name = service_obj.service)
 				)
 			
 			unlabeled_results = await gather(*tasks)
@@ -469,13 +468,13 @@ class GlobalIO:
 					cover_url = result_cover,
 					api_response_time = end_time - start_time,
 					api_http_code = 200,
-					request = {'request': request, 'id': id, 'country_code': country_code}
+					request = {'request': request, 'id': id, 'song_country_code': song_country_code, 'lookup_country_code': lookup_country_code}
 				)
 
 			else:
 				empty_response = Empty(
 					service = self.service,
-					request = {'request': request, 'id': id, 'country_code': country_code}
+					request = {'request': request, 'id': id, 'song_country_code': song_country_code, 'lookup_country_code': lookup_country_code}
 				)
 				await log(empty_response)
 				return empty_response
@@ -485,20 +484,20 @@ class GlobalIO:
 				service = self.service,
 				component = self.component,
 				error_msg = f'Error when looking up song: "{msg}"',
-				request = {'request': request, 'id': id, 'country_code': country_code}
+				request = {'request': request, 'id': id, 'song_country_code': song_country_code, 'lookup_country_code': lookup_country_code}
 			)
 			await log(error)
 			return error
 
 
 
-	async def lookup_music_video(self, service: object, id: str, country_code: str = None) -> object:
-			request = 'lookup_music_video'
-		#try:
+	async def lookup_music_video(self, service: object, id: str, mv_country_code: str = None, lookup_country_code: str = 'us') -> object:
+		request = 'lookup_music_video'
+		try:
 			start_time = current_unix_time_ms()
 
 			if service == AppleMusic:
-				video = await service.lookup_music_video(id = id, country_code = country_code)
+				video = await service.lookup_music_video(id = id, country_code = mv_country_code)
 			elif service == YouTubeMusic:
 				video = await service.lookup_song(id = id)
 			else:
@@ -519,7 +518,7 @@ class GlobalIO:
 			tasks = []
 			for service_obj in service_objects:
 				tasks.append(
-					create_task(service_obj.search_music_video(video.artists, video.title, video.is_explicit), name = service_obj.service)
+					create_task(service_obj.search_music_video(video.artists, video.title, video.is_explicit, lookup_country_code), name = service_obj.service)
 				)
 			
 			unlabeled_results = await gather(*tasks)
@@ -582,54 +581,54 @@ class GlobalIO:
 					thumbnail_url = result_cover,
 					api_response_time = end_time - start_time,
 					api_http_code = 200,
-					request = {'request': request, 'id': id, 'country_code': country_code}
+					request = {'request': request, 'id': id, 'mv_country_code': mv_country_code, 'lookup_country_code': lookup_country_code}
 				)
 
 			else:
 				return Empty(
 					service = self.service,
-					request = {'request': request, 'id': id, 'country_code': country_code}
+					request = {'request': request, 'id': id, 'mv_country_code': mv_country_code, 'lookup_country_code': lookup_country_code}
 				)
 
-		#except Exception as msg:
-		#	error = Error(
-		#		service = self.service,
-		#		component = self.component,
-		#		error_msg = f'Error when looking up music video: "{msg}"',
-		#		request = {'request': request, 'id': id, 'country_code': country_code}
-		#	)
-		#	await log(error)
-		#	return error
+		except Exception as msg:
+			error = Error(
+				service = self.service,
+				component = self.component,
+				error_msg = f'Error when looking up music video: "{msg}"',
+				request = {'request': request, 'id': id, 'mv_country_code': mv_country_code, 'lookup_country_code': lookup_country_code}
+			)
+			await log(error)
+			return error
 		
 
 
-	async def lookup_collection(self, service: object, id: str, country_code: str = None) -> object:
+	async def lookup_collection(self, service: object, id: str, collection_country_code: str = None, lookup_country_code: str = 'us') -> object:
 		request = 'lookup_collection'
 		try:
 			start_time = current_unix_time_ms()
 
 			if service == AppleMusic:
-				collection = await service.lookup_collection(id = id, country_code = country_code)
+				collection = await service.lookup_collection(id = id, country_code = collection_country_code)
 			else:
 				collection = await service.lookup_collection(id = id)
 
 			if collection.type != 'album' and collection.type != 'ep':
 				return collection
 			
-			service_objects = [Spotify, AppleMusic, YouTubeMusic, Deezer, Tidal, Genius]
-			services = [Spotify.service, AppleMusic.service, YouTubeMusic.service, Deezer.service, Tidal.service, Genius.service]
+			service_objects = [Spotify, AppleMusic, YouTubeMusic, Deezer, Tidal]
+			services = [Spotify.service, AppleMusic.service, YouTubeMusic.service, Deezer.service, Tidal.service]
 			service_objects.remove(service)
 
-			type_order = [Spotify.service, AppleMusic.service, YouTubeMusic.service, Deezer.service, Tidal.service, Genius.service]
-			title_order = [Spotify.service, AppleMusic.service, YouTubeMusic.service, Deezer.service, Tidal.service, Genius.service]
-			artists_order = [Spotify.service, Tidal.service, YouTubeMusic.service, Deezer.service, AppleMusic.service, Genius.service]
-			release_year_order = [Spotify.service, AppleMusic.service, YouTubeMusic.service, Deezer.service, Tidal.service, Genius.service]
-			cover_order = [Tidal.service, Deezer.service, Spotify.service, AppleMusic.service, YouTubeMusic.service, Genius.service]
+			type_order = [Spotify.service, AppleMusic.service, YouTubeMusic.service, Deezer.service, Tidal.service]
+			title_order = [Spotify.service, AppleMusic.service, YouTubeMusic.service, Deezer.service, Tidal.service]
+			artists_order = [Spotify.service, Tidal.service, YouTubeMusic.service, Deezer.service, AppleMusic.service]
+			release_year_order = [Spotify.service, AppleMusic.service, YouTubeMusic.service, Deezer.service, Tidal.service]
+			cover_order = [Tidal.service, Deezer.service, Spotify.service, AppleMusic.service, YouTubeMusic.service]
 
 			tasks = []
 			for service_obj in service_objects:
 				tasks.append(
-					create_task(service_obj.search_collection([' '.join(collection.artists)], collection.title, collection.release_year), name = service_obj.service)
+					create_task(service_obj.search_collection(collection.artists, collection.title, collection.release_year, lookup_country_code), name = service_obj.service)
 				)
 			
 			unlabeled_results = await gather(*tasks)
@@ -697,13 +696,13 @@ class GlobalIO:
 					cover_url = result_cover,
 					api_response_time = end_time - start_time,
 					api_http_code = 200,
-					request = {'request': request, 'id': id, 'country_code': country_code}
+					request = {'request': request, 'id': id, 'collection_country_code': collection_country_code, 'lookup_country_code': lookup_country_code}
 				)
 
 			else:
 				return Empty(
 					service = self.service,
-					request = {'request': request, 'id': id, 'country_code': country_code}
+					request = {'request': request, 'id': id, 'collection_country_code': collection_country_code, 'lookup_country_code': lookup_country_code}
 				)
 
 		except Exception as msg:
@@ -711,7 +710,7 @@ class GlobalIO:
 				service = self.service,
 				component = self.component,
 				error_msg = f'Error when looking up collection: "{msg}"',
-				request = {'request': request, 'id': id, 'country_code': country_code}
+				request = {'request': request, 'id': id, 'collection_country_code': collection_country_code, 'lookup_country_code': lookup_country_code}
 			)
 			await log(error)
 			return error
