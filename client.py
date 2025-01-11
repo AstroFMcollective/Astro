@@ -111,7 +111,7 @@ async def on_message(message):
 				media_type = data[0]['media']
 				media_id = data[0]['id']
 				media_country_code = data[0]['country_code']
-				media_object = await link_lookup_functions[types.index(media_type)](link_lookup_function_objects[types.index(media_type)], media_id, media_country_code)
+				media_object = await link_lookup_functions[types.index(media_type)](link_lookup_function_objects[types.index(media_type)], media_id, media_country_code, media_country_code)
 				media_embed = Embed(
 					command = 'link',
 					media_object = media_object,
@@ -127,7 +127,7 @@ async def on_message(message):
 					media_id = entry['id']
 					media_country_code = entry['country_code']
 					tasks.append(
-						create_task(link_lookup_functions[types.index(media_type)](link_lookup_function_objects[types.index(media_type)], media_id, media_country_code))
+						create_task(link_lookup_functions[types.index(media_type)](link_lookup_function_objects[types.index(media_type)], media_id, media_country_code, media_country_code))
 					)
 
 				results = await gather(*tasks)
@@ -182,17 +182,19 @@ async def on_message(message):
 @app_commands.describe(title = 'The title of the song you want to search (ex. "NEW MAGIC WAND")')
 @app_commands.describe(from_album = 'The album, EP or collection of the song you want to search, helps with precision (ex. "IGOR")')
 @app_commands.describe(is_explicit = 'Whether the song you want to search has explicit content (has the little [E] badge next to its name on streaming platforms), helps with precision')
+@app_commands.describe(country_code = 'The country code of the country in which you want to search, US by default')
 @app_commands.guild_install()
 @app_commands.user_install()
 @app_commands.allowed_contexts(guilds = True, dms = True, private_channels = True)
-async def searchsong(interaction: discord.Interaction, artist: str, title: str, from_album: str = None, is_explicit: bool = None):
+async def searchsong(interaction: discord.Interaction, artist: str, title: str, from_album: str = None, is_explicit: bool = None, country_code: str = 'us'):
 	start_time = current_unix_time_ms()
 	await interaction.response.defer()
 	song = await astro.Global.search_song(
 		artists = [artist],
 		title = title,
 		collection = from_album,
-		is_explicit = is_explicit
+		is_explicit = is_explicit,
+		country_code = country_code
 	)
 	embeds = Embed(
 		command = 'search',
@@ -215,7 +217,7 @@ async def searchsong(interaction: discord.Interaction, artist: str, title: str, 
 		log_embeds = [embeds.log_embed],
 		media = [song],
 		command = 'searchalbum',
-		parameters = f'artist:`{artist}` title:`{title}` from_album:`{from_album}` is_explicit:`{is_explicit}`',
+		parameters = f'artist:`{artist}` title:`{title}` from_album:`{from_album}` is_explicit:`{is_explicit}` country_code:`{country_code}`',
 		latency = total_time
 	)
 
@@ -225,16 +227,18 @@ async def searchsong(interaction: discord.Interaction, artist: str, title: str, 
 @app_commands.describe(artist = 'The artist of the album you want to search (ex. "Kendrick Lamar")')
 @app_commands.describe(title = 'The title of the album you want to search (ex. "To Pimp A Butterfly")')
 @app_commands.describe(year = 'The release year of the album you want to search, helps with precision (ex. "2015")')
+@app_commands.describe(country_code = 'The country code of the country in which you want to search, US by default')
 @app_commands.guild_install()
 @app_commands.user_install()
 @app_commands.allowed_contexts(guilds = True, dms = True, private_channels = True)
-async def searchcollection(interaction: discord.Interaction, artist: str, title: str, year: int = None):
+async def searchcollection(interaction: discord.Interaction, artist: str, title: str, year: int = None, country_code: str = 'us'):
 	start_time = current_unix_time_ms()
 	await interaction.response.defer()
 	collection = await astro.Global.search_collection(
 		artists = [artist],
 		title = title,
-		year = year
+		year = year,
+		country_code = country_code
 	)
 	embeds = Embed(
 		command = 'search',
@@ -257,7 +261,7 @@ async def searchcollection(interaction: discord.Interaction, artist: str, title:
 		log_embeds = [embeds.log_embed],
 		media = [collection],
 		command = 'searchalbum',
-		parameters = f'artist:`{artist}` title:`{title}` year:`{year}`',
+		parameters = f'artist:`{artist}` title:`{title}` year:`{year}` country_code:`{country_code}`',
 		latency = total_time
 	)
 
@@ -265,21 +269,30 @@ async def searchcollection(interaction: discord.Interaction, artist: str, title:
 
 @tree.command(name = 'lookup', description = 'Search a song, music video, album or EP from a query or its link')
 @app_commands.describe(query = 'Search query or the link of the media you want to search')
+@app_commands.describe(country_code = 'The country code of the country in which you want to search, US by default')
 @app_commands.guild_install()
 @app_commands.user_install()
 @app_commands.allowed_contexts(guilds = True, dms = True, private_channels = True)
-async def lookup(interaction: discord.Interaction, query: str):
+async def lookup(interaction: discord.Interaction, query: str, country_code: str = 'us'):
+	request = '/lookup'
 	start_time = current_unix_time_ms()
 	await interaction.response.defer()
 	urls = find_urls(query)
 	data = await get_data_from_urls(urls)
-	if data == []:
+	if data == [] and len(urls) == 0:
 		media_object = await astro.Global.search_query(query = query)
+	elif data == [] and len(urls) >= 1:
+		media_object = astro.Error(
+			service = service,
+			component = '`/lookup`',
+			error_msg = text['error']['invalid_link'],
+			request = {'request': request, 'query': query, 'country_code': country_code}
+		)
 	else:
 		media_type = data[0]['media']
 		media_id = data[0]['id']
 		media_country_code = data[0]['country_code']
-		media_object = await link_lookup_functions[types.index(media_type)](link_lookup_function_objects[types.index(media_type)], media_id, media_country_code)
+		media_object = await link_lookup_functions[types.index(media_type)](link_lookup_function_objects[types.index(media_type)], media_id, media_country_code, country_code)
 	embeds = Embed(
 		command = 'search',
 		media_object = media_object,
@@ -332,9 +345,9 @@ async def snoop(interaction: discord.Interaction, user: discord.Member = None, e
 	
 	if identifier == None:
 		if user == interaction.user:
-			error_msg = text['embed']['snoop_you_errormsg']
+			error_msg = text['error']['no_spotify_you']
 		else:
-			error_msg = text['embed']['snoop_someone_errormsg']
+			error_msg = text['error']['no_spotify_someone']
 		song = astro.Error(
 			service = service,
 			component = 'Snoop',
@@ -389,7 +402,7 @@ async def coverart(interaction: discord.Interaction, link: str):
 		media_object = astro.Error(
 			service = service,
 			component = '`/coverart`',
-			error_msg = text['embed']['cover_errormsg'],
+			error_msg = text['error']['invalid_link'],
 			request = {'request': request, 'url': link}
 		)
 	else:
@@ -480,7 +493,7 @@ async def context_menu_lookup(interaction: discord.Interaction, message: discord
 		media_object = astro.Error(
 			service = service,
 			component = 'Context Menu Link Lookup',
-			error_msg = text['embed']['context_menu_link_lookup_errormsg'],
+			error_msg = text['error']['no_links_detected'],
 			request = {'request': request, 'urls': urls}
 		)
 		media_embed = Embed(
