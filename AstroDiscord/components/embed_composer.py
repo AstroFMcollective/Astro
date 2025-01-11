@@ -7,10 +7,10 @@ from AstroDiscord.components.image_hex import image_hex
 class Embed:
     def __init__(self, command: str, media_object: object, user: object, censored: bool = False):
         self.custom_errors = [
-            text['embed']['snoop_you_errormsg'],
-            text['embed']['snoop_someone_errormsg'],
-            text['embed']['cover_errormsg'],
-            text['embed']['context_menu_link_lookup_errormsg'],
+            text['error']['no_spotify_you'],
+            text['error']['no_spotify_someone'],
+            text['error']['invalid_link'],
+            text['error']['no_links_detected'],
         ]
 
         if media_object.type != 'empty_response' and media_object.type != 'error':
@@ -25,7 +25,7 @@ class Embed:
     def create_embed(self, command: str, media_object: object, user: object, censored: bool, anonymous: bool):
         if media_object.type == 'empty_response' or media_object.type == 'error':
             embed = discord.Embed(
-                title = text['embed']['errortitle'],
+                title = text['error']['title'],
                 color = 0xf5c000
             )
 
@@ -33,10 +33,10 @@ class Embed:
                 if media_object.error_msg in self.custom_errors:
                     error_msg = media_object.error_msg
                 else:
-                    error_msg = text['embed']['errormsg'] if media_object.type == 'error' else text['embed']['emptymsg']
+                    error_msg = text['error']['generic'] if media_object.type == 'error' else text['error']['empty_response']
             
             if media_object.type == 'empty_response':
-                error_msg = text['embed']['emptymsg']
+                error_msg = text['error']['empty_response']
 
             embed.add_field(
                 name = '',
@@ -46,7 +46,7 @@ class Embed:
                 
             embed.set_footer(
                 text = text['embed']['tymsg'],
-                icon_url = text['embed']['pfpurl']
+                icon_url = text['images']['pfpurl']
             )
 
             return embed
@@ -108,7 +108,7 @@ class Embed:
 
         embed.set_footer(
             text = text['embed']['tymsg'],
-            icon_url = text['embed']['pfpurl']
+            icon_url = text['images']['pfpurl']
         )
 
         return embed
@@ -117,5 +117,5 @@ class Embed:
         anchor = []
         urls = media_object.url
         for url in urls:
-            anchor.append(text['anchor'][url].replace('URL', urls[url]))
+            anchor.append(text['anchor'][url].replace('URL', urls[url]).replace('NOTEXT',''))
         return '\n'.join(anchor)
