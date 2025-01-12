@@ -28,6 +28,9 @@ component = 'Discord Client'
 deployment_channel = config['client']['deployment_channel']
 app_start_time = current_unix_time()
 total_requests = []
+embed_reactions = ['🔥','🗑️']
+recognized_message_reaction = ['❗']
+not_found_reaction = ['🤷']
 intents = discord.Intents.all()
 intents.message_content = True
 intents.presences = True
@@ -96,7 +99,6 @@ async def on_ready():
 @client.event
 async def on_message(message):
 	if message.author != client.user:
-		start_time = current_unix_time_ms()
 		urls = find_urls(message.content)
 		data = await get_data_from_urls(urls)
 
@@ -107,6 +109,8 @@ async def on_message(message):
 		tasks = []
 
 		if data != []:
+			await add_reactions(message, recognized_message_reaction)
+			start_time = current_unix_time_ms()
 			if len(data) == 1:
 				media_type = data[0]['media']
 				media_id = data[0]['id']
@@ -154,6 +158,8 @@ async def on_message(message):
 				if obj.type not in invalid_responses:
 					api_request_latency += obj.api_response_time
 			api_request_latency = api_request_latency // len(media_objects)
+			if await check_for_reaction(message, '❗'):
+				await message.remove_reaction('❗', client.user)
 			message_embed = await message.reply(embeds = embeds, mention_author = False)
 
 		end_time = current_unix_time_ms()
@@ -161,11 +167,13 @@ async def on_message(message):
 
 		if embeds != []:
 			log_request(api_request_latency, total_time - api_request_latency, 'success')
-			await add_reactions(message_embed, ['👍','👎'])
+			await add_reactions(message_embed, embed_reactions)
 			
 		else:
 			log_request(api_request_latency, total_time - api_request_latency, 'failure')
-			await add_reactions(message, ['🤷'])
+			await add_reactions(message, not_found_reaction)
+			if await check_for_reaction(message, '❗'):
+				await message.remove_reaction('❗', client.user)
 
 		await log(
 			log_embeds = log_embeds,
@@ -209,7 +217,7 @@ async def searchsong(interaction: discord.Interaction, artist: str, title: str, 
 
 	if song.type not in invalid_responses:
 		log_request(song.api_response_time, total_time - song.api_response_time, 'success')
-		await add_reactions(embed, ['👍','👎'])
+		await add_reactions(embed, embed_reactions)
 	else:
 		log_request(0, total_time, 'failure')
 
@@ -253,7 +261,7 @@ async def searchcollection(interaction: discord.Interaction, artist: str, title:
 
 	if collection.type not in invalid_responses:
 		log_request(collection.api_response_time, total_time - collection.api_response_time, 'success')
-		await add_reactions(embed, ['👍','👎'])
+		await add_reactions(embed, embed_reactions)
 	else:
 		log_request(0, total_time, 'failure')
 
@@ -292,7 +300,10 @@ async def lookup(interaction: discord.Interaction, query: str, country_code: str
 		media_type = data[0]['media']
 		media_id = data[0]['id']
 		media_country_code = data[0]['country_code']
-		media_object = await link_lookup_functions[types.index(media_type)](link_lookup_function_objects[types.index(media_type)], media_id, media_country_code, country_code)
+		if country_code != 'us':
+			media_object = await link_lookup_functions[types.index(media_type)](link_lookup_function_objects[types.index(media_type)], media_id, media_country_code, media_country_code)
+		else:
+			media_object = await link_lookup_functions[types.index(media_type)](link_lookup_function_objects[types.index(media_type)], media_id, media_country_code, country_code)
 	embeds = Embed(
 		command = 'search',
 		media_object = media_object,
@@ -306,7 +317,7 @@ async def lookup(interaction: discord.Interaction, query: str, country_code: str
 
 	if media_object.type not in invalid_responses:
 		log_request(media_object.api_response_time, total_time - media_object.api_response_time, 'success')
-		await add_reactions(embed, ['👍','👎'])
+		await add_reactions(embed, embed_reactions)
 	else:
 		log_request(0, total_time, 'failure')
 
@@ -373,7 +384,7 @@ async def snoop(interaction: discord.Interaction, user: discord.Member = None, e
 
 	if song.type not in invalid_responses:
 		log_request(song.api_response_time, total_time - song.api_response_time, 'success')
-		await add_reactions(embed, ['👍','👎'])
+		await add_reactions(embed, embed_reactions)
 	else:
 		log_request(0, total_time, 'failure')
 
@@ -424,7 +435,7 @@ async def coverart(interaction: discord.Interaction, link: str):
 
 	if media_object.type not in invalid_responses:
 		log_request(media_object.api_response_time, total_time - media_object.api_response_time, 'success')
-		await add_reactions(embed, ['🔥','🗑️'])
+		await add_reactions(embed, embed_reactions)
 	else:
 		log_request(0, total_time, 'failure')
 
@@ -520,7 +531,7 @@ async def context_menu_lookup(interaction: discord.Interaction, message: discord
 
 	if media_object.type not in invalid_responses:
 		log_request(api_request_latency, total_time - api_request_latency, 'success')
-		await add_reactions(message_embed, ['👍','👎'])
+		await add_reactions(message_embed, embed_reactions)
 	else:
 		log_request(api_request_latency, total_time - api_request_latency, 'failure')
 
