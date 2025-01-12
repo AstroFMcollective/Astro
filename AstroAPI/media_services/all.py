@@ -28,7 +28,6 @@ class GlobalIO:
 
 			service_objs = [Spotify, AppleMusic, YouTubeMusic, Deezer, Tidal, Genius]
 			
-
 			tasks = []
 			for obj in service_objs:
 				if obj.service not in exclude_services:
@@ -42,8 +41,6 @@ class GlobalIO:
 					service = service,
 					request = {'request': 'terminated'}
 				))
-			
-			print(unlabeled_results)
 
 			labeled_results = {}
 			for result in unlabeled_results:
