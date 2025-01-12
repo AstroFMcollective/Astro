@@ -21,20 +21,30 @@ class GlobalIO:
 
 
 
-	async def search_song(self, artists: list, title: str, song_type: str = None, collection: str = None, is_explicit: bool = None, country_code: str = 'us') -> object:
+	async def search_song(self, artists: list, title: str, song_type: str = None, collection: str = None, is_explicit: bool = None, country_code: str = 'us', exclude_services: list = []) -> object:
 		request = 'search_song'
 		try:
 			start_time = current_unix_time_ms()
-			tasks = [
-				create_task(Spotify.search_song(artists, title, song_type, collection, is_explicit, country_code), name = Spotify.service),
-				create_task(AppleMusic.search_song(artists, title, song_type, collection, is_explicit, country_code), name = AppleMusic.service),
-				create_task(YouTubeMusic.search_song(artists, title, song_type, collection, is_explicit, country_code), name = YouTubeMusic.service),
-				create_task(Deezer.search_song(artists, title, song_type, collection, is_explicit, country_code), name = Deezer.service),
-				create_task(Tidal.search_song(artists, title, song_type, collection, is_explicit, country_code), name = Tidal.service),
-				create_task(Genius.search_song(artists, title, song_type, collection, is_explicit, country_code), name = Genius.service)
-			]
+
+			service_objs = [Spotify, AppleMusic, YouTubeMusic, Deezer, Tidal, Genius]
+			
+
+			tasks = []
+			for obj in service_objs:
+				if obj.service not in exclude_services:
+					tasks.append(
+						create_task(obj.search_song(artists, title, song_type, collection, is_explicit, country_code), name = obj.service)
+					)
 
 			unlabeled_results = await gather(*tasks)
+			for service in exclude_services:
+				unlabeled_results.append(Empty(
+					service = service,
+					request = {'request': 'terminated'}
+				))
+			
+			print(unlabeled_results)
+
 			labeled_results = {}
 			for result in unlabeled_results:
 				labeled_results[result.service] = result
@@ -134,17 +144,27 @@ class GlobalIO:
 
 
 	
-	async def search_music_video(self, artists: list, title: str, is_explicit: bool = None, country_code: str = 'us') -> object:
+	async def search_music_video(self, artists: list, title: str, is_explicit: bool = None, country_code: str = 'us', exclude_services: list = []) -> object:
 		request = 'search_music_video'
 		try:
 			start_time = current_unix_time_ms()
-			tasks = [
-				create_task(AppleMusic.search_music_video(artists, title, is_explicit, country_code), name = AppleMusic.service),
-				create_task(YouTubeMusic.search_music_video(artists, title, is_explicit, country_code), name = YouTubeMusic.service),
-				create_task(Tidal.search_music_video(artists, title, is_explicit, country_code), name = Tidal.service),
-			]
+			
+			service_objs = [AppleMusic, YouTubeMusic, Tidal]
+
+			tasks = []
+			for obj in service_objs:
+				if obj.service not in exclude_services:
+					tasks.append(
+						create_task(obj.search_music_video(artists, title, is_explicit, country_code), name = obj.service)
+					)
 
 			unlabeled_results = await gather(*tasks)
+			for service in exclude_services:
+				unlabeled_results.append(Empty(
+					service = service,
+					request = {'request': 'terminated'}
+				))
+
 			labeled_results = {}
 			for result in unlabeled_results:
 				labeled_results[result.service] = result
@@ -223,19 +243,27 @@ class GlobalIO:
 
 
 
-	async def search_collection(self, artists: list, title: str, year: int = None, country_code: str = 'us') -> object:
+	async def search_collection(self, artists: list, title: str, year: int = None, country_code: str = 'us', exclude_services: list = []) -> object:
 		request = 'search_collection'
 		try:
 			start_time = current_unix_time_ms()
-			tasks = [
-				create_task(Spotify.search_collection(artists, title, year, country_code), name = Spotify.service),
-				create_task(AppleMusic.search_collection(artists, title, year, country_code), name = AppleMusic.service),
-				create_task(YouTubeMusic.search_collection(artists, title, year, country_code), name = YouTubeMusic.service),
-				create_task(Deezer.search_collection(artists, title, year, country_code), name = Deezer.service),
-				create_task(Tidal.search_collection(artists, title, year, country_code), name = Tidal.service),
-			]
+
+			service_objs = [Spotify, AppleMusic, YouTubeMusic, Deezer, Tidal]
+
+			tasks = []
+			for obj in service_objs:
+				if obj.service not in exclude_services:
+					tasks.append(
+						create_task(obj.search_collection(artists, title, year, country_code), name = obj.service)
+					)
 
 			unlabeled_results = await gather(*tasks)
+			for service in exclude_services:
+				unlabeled_results.append(Empty(
+					service = service,
+					request = {'request': 'terminated'}
+				))
+
 			labeled_results = {}
 			for result in unlabeled_results:
 				labeled_results[result.service] = result
@@ -611,6 +639,10 @@ class GlobalIO:
 				collection = await service.lookup_collection(id = id, country_code = collection_country_code)
 			else:
 				collection = await service.lookup_collection(id = id)
+
+			if collection.type == 'single':
+				song = await self.search_song(collection.artists, collection.title, 'single', collection.collection, collection.is_explicit, lookup_country_code, [])
+				return song
 
 			if collection.type != 'album' and collection.type != 'ep':
 				return collection
