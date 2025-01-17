@@ -17,7 +17,6 @@ async def filter_song(service: str, query_request: str, songs: list, query_artis
 	for data in songs:
 		song_similarity = 0
 		
-		#artist_input = ' '.join([bare_bones(artist) for artist in query_artists])
 		artist_input = bare_bones(query_artists[0])
 		artists_reference = data.artists
 		artists_with_similarity = []
@@ -33,16 +32,16 @@ async def filter_song(service: str, query_request: str, songs: list, query_artis
 		title_reference = remove_feat(data.title)
 		song_similarity += calculate_similarity(bare_bones(title_reference), title_input)
 
-		if query_collection != None:
+		if query_collection != None and data.collection != None:
 			collection_input = bare_bones(query_collection)
 			collection_reference = data.collection
 			song_similarity += calculate_similarity(bare_bones(collection_reference), collection_input)
 
-		if query_is_explicit != None:
+		if query_is_explicit != None and data.is_explicit != None:
 			if query_is_explicit == data.is_explicit:
 				song_similarity += 500
 
-		if query_song_type != None:
+		if query_song_type != None and data.type != None:
 			if query_song_type == data.type:
 				song_similarity += 500
 
@@ -93,7 +92,7 @@ async def filter_mv(service: str, query_request: str, videos: list, query_artist
 		title_reference = remove_feat(data.title)
 		song_similarity += calculate_similarity(bare_bones(title_reference), title_input)
 
-		if query_is_explicit != None:
+		if query_is_explicit != None and data.is_explicit != None:
 			if query_is_explicit == data.is_explicit:
 				song_similarity += 500
 
@@ -144,7 +143,7 @@ async def filter_collection(service: str, query_request: str, collections: list,
 		title_reference = remove_feat(data.title)
 		collection_similarity += calculate_similarity(bare_bones(title_reference), title_input)
 
-		if query_year != None:
+		if query_year != None and data.release_year != None:
 			if query_year == data.release_year:
 				collection_similarity += 1000
 
