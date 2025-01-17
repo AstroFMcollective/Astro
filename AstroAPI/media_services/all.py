@@ -10,7 +10,7 @@ AppleMusic = apple_music_api.AppleMusic()
 YouTubeMusic = youtube_music_api.YouTubeMusic()
 Tidal = tidal_api.Tidal(client_id = keys['tidal']['id'], client_secret = f'{keys['tidal']['secret']}=')
 Deezer = deezer_api.Deezer()
-Genius = genius_api.Genius()
+Genius = genius_api.Genius(token = keys['genius']['token'])
 
 
 
@@ -146,7 +146,7 @@ class GlobalIO:
 		try:
 			start_time = current_unix_time_ms()
 			
-			service_objs = [AppleMusic, YouTubeMusic, Tidal]
+			service_objs = [AppleMusic, YouTubeMusic, Tidal, Genius]
 
 			tasks = []
 			for obj in service_objs:
@@ -166,12 +166,12 @@ class GlobalIO:
 			for result in unlabeled_results:
 				labeled_results[result.service] = result
 			
-			services = [AppleMusic.service, YouTubeMusic.service, Tidal.service]
+			services = [AppleMusic.service, YouTubeMusic.service, Tidal.service, Genius.service]
 
-			title_order = [AppleMusic.service, YouTubeMusic.service, Tidal.service]
-			artists_order = [Tidal.service, YouTubeMusic.service, AppleMusic.service]
-			explicitness_order = [AppleMusic.service, Tidal.service, YouTubeMusic.service]
-			cover_order = [Tidal.service, YouTubeMusic.service, AppleMusic.service]
+			title_order = [AppleMusic.service, YouTubeMusic.service, Tidal.service, Genius.service]
+			artists_order = [Tidal.service, YouTubeMusic.service, AppleMusic.service, Genius.service]
+			explicitness_order = [AppleMusic.service, Tidal.service, YouTubeMusic.service, Genius.service]
+			cover_order = [Tidal.service, YouTubeMusic.service, AppleMusic.service, Genius.service]
 
 			for service in services:
 				if labeled_results[service].type != 'music_video':
