@@ -28,7 +28,7 @@ async def log(media: object):
 			)
 
 			#parameters = list(media.request.keys())
-			request = '\n'.join([f'{parameter}: {media.request[parameter]}' for parameter in list(media.request.keys())])
+			request = '\n'.join([f'{parameter}: `{media.request[parameter]}`' for parameter in list(media.request.keys())])
 
 			embed.add_field(
 				name = 'Request (parameters)',
@@ -41,7 +41,7 @@ async def log(media: object):
 			return
 
 		elif media.type == 'empty_response':
-			request = '\n'.join([f'{parameter}: {media.request[parameter]}' for parameter in list(media.request.keys())])
+			request = '\n'.join([f'{parameter}: `{media.request[parameter]}`' for parameter in list(media.request.keys())])
 			embed.add_field(
 				name = 'Request (parameters)',
 				value = f'{request}',
