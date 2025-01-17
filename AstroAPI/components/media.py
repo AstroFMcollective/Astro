@@ -16,7 +16,7 @@ class Empty:
 		self.request = request
 
 class Song:
-	def __init__(self, service: str, type: str, url: str | dict, id: any, title: str, artists: list, cover_url: str, api_response_time: int, api_http_code: int, request: dict, collection: str = None, is_explicit: bool = None) -> object:
+	def __init__(self, service: str, type: str, url: str | dict, id: any, title: str, artists: list, cover_url: str, api_response_time: int, api_http_code: int, request: dict, collection: str = None, genre: str = None, is_explicit: bool = None) -> object:
 		self.service = service
 		self.type = type
 		self.url = {service: url} if isinstance(url, str) else url
@@ -26,13 +26,14 @@ class Song:
 		self.collection = collection
 		self.artists = artists
 		self.cover_url = cover_url
+		self.genre = genre
 		self.is_explicit = is_explicit
 		self.api_response_time = api_response_time
 		self.api_http_code = api_http_code
 		self.request = request
 
 class MusicVideo:
-	def __init__(self, service: str, url: str | dict, id: any, title: str, artists: list, thumbnail_url: str, api_response_time: int, api_http_code: int, request: dict, is_explicit: bool = None) -> object:
+	def __init__(self, service: str, url: str | dict, id: any, title: str, artists: list, thumbnail_url: str, api_response_time: int, api_http_code: int, request: dict, is_explicit: bool = None, genre: str = None) -> object:
 		self.service = service
 		self.type = 'music_video'
 		self.url = {service: url} if isinstance(url, str) else url
@@ -47,7 +48,7 @@ class MusicVideo:
 		self.request = request
 
 class Collection:
-	def __init__(self, service: str, type: str, url: str | dict, id: any, title: str, artists: list, cover_url: str, api_response_time: int, api_http_code: int, request: dict, release_year: int = None) -> object:
+	def __init__(self, service: str, type: str, url: str | dict, id: any, title: str, artists: list, cover_url: str, api_response_time: int, api_http_code: int, request: dict, release_year: int = None, genre: str = None) -> object:
 		self.service = service
 		self.type = type
 		self.url = {service: url} if isinstance(url, str) else url
@@ -57,6 +58,7 @@ class Collection:
 		self.artists = artists
 		self.release_year = None if release_year == None else int(release_year)
 		self.cover_url = cover_url
+		self.genre = genre
 		self.api_response_time = api_response_time
 		self.api_http_code = api_http_code
 		self.request = request
