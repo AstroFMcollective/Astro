@@ -202,6 +202,7 @@ class AppleMusic:
 					song_id = song['trackId']
 					song_title = song['trackName']
 					song_artists = await self.lookup_artist(id = song['artistId'], country_code = country_code)
+					song_artists = [song_artists.name] if song_artists.type != 'error' else [song['artistName']]
 					song_cover = song['artworkUrl100']
 					song_is_explicit = not 'not' in song['trackExplicitness']
 					song_collection = remove_feat(clean_up_collection_title(song['collectionName']))
@@ -212,7 +213,7 @@ class AppleMusic:
 						url = song_url,
 						id = song_id,
 						title = song_title,
-						artists = [song_artists.name],
+						artists = song_artists,
 						collection = song_collection,
 						is_explicit = song_is_explicit,
 						cover_url = song_cover,
@@ -227,7 +228,7 @@ class AppleMusic:
 						component = self.component,
 						http_code = response.status,
 						error_msg = "HTTP error when looking up song ID",
-						request = {'request': request, 'id': id, 'url': f'https://music.apple.com/{country_code}/album/{id}'}
+						request = {'request': request, 'id': id, 'country_code': country_code, 'url': f'https://music.apple.com/{country_code}/album/{id}'}
 					)
 					await log(error)
 					return error
@@ -247,16 +248,16 @@ class AppleMusic:
 
 			async with session.get(url = api_url, params = api_params, timeout = timeout) as response:
 				if response.status == 200:
-					song = await response.json(content_type = 'text/javascript')
-					song = song['results'][0]
+					video = await response.json(content_type = 'text/javascript')
+					video = video['results'][0]
 
-					mv_url = song['trackViewUrl']
-					mv_id = song['trackId']
-					mv_title = song['trackName']
-					mv_artist = await self.lookup_artist(id = song['artistId'], country_code = country_code)
-					mv_artist = [mv_artist.name]
-					mv_thumbnail = song['artworkUrl100']
-					mv_is_explicit = not 'not' in song['trackExplicitness']
+					mv_url = video['trackViewUrl']
+					mv_id = video['trackId']
+					mv_title = video['trackName']
+					mv_artist = await self.lookup_artist(id = video['artistId'], country_code = country_code)
+					mv_artist = [mv_artist.name] if mv_artist.type != 'error' else [video['artistName']]
+					mv_thumbnail = video['artworkUrl100']
+					mv_is_explicit = not 'not' in video['trackExplicitness']
 					end_time = current_unix_time_ms()
 					return MusicVideo(
 						service = self.service,
@@ -268,7 +269,7 @@ class AppleMusic:
 						thumbnail_url = mv_thumbnail,
 						api_response_time = end_time - start_time,
 						api_http_code = response.status,
-						request = {'request': request, 'id': id, 'url': f'https://music.apple.com/{country_code}/music-video/{id}'}
+						request = {'request': request, 'id': id, 'country_code': country_code, 'url': f'https://music.apple.com/{country_code}/music-video/{id}'}
 					)
 
 				else:
@@ -277,7 +278,7 @@ class AppleMusic:
 						component = self.component,
 						http_code = response.status,
 						error_msg = "HTTP error when looking up music video ID",
-						request = {'request': request, 'id': id, 'url': f'https://music.apple.com/{country_code}/music-video/{id}'}
+						request = {'request': request, 'id': id, 'country_code': country_code, 'url': f'https://music.apple.com/{country_code}/music-video/{id}'}
 					)
 					await log(error)
 					return error
@@ -306,6 +307,7 @@ class AppleMusic:
 						collection_id = collection['collectionId']
 						collection_title = clean_up_collection_title(collection['collectionName'])
 						collection_artists = await self.lookup_artist(id = collection['artistId'], country_code = country_code)
+						collection_artists = [collection_artists.name] if collection_artists.type != 'error' else [collection['artistName']]
 						collection_year = collection['releaseDate'][:4]
 						collection_cover = collection['artworkUrl100']
 						end_time = current_unix_time_ms()
@@ -315,12 +317,12 @@ class AppleMusic:
 							url = collection_url,
 							id = collection_id,
 							title = collection_title,
-							artists = [collection_artists.name],
+							artists = collection_artists,
 							release_year = collection_year,
 							cover_url = collection_cover,
 							api_response_time = end_time - start_time,
 							api_http_code = response.status,
-							request = {'request': request, 'id': id, 'url': f'https://music.apple.com/{country_code}/album/{id}'}
+							request = {'request': request, 'id': id, 'country_code': country_code, 'url': f'https://music.apple.com/{country_code}/album/{id}'}
 						)
 					else:
 						song_type = 'single'
@@ -328,6 +330,7 @@ class AppleMusic:
 						song_id = collection['collectionId']
 						song_title = collection['collectionName'].replace(' - Single', '')
 						song_artists = await self.lookup_artist(id = collection['artistId'], country_code = country_code)
+						song_artists = [song_artists.name] if song_artists.type != 'error' else collection['artistName']
 						song_cover = collection['artworkUrl100']
 						song_is_explicit = not 'not' in collection['collectionExplicitness']
 						song_collection = remove_feat(clean_up_collection_title(collection['collectionName']))
@@ -353,7 +356,7 @@ class AppleMusic:
 						component = self.component,
 						http_code = response.status,
 						error_msg = "HTTP error when looking up collection ID",
-						request = {'request': request, 'id': id, 'url': f'https://music.apple.com/{country_code}/album/{id}'}
+						request = {'request': request, 'id': id, 'country_code': country_code, 'url': f'https://music.apple.com/{country_code}/album/{id}'}
 					)
 					await log(error)
 					return error
@@ -389,7 +392,7 @@ class AppleMusic:
 						genres = artist_genres,
 						api_response_time = end_time - start_time,
 						api_http_code = response.status,
-						request = {'request': request, 'id': id, 'url': f'https://music.apple.com/{country_code}/artist/{id}'}
+						request = {'request': request, 'id': id, 'country_code': country_code, 'url': f'https://music.apple.com/{country_code}/artist/{id}'}
 					)
 
 				else:
@@ -398,7 +401,7 @@ class AppleMusic:
 						component = self.component,
 						http_code = response.status,
 						error_msg = "HTTP error when looking up artist ID",
-						request = {'request': request, 'id': id, 'url': f'https://music.apple.com/{country_code}/artist/{id}'}
+						request = {'request': request, 'id': id, 'country_code': country_code, 'url': f'https://music.apple.com/{country_code}/artist/{id}'}
 					)
 					await log(error)
 					return error
