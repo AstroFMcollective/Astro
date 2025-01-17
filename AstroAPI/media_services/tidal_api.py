@@ -297,7 +297,57 @@ class Tidal:
 					)
 					await log(error)
 					return error
-				
+
+
+
+	async def lookup_music_video(self, id: str) -> object:
+		async with aiohttp.ClientSession() as session:
+			request = 'lookup_music_video'
+			api_url = f'https://openapi.tidal.com/videos/{id}?countryCode=US'
+			api_headers = {
+				'accept': 'application/vnd.api+json',
+				'Authorization': f'Bearer {await self.get_token()}',
+				'Content-Type': 'application/vnd.tidal.v1+json'
+			}
+			timeout = aiohttp.ClientTimeout(total = 30)
+			start_time = current_unix_time_ms()
+
+			async with session.get(url = api_url, headers = api_headers, timeout = timeout) as response:
+				if response.status == 200:
+					video = await response.json()
+
+					mv_url = video['resource']['tidalUrl']
+					mv_id = video['resource']['id']
+					mv_title = video['resource']['title']
+					mv_artists = [artist['name'] for artist in video['resource']['artists']]
+					mv_thumbnail = (video['resource']['image'][1]['url'] if video['resource']['image'] != [] else '')
+					mv_is_explicit = ('explicit' in video['resource']['properties']['content'][0] if 'content' in video['resource']['properties'] else False)
+					end_time = current_unix_time_ms()
+					return MusicVideo(
+						service = self.service,
+						url = mv_url,
+						id = mv_id,
+						title = mv_title,
+						artists = mv_artists,
+						is_explicit = mv_is_explicit,
+						thumbnail_url = mv_thumbnail,
+						api_response_time = end_time - start_time,
+						api_http_code = response.status,
+						request = {'request': request, 'id': id, 'url': f'https://tidal.com/browse/video/{id}'}
+
+					)
+
+				else:
+					error = Error(
+						service = self.service,
+						component = self.component,
+						http_code = response.status,
+						error_msg = "HTTP error when looking up music video ID",
+						request = {'request': request, 'id': id, 'url': f'https://tidal.com/browse/video/{id}'}
+					)
+					await log(error)
+					return error
+
 
 
 	async def lookup_collection(self, id: str, country_code: str = 'us') -> object:
@@ -346,56 +396,6 @@ class Tidal:
 						http_code = response.status,
 						error_msg = "HTTP error when looking up collection ID",
 						request = {'request': request, 'id': id, 'country_code': country_code, 'url': f'https://tidal.com/browse/album/{id}'}
-					)
-					await log(error)
-					return error
-
-
-
-	async def lookup_music_video(self, id: str) -> object:
-		async with aiohttp.ClientSession() as session:
-			request = 'lookup_music_video'
-			api_url = f'https://openapi.tidal.com/videos/{id}?countryCode=US'
-			api_headers = {
-				'accept': 'application/vnd.api+json',
-				'Authorization': f'Bearer {await self.get_token()}',
-				'Content-Type': 'application/vnd.tidal.v1+json'
-			}
-			timeout = aiohttp.ClientTimeout(total = 30)
-			start_time = current_unix_time_ms()
-
-			async with session.get(url = api_url, headers = api_headers, timeout = timeout) as response:
-				if response.status == 200:
-					video = await response.json()
-
-					mv_url = video['resource']['tidalUrl']
-					mv_id = video['resource']['id']
-					mv_title = video['resource']['title']
-					mv_artists = [artist['name'] for artist in video['resource']['artists']]
-					mv_thumbnail = (video['resource']['image'][1]['url'] if video['resource']['image'] != [] else '')
-					mv_is_explicit = ('explicit' in video['resource']['properties']['content'][0] if 'content' in video['resource']['properties'] else False)
-					end_time = current_unix_time_ms()
-					return MusicVideo(
-						service = self.service,
-						url = mv_url,
-						id = mv_id,
-						title = mv_title,
-						artists = mv_artists,
-						is_explicit = mv_is_explicit,
-						thumbnail_url = mv_thumbnail,
-						api_response_time = end_time - start_time,
-						api_http_code = response.status,
-						request = {'request': request, 'id': id, 'url': f'https://tidal.com/browse/video/{id}'}
-
-					)
-
-				else:
-					error = Error(
-						service = self.service,
-						component = self.component,
-						http_code = response.status,
-						error_msg = "HTTP error when looking up music video ID",
-						request = {'request': request, 'id': id, 'url': f'https://tidal.com/browse/video/{id}'}
 					)
 					await log(error)
 					return error
