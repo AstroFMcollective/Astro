@@ -1,41 +1,33 @@
 from AstroAPI.components import *
-from lyricsgenius import Genius as genius
+import requests
 
 
 
 class Genius:
-	def __init__(self):
+	def __init__(self, token: str):
 		self.service = 'genius'
 		self.component = 'Genius API'
-		self.token = keys['genius']['token']
-		self.api = genius(
-			access_token = self.token,
-			timeout = 30,
-			verbose = False,
-			skip_non_songs = True,
-			sleep_time = 0.1,
-			excluded_terms = [
-				'(Türkçe Çeviri)',
-				'(Tradução em Português)',
-				'(Traducción al Español)',
-				'(Traduction Française)',
-				'(Svensk Översättning)',
-				'(Русский перевод)'
-			]
-		)
+		self.token = token
 
 
 
 	async def search_song(self, artists: list, title: str, song_type: str = None, collection: str = None, is_explicit: bool = None, country_code: str = 'us') -> object:
-		try:
-			request = 'search_song'
-			artists = [optimize_for_search(artist) for artist in artists]
-			title = optimize_for_search(title)
-			collection = clean_up_collection_title(optimize_for_search(collection)) if collection != None else None
+		request = 'search_song'
+		artists = [optimize_for_search(artist) for artist in artists]
+		title = optimize_for_search(title)
+		collection = clean_up_collection_title(optimize_for_search(collection)) if collection != None else None
+			
+		songs = []
+		api_url = f'https://api.genius.com/search'
+		api_params = {
+			'q': f'{artists[0]} {title}',
+		}
+		api_headers = {'Authorization': f'Bearer {self.token}'}
+		start_time = current_unix_time_ms()
+		results = requests.get(api_url, api_params, headers = api_headers)
 
-			songs = []
-			start_time = current_unix_time_ms()
-			results = self.api.search_songs(f'{artists[0]} {title}')
+		if results.status_code == 200:
+			results = results.json()['response']
 			for result in results['hits']:
 				song_url = result['result']['url']
 				song_id = result['result']['id']
@@ -59,23 +51,80 @@ class Genius:
 					api_http_code = 200,
 					request = {'request': request, 'artists': artists, 'title': title, 'song_type': song_type, 'collection': collection, 'is_explicit': is_explicit, 'country_code': country_code}
 				))
-			return await filter_song(service = self.service, query_request = request, songs = songs, query_artists = artists, query_title = title, query_song_type = song_type, query_collection = None, query_is_explicit = None)
+			return await filter_song(service = self.service, query_request = request, songs = songs, query_artists = artists, query_title = title, query_song_type = song_type, query_collection = collection, query_is_explicit = is_explicit, query_country_code = country_code)
 		
-		except Exception as msg:
+		else:
 			error = Error(
 				service = self.service,
 				component = self.component,
-				error_msg = f'Error when searching for song: "{msg}"',
+				http_code = results.status_code,
+				error_msg = "HTTP error when searching for song",
 				request = {'request': request, 'artists': artists, 'title': title, 'song_type': song_type, 'collection': collection, 'is_explicit': is_explicit, 'country_code': country_code}
 			)
 			await log(error)
 			return error
 
+
+
+	async def search_music_video(self, artists: list, title: str, is_explicit: bool = None, country_code: str = 'us') -> object:
+		request = 'search_music_video'
+		artists = [optimize_for_search(artist) for artist in artists]
+		title = optimize_for_search(replace_with_ascii(title).lower())
+			
+		videos = []
+		api_url = f'https://api.genius.com/search'
+		api_params = {
+			'q': f'{artists[0]} {title}',
+		}
+		api_headers = {'Authorization': f'Bearer {self.token}'}
+		start_time = current_unix_time_ms()
+		results = requests.get(api_url, api_params, headers = api_headers)
+		
+		if results.status_code == '200':
+			results = results.json()['response']
+			for result in results['hits']:
+				mv_url = result['result']['url']
+				mv_id = result['result']['id']
+				mv_title = result['result']['title']
+				mv_artists = [result['result']['primary_artist']['name']]
+				mv_cover = result['result']['song_art_image_url']
+				mv_is_explicit = None
+				end_time = current_unix_time_ms()
+				videos.append(MusicVideo(
+					service = self.service,
+					url = mv_url,
+					id = mv_id,
+					title = mv_title,
+					artists = mv_artists,
+					is_explicit = mv_is_explicit,
+					thumbnail_url = mv_cover,
+					api_response_time = end_time - start_time,
+					api_http_code = 200,
+					request = {'request': request, 'artists': artists, 'title': title, 'is_explicit': is_explicit, 'country_code': country_code}
+				))
+			return await filter_mv(service = self.service, query_request = request, videos = videos, query_artists = artists, query_title = title, query_is_explicit = is_explicit, query_country_code = country_code)
+
+		else:
+			error = Error(
+				service = self.service,
+				component = self.component,
+				http_code = results.status_code,
+				error_msg = "HTTP error when searching for music video",
+				request = {'request': request, 'artists': artists, 'title': title, 'is_explicit': is_explicit, 'country_code': country_code}
+			)
+			await log(error)
+			return error
+
+
 	async def lookup_song(self, id: str, country_code: str = 'us') -> object:
-		try:
-			request = 'lookup_song'
-			start_time = current_unix_time_ms()
-			song = self.api.song(song_id = id)
+		request = 'lookup_song'
+		api_url = f'https://api.genius.com/songs/{id}'
+		api_headers = {'Authorization': f'Bearer {self.token}'}
+		start_time = current_unix_time_ms()
+		result = requests.get(api_url, headers = api_headers)
+		
+		if result.status_code == 200:
+			song = result['response']
 			song_type = 'track'
 			song_url = song['song']['url']
 			song_id = song['song']['id']
@@ -99,12 +148,13 @@ class Genius:
 				api_http_code = 200,
 				request = {'request': request, 'id': id, 'country_code': country_code}
 			)
-
-		except Exception as msg:
+		
+		else:
 			error = Error(
 				service = self.service,
 				component = self.component,
-				error_msg = f'Error when looking up song: "{msg}"',
+				http_code = result.status_code,
+				error_msg = "HTTP error when looking up song ID",
 				request = {'request': request, 'id': id, 'country_code': country_code}
 			)
 			await log(error)
