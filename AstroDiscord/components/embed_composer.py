@@ -54,13 +54,13 @@ class Embed:
 		if len(media_object.url) == 1 and command == 'link':
 			return
 		
-		data = [discord.utils.escape_markdown(', '.join(media_object.artists))]
+		data = [f'**{discord.utils.escape_markdown(', '.join(media_object.artists))}**']
 		genius_url = media_object.url['genius'] if 'genius' in media_object.url else None
 		is_explicit = None
 
 		if media_object.type == 'track':
 			if media_object.collection != None:
-				data.append(discord.utils.escape_markdown(media_object.collection))
+				data.append(f'{discord.utils.escape_markdown(media_object.collection)}')
 			is_explicit = media_object.is_explicit
 		elif media_object.type == 'single':
 			data.append('Single')
