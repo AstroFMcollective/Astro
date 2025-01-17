@@ -29,7 +29,6 @@ deployment_channel = config['client']['deployment_channel']
 app_start_time = current_unix_time()
 total_requests = []
 embed_reactions = ['🔥','🗑️']
-recognized_message_reaction = ['❗']
 not_found_reaction = ['🤷']
 intents = discord.Intents.all()
 intents.message_content = True
@@ -109,7 +108,6 @@ async def on_message(message):
 		tasks = []
 
 		if data != []:
-			await add_reactions(message, recognized_message_reaction)
 			start_time = current_unix_time_ms()
 			if len(data) == 1:
 				media_type = data[0]['media']
@@ -158,8 +156,6 @@ async def on_message(message):
 				if obj.type not in invalid_responses:
 					api_request_latency += obj.api_response_time
 			api_request_latency = api_request_latency // len(media_objects)
-			if await check_for_reaction(message, '❗'):
-				await message.remove_reaction('❗', client.user)
 			message_embed = await message.reply(embeds = embeds, mention_author = False)
 
 		end_time = current_unix_time_ms()
@@ -172,8 +168,6 @@ async def on_message(message):
 		else:
 			log_request(api_request_latency, total_time - api_request_latency, 'failure')
 			await add_reactions(message, not_found_reaction)
-			if await check_for_reaction(message, '❗'):
-				await message.remove_reaction('❗', client.user)
 
 		await log(
 			log_embeds = log_embeds,
