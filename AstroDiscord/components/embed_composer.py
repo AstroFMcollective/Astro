@@ -54,13 +54,13 @@ class Embed:
 		if len(media_object.url) == 1 and command == 'link':
 			return
 		
-		data = [', '.join(media_object.artists)]
+		data = [discord.utils.escape_markdown(', '.join(media_object.artists))]
 		genius_url = media_object.url['genius'] if 'genius' in media_object.url else None
 		is_explicit = None
 
 		if media_object.type == 'track':
 			if media_object.collection != None:
-				data.append(media_object.collection)
+				data.append(discord.utils.escape_markdown(media_object.collection))
 			is_explicit = media_object.is_explicit
 		elif media_object.type == 'single':
 			data.append('Single')
@@ -70,13 +70,17 @@ class Embed:
 			is_explicit = media_object.is_explicit
 		elif media_object.type == 'album' or media_object.type == 'ep':
 			data.append(str(media_object.release_year))
+		
+		if genius_url != None:
+			data.append(f'[Lyrics]({genius_url})')
 			
 		embed = discord.Embed(
-			title = f'{discord.utils.escape_markdown(f'{media_object.title}')}  {'`E`' if is_explicit != None and is_explicit != False else ''}',
-			url = genius_url,
-			description = discord.utils.escape_markdown(f'{' • '.join(data)}'),
+			title = f'{f'{discord.utils.escape_markdown(media_object.title)}'}  {'`E`' if is_explicit != None and is_explicit != False else ''}',
+			description = f'{' • '.join(data)}',
 			color = self.embed_color
 		)
+
+		
 
 		if anonymous == False:
 			embed.set_author(
