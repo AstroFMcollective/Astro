@@ -1,6 +1,6 @@
 import discord as discord
 from AstroDiscord.components.ini import text
-from AstroDiscord.components.image_hex import image_hex
+from AstroAPI.components.image_hex import image_hex
 
 
 
