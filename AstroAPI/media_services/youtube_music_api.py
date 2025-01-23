@@ -18,7 +18,7 @@ class YouTubeMusic:
 
 	async def search_song(self, artists: list, title: str, song_type: str = None, collection: str = None, is_explicit: bool = None, country_code: str = 'us') -> object:
 		try:
-			request = 'search_song'
+			request = {'request': 'search_song', 'artists': artists, 'title': title, 'song_type': song_type, 'collection': collection, 'is_explicit': is_explicit, 'country_code': country_code}
 			artists = [optimize_for_search(artist) for artist in artists]
 			title = optimize_for_search(replace_with_ascii(title).lower())
 			collection = clean_up_collection_title(optimize_for_search(collection)) if collection != None else None
@@ -40,7 +40,6 @@ class YouTubeMusic:
 				song_cover = song['thumbnails'][len(song['thumbnails'])-1]['url']
 				song_is_explicit = song['isExplicit']
 				song_collection = song['album']['name']
-				end_time = current_unix_time_ms()
 				songs.append(Song(
 					service = self.service,
 					type = song_type,
@@ -51,9 +50,12 @@ class YouTubeMusic:
 					collection = song_collection,
 					is_explicit = song_is_explicit,
 					cover_url = song_cover,
-					api_response_time = end_time - start_time,
-					api_http_code = 200,
-					request = {'request': request, 'artists': artists, 'title': title, 'song_type': song_type, 'collection': collection, 'is_explicit': is_explicit, 'country_code': country_code}
+					meta = Meta(
+						service = self.service,
+						request = request,
+						processing_time = current_unix_time_ms() - start_time,
+						http_code = 200
+					)
 				))
 			return await filter_song(service = self.service, query_request = request, songs = songs, query_artists = artists, query_title = title, query_song_type = song_type, query_collection = collection, query_is_explicit = is_explicit, query_country_code = country_code)
 
@@ -62,7 +64,11 @@ class YouTubeMusic:
 				service = self.service,
 				component = self.component,
 				error_msg = f'Error when searching for song: "{msg}"',
-				request = {'request': request, 'artists': artists, 'title': title, 'song_type': song_type, 'collection': collection, 'is_explicit': is_explicit, 'country_code': country_code}
+				meta = Meta(
+					service = self.service,
+					request = request,
+					processing_time = current_unix_time_ms() - start_time,
+				)
 			)
 			await log(error)
 			return error
@@ -71,7 +77,7 @@ class YouTubeMusic:
 	
 	async def search_music_video(self, artists: list, title: str, is_explicit: bool = None, country_code: str = 'us') -> object:
 		try:
-			request = 'search_music_video'
+			request = {'request': 'search_music_video', 'artists': artists, 'title': title, 'is_explicit': is_explicit, 'country_code': country_code}
 			artists = [optimize_for_search(artist) for artist in artists]
 			title = optimize_for_search(replace_with_ascii(title).lower())
 			
@@ -89,7 +95,6 @@ class YouTubeMusic:
 				mv_artists = [artist['name'] for artist in video['artists']] if video['artists'] != [] else await self.lookup_artist(video_id = video['videoId'])
 				if not isinstance(mv_artists, list): mv_artists = split_artists(mv_artists.name)
 				mv_cover = video['thumbnails'][len(video['thumbnails'])-1]['url']
-				end_time = current_unix_time_ms()
 				videos.append(MusicVideo(
 					service = self.service,
 					url = mv_url,
@@ -98,9 +103,12 @@ class YouTubeMusic:
 					artists = mv_artists,
 					is_explicit = None,
 					thumbnail_url = mv_cover,
-					api_response_time = end_time - start_time,
-					api_http_code = 200,
-					request = {'request': request, 'artists': artists, 'title': title, 'is_explicit': is_explicit, 'country_code': country_code}
+					meta = Meta(
+						service = self.service,
+						request = request,
+						processing_time = current_unix_time_ms() - start_time,
+						http_code = 200
+					)
 				))
 			return await filter_mv(service = self.service, query_request = request, videos = videos, query_artists = artists, query_title = title, query_is_explicit = is_explicit, query_country_code = country_code)
 
@@ -109,7 +117,11 @@ class YouTubeMusic:
 				service = self.service,
 				component = self.component,
 				error_msg = f'Error when searching for music video: "{msg}"',
-				request = {'request': request, 'artists': artists, 'title': title, 'is_explicit': is_explicit, 'country_code': country_code}
+				meta = Meta(
+					service = self.service,
+					request = request,
+					processing_time = current_unix_time_ms() - start_time,
+				)
 			)
 			await log(error)
 			return error
@@ -118,7 +130,7 @@ class YouTubeMusic:
 
 	async def search_collection(self, artists: list, title: str, year: int = None, country_code: str = 'us') -> object:
 		try:
-			request = 'search_collection'
+			request = {'request': 'search_collection', 'artists': artists, 'title': title, 'year': year, 'country_code': country_code}
 			artists = [optimize_for_search(artist) for artist in artists]
 			title = optimize_for_search(title)
 
@@ -137,7 +149,6 @@ class YouTubeMusic:
 				collection_artists = [artist['name'] for artist in collection['artists']]
 				collection_year = collection['year']
 				collection_cover = collection['thumbnails'][len(collection['thumbnails'])-1]['url']
-				end_time = current_unix_time_ms()
 				collections.append(Collection(
 					service = self.service,
 					type = collection_type,
@@ -147,9 +158,12 @@ class YouTubeMusic:
 					artists = collection_artists,
 					release_year = collection_year,
 					cover_url = collection_cover,
-					api_response_time = end_time - start_time,
-					api_http_code = 200,
-					request = {'request': request, 'artists': artists, 'title': title, 'year': year, 'country_code': country_code}
+					meta = Meta(
+						service = self.service,
+						request = request,
+						processing_time = current_unix_time_ms() - start_time,
+						http_code = 200
+					)
 				))
 			return await filter_collection(service = self.service, query_request = request, collections = collections, query_artists = artists, query_title = title, query_year = year, query_country_code = country_code)
 
@@ -158,7 +172,11 @@ class YouTubeMusic:
 				service = self.service,
 				component = self.component,
 				error_msg = f'Error when searching for collection: "{msg}"',
-				request = {'request': request, 'artists': artists, 'title': title, 'year': year, 'country_code': country_code}
+				meta = Meta(
+					service = self.service,
+					request = request,
+					processing_time = current_unix_time_ms() - start_time,
+				)
 			)
 			await log(error)
 			return error
@@ -167,7 +185,7 @@ class YouTubeMusic:
 
 	async def search_query(self, query: str, country_code: str = 'us') -> object:
 		try:
-			request = 'search_query'
+			request = {'request': 'search_query', 'query': query, 'country_code': country_code}
 			start_time = current_unix_time_ms()
 			results = self.ytm.search(
 				query = query,
@@ -186,9 +204,12 @@ class YouTubeMusic:
 					collection = None,
 					is_explicit = None,
 					cover_url = result['thumbnails'][len(result['thumbnails'])-1]['url'],
-					api_response_time = current_unix_time_ms() - start_time,
-					api_http_code = 200,
-					request = {'request': request, 'query': query, 'country_code': country_code}
+					meta = Meta(
+						service = self.service,
+						request = request,
+						processing_time = current_unix_time_ms() - start_time,
+						http_code = 200
+					)
 				)
 			elif result_type == 'album':
 				return Collection(
@@ -200,9 +221,12 @@ class YouTubeMusic:
 					artists = [artist['name'] for artist in result['artists']],
 					release_year = None,
 					cover_url = result['thumbnails'][len(result['thumbnails'])-1]['url'],
-					api_response_time = current_unix_time_ms() - start_time,
-					api_http_code = 200,
-					request = {'request': request, 'query': query, 'country_code': country_code}
+					meta = Meta(
+						service = self.service,
+						request = request,
+						processing_time = current_unix_time_ms() - start_time,
+						http_code = 200
+					)
 				)
 			elif result_type == 'video':
 				return MusicVideo(
@@ -213,14 +237,22 @@ class YouTubeMusic:
 					artists = [artist['name'] for artist in result['artists']],
 					is_explicit = None,
 					thumbnail_url = result['thumbnails'][len(result['thumbnails'])-1]['url'],
-					api_response_time = current_unix_time_ms() - start_time,
-					api_http_code = 200,
-					request = {'request': request, 'query': query, 'country_code': country_code}
+					meta = Meta(
+						service = self.service,
+						request = request,
+						processing_time = current_unix_time_ms() - start_time,
+						http_code = 200
+					)
 				)
 			else:
 				empty_response = Empty(
 					service = self.service,
-					request = {'request': request, 'query': query, 'country_code': country_code}
+					meta = Meta(
+						service = self.service,
+						request = request,
+						processing_time = current_unix_time_ms() - start_time,
+						http_code = 204
+					)
 				)
 				await log(empty_response)
 				return empty_response
@@ -229,7 +261,11 @@ class YouTubeMusic:
 				service = self.service,
 				component = self.component,
 				error_msg = f'Error when doing general query search: "{msg}"',
-				request = {'request': request, 'query': query, 'country_code': country_code}
+				meta = Meta(
+					service = self.service,
+					request = request,
+					processing_time = current_unix_time_ms() - start_time,
+				)
 			)
 			await log(error)
 			return error
@@ -238,7 +274,7 @@ class YouTubeMusic:
 
 	async def lookup_song(self, id: str, country_code: str = 'us') -> object:
 		try:
-			request = 'lookup_song'
+			request = {'request': 'lookup_song', 'id': id, 'country_code': country_code, 'url': f'https://music.youtube.com/watch?v={id}'}
 			start_time = current_unix_time_ms()
 			song = self.ytm.get_song(id)['videoDetails']
 
@@ -250,7 +286,6 @@ class YouTubeMusic:
 					song_artists = await self.lookup_artist(video_id = song['videoId'])
 					if not isinstance(song_artists, list): song_artists = [song_artists.name]
 					song_cover = song['thumbnail']['thumbnails'][len(song['thumbnail']['thumbnails'])-1]['url']
-					end_time = current_unix_time_ms()
 					if song['musicVideoType'] == 'MUSIC_VIDEO_TYPE_ATV':
 						return Song(
 							service = self.service,
@@ -262,9 +297,13 @@ class YouTubeMusic:
 							collection = None,
 							is_explicit = None,
 							cover_url = song_cover,
-							api_response_time = end_time - start_time,
-							api_http_code = 200,
-							request = {'request': request, 'id': id, 'country_code': country_code, 'url': f'https://music.youtube.com/watch?v={id}'}
+							meta = Meta(
+								service = self.service,
+								request = request,
+								processing_time = current_unix_time_ms() - start_time,
+								filter_confidence_percentage = 100.0,
+								http_code = 200
+							)
 						)
 
 					else:
@@ -277,14 +316,23 @@ class YouTubeMusic:
 							artists = song_artists,
 							is_explicit = None,
 							thumbnail_url = song_cover,
-							api_response_time = end_time - start_time,
-							api_http_code = 200,
-							request = {'request': request, 'id': id, 'country_code': country_code, 'url': f'https://music.youtube.com/watch?v={id}'}
+							meta = Meta(
+								service = self.service,
+								request = request,
+								processing_time = current_unix_time_ms() - start_time,
+								filter_confidence_percentage = 100.0,
+								http_code = 200
+							)
 						)
 			else:
 				return Empty(
 					service = self.service,
-					request = {'request': request, 'id': id, 'country_code': country_code, 'url': f'https://music.youtube.com/watch?v={id}'}
+					meta = Meta(
+							service = self.service,
+							request = request,
+							processing_time = current_unix_time_ms() - start_time,
+							http_code = 204
+						)
 				)
 			
 		except Exception as msg:
@@ -292,7 +340,11 @@ class YouTubeMusic:
 				service = self.service,
 				component = self.component,
 				error_msg = f'Error when looking up song: "{msg}"',
-				request = {'request': request, 'id': id, 'country_code': country_code, 'url': f'https://music.youtube.com/watch?v={id}'}
+				meta = Meta(
+					service = self.service,
+					request = request,
+					processing_time = current_unix_time_ms() - start_time,
+				)
 			)
 			await log(error)
 			return error
@@ -301,7 +353,7 @@ class YouTubeMusic:
 
 	async def lookup_collection(self, id: str, country_code: str = 'us') -> object:
 		try:
-			request = 'lookup_collection'
+			request = {'request': 'lookup_collection', 'id': id, 'country_code': country_code, 'url': f'https://music.youtube.com/playlist?list={id}'}
 			start_time = current_unix_time_ms()
 			browse_id = self.ytm.get_album_browse_id(id)
 			collection = self.ytm.get_album(browse_id)
@@ -313,7 +365,6 @@ class YouTubeMusic:
 			collection_artists = [artist['name'] for artist in collection['artists']]
 			collection_year = collection['year']
 			collection_cover = collection['thumbnails'][len(collection['thumbnails'])-1]['url']
-			end_time = current_unix_time_ms()
 			return Collection(
 				service = self.service,
 				type = collection_type,
@@ -323,9 +374,13 @@ class YouTubeMusic:
 				artists = collection_artists,
 				release_year = collection_year,
 				cover_url = collection_cover,
-				api_response_time = end_time - start_time,
-				api_http_code = 200,
-				request = {'request': request, 'id': id, 'country_code': country_code, 'url': f'https://music.youtube.com/playlist?list={id}'}
+				meta = Meta(
+					service = self.service,
+					request = request,
+					processing_time = current_unix_time_ms() - start_time,
+					filter_confidence_percentage = 100.0,
+					http_code = 200
+				)
 			)
 			
 		except Exception as msg:
@@ -333,7 +388,11 @@ class YouTubeMusic:
 				service = self.service,
 				component = self.component,
 				error_msg = f'Error when looking up collection: "{msg}"',
-				request = {'request': request, 'id': id, 'country_code': country_code, 'url': f'https://music.youtube.com/playlist?list={id}'}
+				meta = Meta(
+					service = self.service,
+					request = request,
+					processing_time = current_unix_time_ms() - start_time,
+				)
 			)
 			await log(error)
 			return error
@@ -342,7 +401,7 @@ class YouTubeMusic:
 
 	async def lookup_artist(self, id: str = None, video_id: str = None, country_code: str = 'us') -> object:
 		try:
-			request = 'lookup_artist'
+			request = {'request': 'lookup_artist', 'id': id, 'video_id': video_id, 'country_code': country_code}
 			start_time = current_unix_time_ms()
 			try:
 				if video_id == None and id == None:
@@ -357,15 +416,18 @@ class YouTubeMusic:
 				artist_url = f'https://www.youtube.com/channel/{artist['channelId']}'
 				artist_id = artist['channelId']
 				artist_name = artist['name']
-				end_time = current_unix_time_ms()
 				return Artist(
 					service = self.service,
 					url = artist_url,
 					id = artist_id,
 					name = artist_name,
-					api_response_time = end_time - start_time,
-					api_http_code = 200,
-					request = {'request': request, 'id': id, 'video_id': video_id, 'country_code': country_code}
+					meta = Meta(
+						service = self.service,
+						request = request,
+						processing_time = current_unix_time_ms() - start_time,
+						filter_confidence_percentage = 100.0,
+						http_code = 200
+					)
 				)
 			except:
 				artist = self.ytm.get_song(video_id)['videoDetails']
@@ -373,23 +435,29 @@ class YouTubeMusic:
 				artist_url = f'https://www.youtube.com/channel/{artist['channelId']}'
 				artist_id = artist['channelId']
 				artist_name = artist['author']
-				end_time = current_unix_time_ms()
 				return Artist(
 					service = self.service,
 					url = artist_url,
 					id = artist_id,
 					name = artist_name,
-					api_response_time = end_time - start_time,
-					api_http_code = 200,
-					request = {'request': request, 'id': id, 'video_id': video_id, 'country_code': country_code}
+					meta = Meta(
+						service = self.service,
+						request = request,
+						processing_time = current_unix_time_ms() - start_time,
+						filter_confidence_percentage = 100.0,
+						http_code = 200
+					)
 				)
 		except Exception as msg:
 			error = Error(
 				service = self.service,
 				component = self.component,
 				error_msg = f'Error when looking up artist: "{msg}"',
-				request = {'request': request, 'id': id, 'video_id': video_id, 'country_code': country_code}
+				meta = Meta(
+					service = self.service,
+					request = request,
+					processing_time = current_unix_time_ms() - start_time,
+				)
 			)
 			await log(error)
 			return error
-		

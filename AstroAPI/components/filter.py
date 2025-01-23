@@ -49,19 +49,33 @@ async def filter_song(service: str, query_request: str, songs: list, query_artis
 	
 	data_with_similarity = sort_similarity_lists(data_with_similarity)
 	if data_with_similarity != []:
-		if percentage(max_score, data_with_similarity[0][0]) > 30:
-			return data_with_similarity[0][1]
+		top_data = data_with_similarity[0]
+		if percentage(max_score, top_data[0]) > 30:
+			top_data[1].meta.filter_confidence_percentage = percentage(max_score, top_data[0])
+			return top_data[1]
 		else:
 			response = Empty(
 				service = service,
-				request = {'request': query_request, 'artists': query_artists, 'title': query_title, 'song_type': query_song_type, 'collection': query_collection, 'is_explicit': query_is_explicit, 'country_code': query_country_code}
+				meta = Meta(
+					service = top_data[1].service,
+					request = top_data[1].meta.request,
+					processing_time = top_data[1].meta.processing_time,
+					filter_confidence_percentage = percentage(max_score, top_data[0]),
+					http_code = 204
+				)
 			)
 			await log(response)
 			return response
 	else:
 		response = Empty(
 			service = service,
-			request = {'request': query_request, 'artists': query_artists, 'title': query_title, 'song_type': query_song_type, 'collection': query_collection, 'is_explicit': query_is_explicit, 'country_code': query_country_code}
+			meta = Meta(
+				service = service,
+				request = query_request,
+				processing_time = 0,
+				filter_confidence_percentage = 0.0,
+				http_code = 204
+			)
 		)
 		await log(response)
 		return response
@@ -100,19 +114,33 @@ async def filter_mv(service: str, query_request: str, videos: list, query_artist
 	
 	data_with_similarity = sort_similarity_lists(data_with_similarity)
 	if data_with_similarity != []:
-		if percentage(max_score, data_with_similarity[0][0]) > 30:
-			return data_with_similarity[0][1]
+		top_data = data_with_similarity[0]
+		if percentage(max_score, top_data[0]) > 30:
+			top_data[1].meta.filter_confidence_percentage = percentage(max_score, top_data[0])
+			return top_data[1]
 		else:
 			empty_response = Empty(
 				service = service,
-				request = {'request': query_request, 'artists': query_artists, 'title': query_title, 'is_explicit': query_is_explicit, 'country_code': query_country_code}
+				meta = Meta(
+					service = top_data[1].service,
+					request = top_data[1].meta.request,
+					processing_time = top_data[1].meta.processing_time,
+					filter_confidence_percentage = percentage(max_score, top_data[0]),
+					http_code = 204
+				)
 			)
 			await log(empty_response)
 			return empty_response
 	else:
 		empty_response = Empty(
 			service = service,
-			request = {'request': query_request, 'artists': query_artists, 'title': query_title, 'is_explicit': query_is_explicit, 'country_code': query_country_code}
+			meta = Meta(
+				service = service,
+				request = query_request,
+				processing_time = 0,
+				filter_confidence_percentage = 0.0,
+				http_code = 204
+			)
 		)
 		await log(empty_response)
 		return empty_response
@@ -151,19 +179,33 @@ async def filter_collection(service: str, query_request: str, collections: list,
 	
 	data_with_similarity = sort_similarity_lists(data_with_similarity)
 	if data_with_similarity != []:
+		top_data = data_with_similarity[0]
 		if percentage(max_score, data_with_similarity[0][0]) > 30:
+			top_data[1].meta.filter_confidence_percentage = percentage(max_score, top_data[0])
 			return data_with_similarity[0][1]
 		else:
 			empty_response = Empty(
 				service = service,
-				request = {'request': query_request, 'artists': query_artists, 'title': query_title, 'year': query_year, 'country_code': query_country_code}
+				meta = Meta(
+					service = top_data[1].service,
+					request = top_data[1].meta.request,
+					processing_time = top_data[1].meta.processing_time,
+					filter_confidence_percentage = percentage(max_score, top_data[0]),
+					http_code = 204
+				)
 			)
 			await log(empty_response)
 			return empty_response
 	else:
 		empty_response = Empty(
 			service = service,
-			request = {'request': query_request, 'artists': query_artists, 'title': query_title, 'year': query_year, 'country_code': query_country_code}
+			meta = Meta(
+				service = service,
+				request = query_request,
+				processing_time = 0,
+				filter_confidence_percentage = 0.0,
+				http_code = 204
+			)
 		)
 		await log(empty_response)
 		return empty_response

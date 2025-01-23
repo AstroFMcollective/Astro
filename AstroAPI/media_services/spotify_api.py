@@ -23,6 +23,7 @@ class Spotify:
 				api_url = 'https://accounts.spotify.com/api/token'
 				api_data = f'grant_type=client_credentials&client_id={self.client_id}&client_secret={self.client_secret}'
 				api_headers = {'Content-Type': 'application/x-www-form-urlencoded'}
+				start_time = current_unix_time_ms()
 
 				async with session.post(url = api_url, data = api_data, headers = api_headers) as response:
 					if response.status == 200:
@@ -34,9 +35,13 @@ class Spotify:
 						error = Error(
 							service = self.service,
 							component = self.component,
-							http_code = response.status,
 							error_msg = "HTTP error when getting token",
-							request = {'request': request}
+							meta = Meta(
+								service = self.service,
+								request = request,
+								processing_time = current_unix_time_ms() - start_time,
+								http_code = response.status
+							)
 						)
 						await log(error)
 						return error
@@ -47,7 +52,7 @@ class Spotify:
 
 	async def search_song(self, artists: list, title: str, song_type: str = None, collection: str = None, is_explicit: bool = None, country_code: str = 'us') -> object:
 		async with aiohttp.ClientSession() as session:
-			request = 'search_song'
+			request = {'request': 'search_song', 'artists': artists, 'title': title, 'song_type': song_type, 'collection': collection, 'is_explicit': is_explicit, 'country_code': country_code}
 			artists = [optimize_for_search(artist) for artist in artists]
 			title = optimize_for_search(title)
 			collection = clean_up_collection_title(optimize_for_search(collection)) if collection != None else None
@@ -78,7 +83,6 @@ class Spotify:
 						song_cover = (song['album']['images'][0]['url'] if song['album']['images'] != [] else '')
 						song_is_explicit = song['explicit']
 						song_collection = remove_feat(song['album']['name'])
-						end_time = current_unix_time_ms()
 						songs.append(Song(
 							service = self.service,
 							type = song_type,
@@ -89,9 +93,12 @@ class Spotify:
 							collection = song_collection,
 							is_explicit = song_is_explicit,
 							cover_url = song_cover,
-							api_response_time = end_time - start_time,
-							api_http_code = response.status,
-							request = {'request': request, 'artists': artists, 'title': title, 'song_type': song_type, 'collection': collection, 'is_explicit': is_explicit, 'country_code': country_code}
+							meta = Meta(
+								service = self.service,
+								request = request,
+								processing_time = current_unix_time_ms() - start_time,
+								http_code = response.status
+							)
 						))
 					return await filter_song(service = self.service, query_request = request, songs = songs, query_artists = artists, query_title = title, query_song_type = song_type, query_collection = collection, query_is_explicit = is_explicit, query_country_code = country_code)
 
@@ -99,9 +106,13 @@ class Spotify:
 					error = Error(
 						service = self.service,
 						component = self.component,
-						http_code = response.status,
 						error_msg = "HTTP error when searching for song",
-						request = {'request': request, 'artists': artists, 'title': title, 'song_type': song_type, 'collection': collection, 'is_explicit': is_explicit, 'country_code': country_code}
+						meta = Meta(
+							service = self.service,
+							request = request,
+							processing_time = current_unix_time_ms() - start_time,
+							http_code = response.status
+						)
 					)
 					await log(error)
 					return error
@@ -110,7 +121,7 @@ class Spotify:
 
 	async def search_collection(self, artists: list, title: str, year: int = None, country_code: str = 'us') -> object:
 		async with aiohttp.ClientSession() as session:
-			request = 'search_collection'
+			request = {'request': 'search_collection', 'artists': artists, 'title': title, 'year': year, 'country_code': country_code}
 			artists = [optimize_for_search(artist) for artist in artists]
 			title = clean_up_collection_title(optimize_for_search(title))
 			
@@ -139,7 +150,6 @@ class Spotify:
 						collection_artists = [artist['name'] for artist in collection['artists']]
 						collection_year = collection['release_date'][:4]
 						collection_cover = (collection['images'][0]['url'] if collection['images'] != [] else '')
-						end_time = current_unix_time_ms()
 						collections.append(Collection(
 							service = self.service,
 							type = collection_type,
@@ -149,9 +159,12 @@ class Spotify:
 							artists = collection_artists,
 							release_year = collection_year,
 							cover_url = collection_cover,
-							api_response_time = end_time - start_time,
-							api_http_code = response.status,
-							request = {'request': request, 'artists': artists, 'title': title, 'year': year, 'country_code': country_code}
+							meta = Meta(
+								service = self.service,
+								request = request,
+								processing_time = current_unix_time_ms() - start_time,
+								http_code = response.status
+							)
 						))
 					return await filter_collection(service = self.service, query_request = request, collections = collections, query_artists = artists, query_title = title, query_year = year, query_country_code = country_code)
 
@@ -159,9 +172,13 @@ class Spotify:
 					error = Error(
 						service = self.service,
 						component = self.component,
-						http_code = response.status,
 						error_msg = "HTTP error when searching for collection",
-						request = {'request': request, 'artists': artists, 'title': title, 'year': year, 'country_code': country_code}
+						meta = Meta(
+							service = self.service,
+							request = request,
+							processing_time = current_unix_time_ms() - start_time,
+							http_code = response.status
+						)
 					)
 					await log(error)
 					return error
@@ -170,7 +187,7 @@ class Spotify:
 	
 	async def lookup_song(self, id: str, country_code: str = 'us') -> object:
 		async with aiohttp.ClientSession() as session:
-			request = 'lookup_song'
+			request = {'request': 'lookup_song', 'id': id, 'country_code': country_code, 'url': f'https://open.spotify.com/track/{id}'}
 			api_url = f'https://api.spotify.com/v1/tracks/{id}'
 			api_params = {
 				'market': country_code.upper(),
@@ -191,7 +208,6 @@ class Spotify:
 					song_cover = (song['album']['images'][0]['url'] if song['album']['images'] != [] else '')
 					song_is_explicit = song['explicit']
 					song_collection = remove_feat(song['album']['name'])
-					end_time = current_unix_time_ms()
 					return Song(
 						service = self.service,
 						type = song_type,
@@ -202,18 +218,26 @@ class Spotify:
 						collection = song_collection,
 						is_explicit = song_is_explicit,
 						cover_url = song_cover,
-						api_response_time = end_time - start_time,
-						api_http_code = response.status,
-						request = {'request': request, 'id': id, 'country_code': country_code, 'url': f'https://open.spotify.com/track/{id}'}
+						meta = Meta(
+							service = self.service,
+							request = request,
+							processing_time = current_unix_time_ms() - start_time,
+							filter_confidence_percentage = 100.0,
+							http_code = response.status
+						)
 					)
 
 				else:
 					error = Error(
 						service = self.service,
 						component = self.component,
-						http_code = response.status,
 						error_msg = "HTTP error when looking up song ID",
-						request = {'request': request, 'id': id, 'country_code': country_code, 'url': f'https://open.spotify.com/track/{id}'}
+						meta = Meta(
+							service = self.service,
+							request = request,
+							processing_time = current_unix_time_ms() - start_time,
+							http_code = response.status
+						)
 					)
 					await log(error)
 					return error
@@ -222,7 +246,7 @@ class Spotify:
 
 	async def lookup_collection(self, id: str, country_code: str = 'us') -> object:
 		async with aiohttp.ClientSession() as session:
-			request = 'lookup_collection'
+			request = {'request': 'lookup_collection', 'id': id, 'country_code': country_code, 'url': f'https://open.spotify.com/album/{id}'}
 			api_url = f'https://api.spotify.com/v1/albums/{id}'
 			api_params = {
 				'market': country_code.upper(),
@@ -242,7 +266,6 @@ class Spotify:
 					collection_artists = [artist['name'] for artist in collection['artists']]
 					collection_year = collection['release_date'][:4]
 					collection_cover = (collection['images'][0]['url'] if collection['images'] != [] else '')
-					end_time = current_unix_time_ms()
 					return Collection(
 						service = self.service,
 						type = collection_type,
@@ -252,18 +275,26 @@ class Spotify:
 						artists = collection_artists,
 						release_year = collection_year,
 						cover_url = collection_cover,
-						api_response_time = end_time - start_time,
-						api_http_code = response.status,
-						request = {'request': request, 'id': id, 'country_code': country_code, 'url': f'https://open.spotify.com/album/{id}'}
+						meta = Meta(
+							service = self.service,
+							request = request,
+							processing_time = current_unix_time_ms() - start_time,
+							filter_confidence_percentage = 100.0,
+							http_code = response.status
+						)
 					)
 
 				else:
 					error = Error(
 						service = self.service,
 						component = self.component,
-						http_code = response.status,
 						error_msg = "HTTP error when looking up collection ID",
-						request = {'request': request, 'id': id, 'country_code': country_code, 'url': f'https://open.spotify.com/album/{id}'}
+						meta = Meta(
+							service = self.service,
+							request = request,
+							processing_time = current_unix_time_ms() - start_time,
+							http_code = response.status
+						)
 					)
 					await log(error)
 					return error

@@ -18,7 +18,7 @@ async def log(media: object):
 		)
 		if media.type == 'error':
 			report = [
-				f'HTTP code: `{media.http_code}`',
+				f'HTTP code: `{media.meta.http_code}`',
 				f'Error message: `{media.error_msg}`'
 			]
 			embed.add_field(
@@ -28,7 +28,7 @@ async def log(media: object):
 			)
 
 			#parameters = list(media.request.keys())
-			request = '\n'.join([f'{parameter}: `{media.request[parameter]}`' for parameter in list(media.request.keys())])
+			request = '\n'.join([f'{parameter}: `{media.meta.request[parameter]}`' for parameter in list(media.meta.request.keys())])
 
 			embed.add_field(
 				name = 'Request (parameters)',
@@ -41,7 +41,7 @@ async def log(media: object):
 			return
 
 		elif media.type == 'empty_response':
-			request = '\n'.join([f'{parameter}: `{media.request[parameter]}`' for parameter in list(media.request.keys())])
+			request = '\n'.join([f'{parameter}: `{media.meta.request[parameter]}`' for parameter in list(media.meta.request.keys())])
 			embed.add_field(
 				name = 'Request (parameters)',
 				value = f'{request}',

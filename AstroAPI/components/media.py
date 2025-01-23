@@ -1,22 +1,21 @@
 from AstroAPI.components.ini import config
 
 class Error:
-	def __init__(self, service: str, component: str, request: dict, http_code: int = None, error_msg: str = None) -> object:
+	def __init__(self, service: str, component: str, meta: object, error_msg: str = None) -> object:
 		self.service = service
 		self.type = 'error'
 		self.component = component
-		self.http_code = http_code
 		self.error_msg = error_msg
-		self.request = request
+		self.meta = meta
 
 class Empty:
-	def __init__(self, service: str, request: dict) -> object:
+	def __init__(self, service: str, meta: object) -> object:
 		self.service = service
 		self.type = 'empty_response'
-		self.request = request
+		self.meta = meta
 
 class Song:
-	def __init__(self, service: str, type: str, url: str | dict, id: any, title: str, artists: list, cover_url: str, api_response_time: int, api_http_code: int, request: dict, collection: str = None, genre: str = None, is_explicit: bool = None) -> object:
+	def __init__(self, service: str, type: str, url: str | dict, id: any, title: str, artists: list, cover_url: str, meta: object, cover_color_hex: int = None, collection: str = None, genre: str = None, is_explicit: bool = None) -> object:
 		self.service = service
 		self.type = type
 		self.url = {service: url} if isinstance(url, str) else url
@@ -26,14 +25,13 @@ class Song:
 		self.collection = collection
 		self.artists = artists
 		self.cover_url = cover_url
+		self.cover_color_hex = cover_color_hex
 		self.genre = genre
 		self.is_explicit = is_explicit
-		self.api_response_time = api_response_time
-		self.api_http_code = api_http_code
-		self.request = request
+		self.meta = meta
 
 class MusicVideo:
-	def __init__(self, service: str, url: str | dict, id: any, title: str, artists: list, thumbnail_url: str, api_response_time: int, api_http_code: int, request: dict, is_explicit: bool = None, genre: str = None) -> object:
+	def __init__(self, service: str, url: str | dict, id: any, title: str, artists: list, thumbnail_url: str, meta = object, thumbnail_color_hex: int = None, is_explicit: bool = None, genre: str = None) -> object:
 		self.service = service
 		self.type = 'music_video'
 		self.url = {service: url} if isinstance(url, str) else url
@@ -42,13 +40,12 @@ class MusicVideo:
 		self.censored_title = title
 		self.artists = artists
 		self.thumbnail_url = thumbnail_url
+		self.thumbnail_color_hex = thumbnail_color_hex
 		self.is_explicit = is_explicit
-		self.api_response_time = api_response_time
-		self.api_http_code = api_http_code
-		self.request = request
+		self.meta = meta
 
 class Collection:
-	def __init__(self, service: str, type: str, url: str | dict, id: any, title: str, artists: list, cover_url: str, api_response_time: int, api_http_code: int, request: dict, release_year: int = None, genre: str = None) -> object:
+	def __init__(self, service: str, type: str, url: str | dict, id: any, title: str, artists: list, cover_url: str, meta = object, cover_color_hex: int = None, release_year: int = None, genre: str = None) -> object:
 		self.service = service
 		self.type = type
 		self.url = {service: url} if isinstance(url, str) else url
@@ -58,13 +55,12 @@ class Collection:
 		self.artists = artists
 		self.release_year = None if release_year == None else int(release_year)
 		self.cover_url = cover_url
+		self.cover_color_hex = cover_color_hex
 		self.genre = genre
-		self.api_response_time = api_response_time
-		self.api_http_code = api_http_code
-		self.request = request
+		self.meta = meta
 
 class Podcast:
-	def __init__(self, service: str, url: str | dict, id: any, title: str, publisher: str, cover_url: str, is_explicit: bool, api_response_time: int, api_http_code: int, request: dict) -> object:
+	def __init__(self, service: str, url: str | dict, id: any, title: str, publisher: str, cover_url: str, is_explicit: bool, meta = object, cover_color_hex: int = None) -> object:
 		self.service = service
 		self.type = 'podcast'
 		self.url = {service: url} if isinstance(url, str) else url
@@ -73,13 +69,12 @@ class Podcast:
 		self.censored_title = title
 		self.publisher = publisher
 		self.cover_url = cover_url
+		self.cover_color_hex = cover_color_hex
 		self.is_explicit = is_explicit
-		self.api_response_time = api_response_time
-		self.api_http_code = api_http_code
-		self.request = request
+		self.meta = meta
 
 class PodcastEpisode:
-	def __init__(self, service: str, url: str | dict, id: any, title: str, release_year: str, cover_url: str, is_explicit: bool, api_response_time: int, api_http_code: int, request: dict) -> object:
+	def __init__(self, service: str, url: str | dict, id: any, title: str, release_year: str, cover_url: str, is_explicit: bool, meta = object, cover_color_hex: int = None) -> object:
 		self.service = service
 		self.type = 'podcast_episode'
 		self.url = {service: url} if isinstance(url, str) else url
@@ -88,13 +83,12 @@ class PodcastEpisode:
 		self.censored_title = title
 		self.release_year = None if release_year == None else int(release_year)
 		self.cover_url = cover_url
+		self.cover_color_hex = cover_color_hex
 		self.is_explicit = is_explicit
-		self.api_response_time = api_response_time
-		self.api_http_code = api_http_code
-		self.request = request
+		self.meta = meta
 
 class Playlist:
-	def __init__(self, service: str, url: str | dict, id: any, title: str, owner: str, songs: list, cover_url: str, api_response_time: int, api_http_code: int, request: dict) -> object:
+	def __init__(self, service: str, url: str | dict, id: any, title: str, owner: str, songs: list, cover_url: int, meta = object, cover_color_hex: int = None) -> object:
 		self.service = service
 		self.type = 'playlist'
 		self.url = {service: url} if isinstance(url, str) else url
@@ -104,12 +98,11 @@ class Playlist:
 		self.owner = owner
 		self.songs = songs
 		self.cover_url = cover_url
-		self.api_response_time = api_response_time
-		self.api_http_code = api_http_code
-		self.request = request
+		self.cover_color_hex = cover_color_hex
+		self.meta = meta
 
 class Audiobook:
-	def __init__(self, service: str, url: str | dict, id: any, title: str, authors: list, narrators: list, publisher: str, chapters: int, cover_url: str, is_explicit: bool, api_response_time: int, api_http_code: int, request: dict) -> object:
+	def __init__(self, service: str, url: str | dict, id: any, title: str, authors: list, narrators: list, publisher: str, chapters: int, cover_url: str, is_explicit: bool, meta = object, cover_color_hex: int = None) -> object:
 		self.service = service
 		self.type = 'audiobook'
 		self.url = {service: url} if isinstance(url, str) else url
@@ -121,13 +114,12 @@ class Audiobook:
 		self.publisher = publisher
 		self.chapters = chapters
 		self.cover_url = cover_url
+		self.cover_color_hex = cover_color_hex
 		self.is_explicit = is_explicit
-		self.api_response_time = api_response_time
-		self.api_http_code = api_http_code
-		self.request = request
+		self.meta = meta
 
 class Artist:
-	def __init__(self, service: str, url: str | dict, id: any, name: str, api_response_time: int, api_http_code: int, request: dict, profie_pic_url: str = None, genres: list = None) -> object:
+	def __init__(self, service: str, url: str | dict, id: any, name: str, meta = object, profie_pic_url: str = None, profile_pic_color_hex: int = None, genres: list = None) -> object:
 		self.service = service
 		self.type = 'artist'
 		self.url = {service: url} if isinstance(url, str) else url
@@ -135,6 +127,26 @@ class Artist:
 		self.name = name
 		self.genres = genres
 		self.profile_pic_url = profie_pic_url if profie_pic_url != None else 'https://developer.valvesoftware.com/w/images/thumb/8/8b/Debugempty.png/200px-Debugempty.png'
-		self.api_response_time = api_response_time
-		self.api_http_code = api_http_code
+		self.profile_pic_color_hex = profile_pic_color_hex
+		self.meta = meta
+
+class Cover:
+	def __init__(self, service: str, type: str, hq_url: str | dict, lq_url: str | dict, title: str, artists: list, meta = object, color_hex: int = None):
+		self.service = service
+		self.type = 'cover'
+		self.media_type = type
+		self.title = title
+		self.censored_title = title
+		self.artists = artists
+		self.hq_url = {service: hq_url} if isinstance(hq_url, str) else hq_url
+		self.lq_url = {service: lq_url} if isinstance(lq_url, str) else lq_url
+		self.color_hex = color_hex
+		self.meta = meta
+
+class Meta:
+	def __init__(self, service: str, request: dict, processing_time: int | dict, filter_confidence_percentage: float | dict = None, http_code: int = None, color_hex: int = None):
+		self.service = service
 		self.request = request
+		self.http_code = http_code
+		self.processing_time = {service: processing_time} if isinstance(processing_time, int) else processing_time
+		self.filter_confidence_percentage = {service: filter_confidence_percentage} if isinstance(filter_confidence_percentage, float) else filter_confidence_percentage

@@ -20,9 +20,9 @@ class Tidal:
 	async def get_token(self) -> str:
 		if self.token == None or (self.token_expiration_date == None or current_unix_time() > self.token_expiration_date):
 			async with aiohttp.ClientSession() as session:
-				request = {'request': 'get_token'}
+				request = 'get_token'
 				credentials = f'{self.client_id}:{self.client_secret}'
-				encoded_credentials = b64encode(credentials.encode('utf-8')).decode('utf-8')
+				encoded_credentials = b64encode(credentials.encode('utf-8'))#.decode('utf-8')
 				api_url = 'https://auth.tidal.com/v1/oauth2/token'
 				api_data = {'grant_type': 'client_credentials'}
 				api_headers = {'Authorization': f'Basic {encoded_credentials}'}
@@ -50,7 +50,7 @@ class Tidal:
 						return error
 
 		return self.token
-
+	
 
 
 	async def search_song(self, artists: list, title: str, song_type: str = None, collection: str = None, is_explicit: bool = None, country_code: str = 'us') -> object:
@@ -61,24 +61,26 @@ class Tidal:
 			collection = clean_up_collection_title(optimize_for_search(collection)) if collection != None else None
 			
 			songs = []
-			query = f'{artists[0]} {title}'
-			api_url = f'https://openapi.tidal.com/searchresults/{query}/relationships/tracks'
+			api_url = f'https://openapi.tidal.com/search'
 			api_params = {
+				'query': f'{artists[0]} {title}',
+				'type': 'TRACKS',
+				'offset': 0,
+				'limit': 100,
 				'countryCode': country_code.upper(),
-				'include': 'tracks'
+				'popularity': 'WORLDWIDE'
 			}
 			api_headers = {
 				'accept': 'application/vnd.api+json',
 				'Authorization': f'Bearer {await self.get_token()}',
-				'Content-Type': 'application/vnd.api+json'
+				'Content-Type': 'application/vnd.tidal.v1+json'
 			}
 			timeout = aiohttp.ClientTimeout(total = 30)
 			start_time = current_unix_time_ms()
 
 			async with session.get(url = api_url, headers = api_headers, timeout = timeout, params = api_params) as response:
-				if response.status == 200:
+				if response.status == 207:
 					json_response = await response.json()
-					save_json()
 
 					for song in json_response['tracks']:
 						song_type = 'track'
@@ -142,7 +144,7 @@ class Tidal:
 				'popularity': 'WORLDWIDE'
 			}
 			api_headers = {
-				'accept': 'application/vnd.tidal.v1+json',
+				'accept': 'application/vnd.api+json',
 				'Authorization': f'Bearer {await self.get_token()}',
 				'Content-Type': 'application/vnd.tidal.v1+json'
 			}
@@ -211,7 +213,7 @@ class Tidal:
 				'popularity': 'WORLDWIDE'
 			}
 			api_headers = {
-				'accept': 'application/vnd.tidal.v1+json',
+				'accept': 'application/vnd.api+json',
 				'Authorization': f'Bearer {await self.get_token()}',
 				'Content-Type': 'application/vnd.tidal.v1+json'
 			}
@@ -271,7 +273,7 @@ class Tidal:
 			request = {'request': 'lookup_song', 'id': id, 'country_code': country_code, 'url': f'https://tidal.com/browse/track/{id}'}
 			api_url = f'https://openapi.tidal.com/tracks/{id}?countryCode=US'
 			api_headers = {
-				'accept': 'application/vnd.tidal.v1+json',
+				'accept': 'application/vnd.api+json',
 				'Authorization': f'Bearer {await self.get_token()}',
 				'Content-Type': 'application/vnd.tidal.v1+json'
 			}
@@ -331,7 +333,7 @@ class Tidal:
 			request = {'request': 'lookup_music_video', 'id': id, 'url': f'https://tidal.com/browse/video/{id}'}
 			api_url = f'https://openapi.tidal.com/videos/{id}?countryCode=US'
 			api_headers = {
-				'accept': 'application/vnd.tidal.v1+json',
+				'accept': 'application/vnd.api+json',
 				'Authorization': f'Bearer {await self.get_token()}',
 				'Content-Type': 'application/vnd.tidal.v1+json'
 			}
@@ -388,7 +390,7 @@ class Tidal:
 			request = {'request': 'lookup_collection', 'id': id, 'country_code': country_code, 'url': f'https://tidal.com/browse/album/{id}'}
 			api_url = f'https://openapi.tidal.com/albums/{id}?countryCode=US'
 			api_headers = {
-				'accept': 'application/vnd.tidal.v1+json',
+				'accept': 'application/vnd.api+json',
 				'Authorization': f'Bearer {await self.get_token()}',
 				'Content-Type': 'application/vnd.tidal.v1+json'
 			}

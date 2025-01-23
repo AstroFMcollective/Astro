@@ -12,7 +12,7 @@ class Genius:
 
 
 	async def search_song(self, artists: list, title: str, song_type: str = None, collection: str = None, is_explicit: bool = None, country_code: str = 'us') -> object:
-		request = 'search_song'
+		request = {'request': 'search_song', 'artists': artists, 'title': title, 'song_type': song_type, 'collection': collection, 'is_explicit': is_explicit, 'country_code': country_code}
 		artists = [optimize_for_search(artist) for artist in artists]
 		title = optimize_for_search(title)
 		collection = clean_up_collection_title(optimize_for_search(collection)) if collection != None else None
@@ -27,8 +27,8 @@ class Genius:
 		results = requests.get(api_url, api_params, headers = api_headers)
 
 		if results.status_code == 200:
-			results = results.json()['response']
-			for result in results['hits']:
+			json = results.json()['response']
+			for result in json['hits']:
 				song_url = result['result']['url']
 				song_id = result['result']['id']
 				song_title = result['result']['title']
@@ -36,7 +36,6 @@ class Genius:
 				song_cover = result['result']['song_art_image_url']
 				song_is_explicit = None
 				song_collection = None
-				end_time = current_unix_time_ms()
 				songs.append(Song(
 					service = self.service,
 					type = 'track',
@@ -47,9 +46,12 @@ class Genius:
 					collection = song_collection,
 					is_explicit = song_is_explicit,
 					cover_url = song_cover,
-					api_response_time = end_time - start_time,
-					api_http_code = 200,
-					request = {'request': request, 'artists': artists, 'title': title, 'song_type': song_type, 'collection': collection, 'is_explicit': is_explicit, 'country_code': country_code}
+					meta = Meta(
+						service = self.service,
+						request = request,
+						processing_time = current_unix_time_ms() - start_time,
+						http_code = results.status_code
+					)
 				))
 			return await filter_song(service = self.service, query_request = request, songs = songs, query_artists = artists, query_title = title, query_song_type = song_type, query_collection = collection, query_is_explicit = is_explicit, query_country_code = country_code)
 		
@@ -57,9 +59,13 @@ class Genius:
 			error = Error(
 				service = self.service,
 				component = self.component,
-				http_code = results.status_code,
 				error_msg = "HTTP error when searching for song",
-				request = {'request': request, 'artists': artists, 'title': title, 'song_type': song_type, 'collection': collection, 'is_explicit': is_explicit, 'country_code': country_code}
+				meta = Meta(
+					service = self.service,
+					request = request,
+					processing_time = current_unix_time_ms() - start_time,
+					http_code = result.status_code
+				)			
 			)
 			await log(error)
 			return error
@@ -67,7 +73,7 @@ class Genius:
 
 
 	async def search_music_video(self, artists: list, title: str, is_explicit: bool = None, country_code: str = 'us') -> object:
-		request = 'search_music_video'
+		request = {'request': 'search_music_video', 'artists': artists, 'title': title, 'is_explicit': is_explicit, 'country_code': country_code}
 		artists = [optimize_for_search(artist) for artist in artists]
 		title = optimize_for_search(replace_with_ascii(title).lower())
 			
@@ -80,7 +86,7 @@ class Genius:
 		start_time = current_unix_time_ms()
 		results = requests.get(api_url, api_params, headers = api_headers)
 		
-		if results.status_code == '200':
+		if results.status_code == 200:
 			results = results.json()['response']
 			for result in results['hits']:
 				mv_url = result['result']['url']
@@ -98,9 +104,12 @@ class Genius:
 					artists = mv_artists,
 					is_explicit = mv_is_explicit,
 					thumbnail_url = mv_cover,
-					api_response_time = end_time - start_time,
-					api_http_code = 200,
-					request = {'request': request, 'artists': artists, 'title': title, 'is_explicit': is_explicit, 'country_code': country_code}
+					meta = Meta(
+						service = self.service,
+						request = request,
+						processing_time = current_unix_time_ms() - start_time,
+						http_code = results.status_code
+					)
 				))
 			return await filter_mv(service = self.service, query_request = request, videos = videos, query_artists = artists, query_title = title, query_is_explicit = is_explicit, query_country_code = country_code)
 
@@ -108,16 +117,20 @@ class Genius:
 			error = Error(
 				service = self.service,
 				component = self.component,
-				http_code = results.status_code,
 				error_msg = "HTTP error when searching for music video",
-				request = {'request': request, 'artists': artists, 'title': title, 'is_explicit': is_explicit, 'country_code': country_code}
+				meta = Meta(
+					service = self.service,
+					request = request,
+					processing_time = current_unix_time_ms() - start_time,
+					http_code = result.status_code
+				)
 			)
 			await log(error)
 			return error
 
 
 	async def lookup_song(self, id: str, country_code: str = 'us') -> object:
-		request = 'lookup_song'
+		request = {'request': 'lookup_song', 'id': id, 'country_code': country_code}
 		api_url = f'https://api.genius.com/songs/{id}'
 		api_headers = {'Authorization': f'Bearer {self.token}'}
 		start_time = current_unix_time_ms()
@@ -133,7 +146,6 @@ class Genius:
 			song_cover = song['song']['song_art_image_url']
 			song_is_explicit = None
 			song_collection = song['song']['album']['name']
-			end_time = current_unix_time_ms()
 			return Song(
 				service = self.service,
 				type = song_type,
@@ -144,18 +156,26 @@ class Genius:
 				collection = song_collection,
 				is_explicit = song_is_explicit,
 				cover_url = song_cover,
-				api_response_time = end_time - start_time,
-				api_http_code = 200,
-				request = {'request': request, 'id': id, 'country_code': country_code}
+				meta = Meta(
+					service = self.service,
+					request = request,
+					processing_time = current_unix_time_ms() - start_time,
+					filter_confidence_percentage = 100.0,
+					http_code = result.status_code
+				)
 			)
 		
 		else:
 			error = Error(
 				service = self.service,
 				component = self.component,
-				http_code = result.status_code,
 				error_msg = "HTTP error when looking up song ID",
-				request = {'request': request, 'id': id, 'country_code': country_code}
+				meta = Meta(
+					service = self.service,
+					request = request,
+					processing_time = current_unix_time_ms() - start_time,
+					http_code = result.status_code
+				)
 			)
 			await log(error)
 			return error

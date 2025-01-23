@@ -22,8 +22,9 @@ class GlobalIO:
 
 
 	async def search_song(self, artists: list, title: str, song_type: str = None, collection: str = None, is_explicit: bool = None, country_code: str = 'us', exclude_services: list = []) -> object:
-		request = 'search_song'
-		try:
+			request = {'request': 'search_song', 'artists': artists, 'title': title, 'song_type': song_type, 'collection': collection, 'is_explicit': is_explicit, 'country_code': country_code, 'exclude_services': exclude_services}
+
+		#try:
 			start_time = current_unix_time_ms()
 
 			service_objs = [Spotify, AppleMusic, YouTubeMusic, Deezer, Tidal, Genius]
@@ -71,6 +72,8 @@ class GlobalIO:
 			result_type = None
 			result_urls = {}
 			result_ids = {}
+			result_processing_time = {}
+			result_confidence = {}
 			result_title = None
 			result_artists = None
 			result_collection = None
@@ -86,6 +89,12 @@ class GlobalIO:
 				if result_ids == {}:
 					for result in unlabeled_results:
 						result_ids[result.service] = result.id[result.service]
+				if result_processing_time == {}:
+					for result in unlabeled_results:
+						result_processing_time[result.service] = result.meta.processing_time[result.service]
+				if result_confidence == {}:
+					for result in unlabeled_results:
+						result_confidence[result.service] = result.meta.filter_confidence_percentage[result.service]
 				if result_title == None:
 					result_title = labeled_results[title_order[service_index]].title
 				if result_artists == None:
@@ -103,7 +112,8 @@ class GlobalIO:
 					if result_cover == None:
 						result_cover = labeled_results[cover_single_order[service]].cover_url
 
-			end_time = current_unix_time_ms()
+			result_processing_time[service] = current_unix_time_ms() - start_time
+			color_hex = await image_hex(result_cover)
 
 			if result_type != None:
 				return Song(
@@ -116,28 +126,43 @@ class GlobalIO:
 					collection = result_collection,
 					is_explicit = result_is_explicit,
 					cover_url = result_cover,
-					api_response_time = end_time - start_time,
-					api_http_code = 200,
-					request = {'request': request, 'artists': artists, 'title': title, 'song_type': song_type, 'collection': collection, 'is_explicit': is_explicit, 'country_code': country_code}
+					meta = Meta(
+						service = self.service,
+						request = request,
+						processing_time = result_processing_time,
+						filter_confidence_percentage = result_confidence,
+						http_code = 200,
+						color_hex = color_hex
+					)
 				)
 
 			else:
 				empty_response = Empty(
 					service = self.service,
-					request = {'request': request, 'artists': artists, 'title': title, 'song_type': song_type, 'collection': collection, 'is_explicit': is_explicit, 'country_code': country_code}
+					meta = Meta(
+						service = self.service,
+						request = request,
+						processing_time = result_processing_time,
+						filter_confidence_percentage = 0.0,
+						http_code = 204
+					)
 				)
 				await log(empty_response)
 				return empty_response
 
-		except Exception as msg:
-			error = Error(
-				service = self.service,
-				component = self.component,
-				error_msg = f'Error when searching for song: "{msg}"',
-				request = {'request': request, 'artists': artists, 'title': title, 'song_type': song_type, 'collection': collection, 'is_explicit': is_explicit, 'country_code': country_code}
-			)
-			await log(error)
-			return error
+		# except Exception as msg:
+		# 	error = Error(
+		# 		service = self.service,
+		# 		component = self.component,
+		# 		error_msg = f'Error when searching for song: "{msg}"',
+		# 		meta = Meta(
+		# 			service = self.service,
+		# 			request = request,
+		# 			processing_time = current_unix_time_ms() - start_time
+		# 		)
+		# 	)
+		# 	await log(error)
+		# 	return error
 
 
 	
