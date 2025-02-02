@@ -8,7 +8,8 @@ async def image_hex(image_url: str, quality: int = 5):
 	async with aiohttp.ClientSession() as session:
 		async with session.get(url = image_url) as response:
 			if response.status == 200:
-				image = Image.open(BytesIO(response.content))
+				image_bytes = await response.read()
+				image = Image.open(BytesIO(image_bytes))
 
 				width, height = image.size
 				new_width = width // quality
