@@ -62,10 +62,10 @@ class Tidal:
 			
 			songs = []
 			query = f'{artists[0]} {title}'
-			api_url = f'https://openapi.tidal.com/searchresults/{query}/relationships/tracks'
+			api_url = f'https://openapi.tidal.com/v2/searchresults/{query}/relationships/tracks'
 			api_params = {
 				'countryCode': country_code.upper(),
-				'include': 'tracks'
+				'include': 'tracks',
 			}
 			api_headers = {
 				'accept': 'application/vnd.api+json',
@@ -78,9 +78,20 @@ class Tidal:
 			async with session.get(url = api_url, headers = api_headers, timeout = timeout, params = api_params) as response:
 				if response.status == 200:
 					json_response = await response.json()
-					save_json()
+					save_json(json_response)
 
-					for song in json_response['tracks']:
+					# for song in json_response['included']:
+					# 	song_type = 'track'
+					# 	song_url = song['attributes']['externalLinks'][0]['href']
+					# 	song_id = song['id']
+					# 	song_title = song['attributes']['title']
+					# 	song_artist_objs = await self.lookup_artist(song_id = song_id)
+					# 	song_artists = [artist.name for artist in song_artist_objs]
+					# 	song_cover = None
+					# 	song_is_explicit = song['attributes']['explicit']
+					# 	song_collection = None
+					
+					'''for song in json_response['tracks']:
 						song_type = 'track'
 						song_url = song['resource']['tidalUrl']
 						song_id = song['resource']['id']
@@ -88,25 +99,25 @@ class Tidal:
 						song_artists = [artist['name'] for artist in song['resource']['artists']]
 						song_cover = (song['resource']['album']['imageCover'][1]['url'] if song['resource']['album']['imageCover'] != [] else '')
 						song_is_explicit = ('explicit' in song['resource']['properties']['content'][0] if 'content' in song['resource']['properties'] else False)
-						song_collection = remove_feat(song['resource']['album']['title'])
-						songs.append(Song(
-							service = self.service,
-							type = song_type,
-							url = song_url,
-							id = song_id,
-							title = song_title,
-							artists = song_artists,
-							collection = song_collection,
-							is_explicit = song_is_explicit,
-							cover_url = song_cover,
-							meta = Meta(
-								service = self.service,
-								request = request,
-								processing_time = current_unix_time_ms() - start_time,
-								http_code = response.status
-							)
-						))
-					return await filter_song(service = self.service, query_request = request, songs = songs, query_artists = artists, query_title = title, query_song_type = song_type, query_collection = collection, query_is_explicit = is_explicit, query_country_code = country_code)
+						song_collection = remove_feat(song['resource']['album']['title'])'''
+					# songs.append(Song(
+					# 		service = self.service,
+					# 		type = song_type,
+					# 		url = song_url,
+					# 		id = song_id,
+					# 		title = song_title,
+					# 		artists = song_artists,
+					# 		collection = song_collection,
+					# 		is_explicit = song_is_explicit,
+					# 		cover_url = song_cover,
+					# 		meta = Meta(
+					# 			service = self.service,
+					# 			request = request,
+					# 			processing_time = current_unix_time_ms() - start_time,
+					# 			http_code = response.status
+					# 		)
+					# 	))
+					# return await filter_song(service = self.service, query_request = request, songs = songs, query_artists = artists, query_title = title, query_song_type = song_type, query_collection = collection, query_is_explicit = is_explicit, query_country_code = country_code)
 
 				else:
 					error = Error(
@@ -438,3 +449,110 @@ class Tidal:
 					)
 					await log(error)
 					return error
+				
+
+
+	async def lookup_artist(self, id: str = None, song_id: str = None, country_code: str = 'us') -> list[object]:
+		async with aiohttp.ClientSession() as session:
+			request = {'request': 'lookup_artist', 'id': id, 'song_id': song_id, 'country_code': country_code}
+			api_headers = {
+				'accept': 'application/vnd.tidal.v1+json',
+				'Authorization': f'Bearer {await self.get_token()}',
+				'Content-Type': 'application/vnd.tidal.v1+json'
+			}
+			timeout = aiohttp.ClientTimeout(total = 30)
+			start_time = current_unix_time_ms()
+			artists = []
+
+			if id is not None:
+				api_url = f'https://openapi.tidal.com/v2/artists/{id}'
+				api_params = {
+					'countryCode': country_code.upper(),
+					'include': 'artists'
+				}
+				async with session.get(url = api_url, headers = api_headers, timeout = timeout, params = api_params) as response:
+					if response.status == 200:
+						json_response = await response.json()
+						#save_json(json_response)
+						artist_url = json_response['data']['attributes']['externalLinks'][0]['href']
+						artist_id = json_response['data']['id']
+						artist_name = json_response['data']['attributes']['name']
+						artist_profile_pic_url = None if json_response['data']['attributes']['imageLinks'] == [] else json_response['data']['attributes']['imageLinks'][0]['href']
+						return [
+							Artist(
+								service = self.service,
+								url = artist_url,
+								id = artist_id,
+								name = artist_name,
+								profie_pic_url = artist_profile_pic_url,
+								meta = Meta(
+									service = self.service,
+									request = request,
+									processing_time = current_unix_time_ms() - start_time,
+									http_code = response.status
+								)
+							)
+						]
+					
+					else:
+						error = Error(
+							service = self.service,
+							component = self.component,
+							error_msg = "HTTP error when looking up artist (via artist ID)",
+							meta = Meta(
+								service = self.service,
+								request = request,
+								processing_time = current_unix_time_ms() - start_time,
+								http_code = response.status
+							)
+						)
+						await log(error)
+						return error
+			
+			elif song_id is not None:
+				api_url = f'https://openapi.tidal.com/v2/tracks/{song_id}/relationships/artists'
+				api_params = {
+					'countryCode': country_code.upper(),
+					'include': 'artists'
+				}
+				async with session.get(url = api_url, headers = api_headers, timeout = timeout, params = api_params) as response:
+					if response.status == 200:
+						json_response = await response.json()
+						#save_json(json_response)
+						for artist in json_response['included']:
+							artist_url = artist['attributes']['externalLinks'][0]['href']
+							artist_id = artist['id']
+							artist_name = artist['attributes']['name']
+							artist_profile_pic_url = None if artist['attributes']['imageLinks'] == [] else artist['attributes']['imageLinks'][0]['href']
+							artists.append(
+								Artist(
+									service = self.service,
+									url = artist_url,
+									id = artist_id,
+									name = artist_name,
+									profie_pic_url = artist_profile_pic_url,
+									meta = Meta(
+										service = self.service,
+										request = request,
+										processing_time = current_unix_time_ms() - start_time,
+										http_code = response.status
+									)
+								)
+							)
+						return artists
+
+					else:
+						error = Error(
+							service = self.service,
+							component = self.component,
+							error_msg = "HTTP error when looking up artist (via song ID)",
+							meta = Meta(
+								service = self.service,
+								request = request,
+								processing_time = current_unix_time_ms() - start_time,
+								http_code = response.status
+							)
+						)
+						await log(error)
+						return error
+					
