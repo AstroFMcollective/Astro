@@ -1,6 +1,6 @@
 import discord as discord
 from AstroDiscord.components.ini import text
-from AstroAPI.components.image_hex import image_hex
+#from AstroAPI.components.image_hex import image_hex
 
 
 
@@ -15,7 +15,7 @@ class Embed:
 
 		if media_object.type != 'empty_response' and media_object.type != 'error':
 			self.cover = media_object.cover_url if media_object.type != 'music_video' else media_object.thumbnail_url
-			self.embed_color = image_hex(self.cover)
+			self.embed_color = media_object.cover_color_hex if media_object.type != 'music_video' else media_object.thumbnail_color_hex
 
 		self.embed = self.create_embed(command = command, media_object = media_object, user = user, censored = censored, anonymous = False)
 		self.log_embed = self.create_embed(command = command, media_object = media_object, user = user, censored = False, anonymous = True)

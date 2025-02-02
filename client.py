@@ -210,7 +210,7 @@ async def searchsong(interaction: discord.Interaction, artist: str, title: str, 
 	total_time = end_time - start_time
 
 	if song.type not in invalid_responses:
-		log_request(song.api_response_time, total_time - song.api_response_time, 'success')
+		log_request(song.meta.processing_time['global'], total_time - song.meta.processing_time['global'], 'success')
 		await add_reactions(embed, embed_reactions)
 	else:
 		log_request(0, total_time, 'failure')
@@ -254,7 +254,7 @@ async def searchcollection(interaction: discord.Interaction, artist: str, title:
 	total_time = end_time - start_time
 
 	if collection.type not in invalid_responses:
-		log_request(collection.api_response_time, total_time - collection.api_response_time, 'success')
+		log_request(collection.meta.processing_time['global'], total_time - collection.meta.processing_time['global'], 'success')
 		await add_reactions(embed, embed_reactions)
 	else:
 		log_request(0, total_time, 'failure')
@@ -310,7 +310,7 @@ async def lookup(interaction: discord.Interaction, query: str, country_code: str
 	total_time = end_time - start_time
 
 	if media_object.type not in invalid_responses:
-		log_request(media_object.api_response_time, total_time - media_object.api_response_time, 'success')
+		log_request(media_object.meta.processing_time['global'], total_time - media_object.meta.processing_time['global'], 'success')
 		await add_reactions(embed, embed_reactions)
 	else:
 		log_request(0, total_time, 'failure')
@@ -377,7 +377,7 @@ async def snoop(interaction: discord.Interaction, user: discord.Member = None, e
 	total_time = end_time - start_time
 
 	if song.type not in invalid_responses:
-		log_request(song.api_response_time, total_time - song.api_response_time, 'success')
+		log_request(song.meta.processing_time['global'], total_time - song.meta.processing_time['global'], 'success')
 		await add_reactions(embed, embed_reactions)
 	else:
 		log_request(0, total_time, 'failure')
@@ -428,7 +428,7 @@ async def coverart(interaction: discord.Interaction, link: str):
 	total_time = end_time - start_time
 
 	if media_object.type not in invalid_responses:
-		log_request(media_object.api_response_time, total_time - media_object.api_response_time, 'success')
+		log_request(media_object.meta.processing_time['global'], total_time - media_object.meta.processing_time['global'], 'success')
 		await add_reactions(embed, embed_reactions)
 	else:
 		log_request(0, total_time, 'failure')
@@ -568,39 +568,39 @@ async def dashboard():
 		client_latency = client_latency // len(total_requests)
 
 	embed = discord.Embed(
-		title="ASTRO DASHBOARD",
-        colour=0x6ae70e
+		title = "ASTRO DASHBOARD",
+        colour = 0x6ae70e
 	)
 
 	embed.add_field(
-		name="About",
-		value=f"Version: `{version}`\nDeployment channel: `{deployment_channel}`\nShards: `{config['client']['shards']}`",
+		name = "About",
+		value = f"Version: `{version}`\nDeployment channel: `{deployment_channel}`\nShards: `{config['client']['shards']}`",
 		inline=False
 	)
 	embed.add_field(
-		name="Stats",
-		value=f"Servers: `{len(client.guilds)}`\nAccessible users: `{len(client.users)}`",
-		inline=False
+		name = "Stats",
+		value = f"Servers: `{len(client.guilds)}`\nAccessible users: `{len(client.users)}`",
+		inline = False
 	)
 	embed.add_field(
-		name="Start time",
-		value=f"<t:{app_start_time}:F>",
-		inline=True
+		name = "Start time",
+		value = f"<t:{app_start_time}:F>",
+		inline = True
 	)
 	embed.add_field(
-		name="Last refreshed",
-		value=f"<t:{current_unix_time()}:F>",
-		inline=True
+		name = "Last refreshed",
+		value = f"<t:{current_unix_time()}:F>",
+		inline = True
 	)
 	embed.add_field(
-		name="Average latency today",
-		value=f"API latency: `{api_latency}` ms\nClient latency: `{client_latency}` ms",
-		inline=False
+		name = "Average latency today",
+		value = f"API latency: `{api_latency}` ms\nClient latency: `{client_latency}` ms",
+		inline = False
 	)
 	embed.add_field(
-		name="Requests today",
-		value=f"Total requests: `{len(total_requests)}`\nSuccessful requests: `{successful_requests}`\nFailed requests: `{failed_requests}`",
-		inline=True
+		name = "Requests today",
+		value = f"Total requests: `{len(total_requests)}`\nSuccessful requests: `{successful_requests}`\nFailed requests: `{failed_requests}`",
+		inline = True
 	)
 	try:
 		server = await client.fetch_guild(tokens['dashboard']['astro_server_id'])

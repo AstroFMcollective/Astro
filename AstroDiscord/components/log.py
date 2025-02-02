@@ -17,7 +17,7 @@ async def log(log_embeds: list[discord.Embed], media: list[object], command: str
 		api_latency = 0
 		for obj in media:
 			if obj.type not in invalid_responses:
-				api_latency += obj.api_response_time
+				api_latency += obj.meta.processing_time['global']
 		
 		if api_latency != 0:
 			api_latency = api_latency // len(media)
