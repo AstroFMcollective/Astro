@@ -21,10 +21,10 @@ class GlobalIO:
 
 
 
-	async def search_song(self, artists: list, title: str, song_type: str = None, collection: str = None, is_explicit: bool = None, country_code: str = 'us', exclude_services: list = []) -> object:
-			request = {'request': 'search_song', 'artists': artists, 'title': title, 'song_type': song_type, 'collection': collection, 'is_explicit': is_explicit, 'country_code': country_code, 'exclude_services': exclude_services}
+	async def search_song(self, artists: list, title: str, song_type: str = None, collection: str = None, is_explicit: bool = None, country_code: str = 'us', exclude_services: list = [Tidal.service]) -> object:
+		request = {'request': 'search_song', 'artists': artists, 'title': title, 'song_type': song_type, 'collection': collection, 'is_explicit': is_explicit, 'country_code': country_code, 'exclude_services': exclude_services}
 
-		#try:
+		try:
 			start_time = current_unix_time_ms()
 
 			service_objs = [Spotify, AppleMusic, YouTubeMusic, Deezer, Tidal, Genius]
@@ -40,7 +40,12 @@ class GlobalIO:
 			for service in exclude_services:
 				unlabeled_results.append(Empty(
 					service = service,
-					request = {'request': 'terminated'}
+					meta = Meta(
+						service = self.service,
+						request = request,
+						processing_time = current_unix_time_ms() - start_time,
+						filter_confidence_percentage = {service: 0.0},
+					)
 				))
 
 			labeled_results = {}
@@ -112,7 +117,7 @@ class GlobalIO:
 					if result_cover == None:
 						result_cover = labeled_results[cover_single_order[service]].cover_url
 
-			result_processing_time[service] = current_unix_time_ms() - start_time
+			result_processing_time[self.service] = current_unix_time_ms() - start_time
 			color_hex = await image_hex(result_cover)
 
 			if result_type != None:
@@ -126,13 +131,13 @@ class GlobalIO:
 					collection = result_collection,
 					is_explicit = result_is_explicit,
 					cover_url = result_cover,
+					cover_color_hex = color_hex,
 					meta = Meta(
 						service = self.service,
 						request = request,
 						processing_time = result_processing_time,
 						filter_confidence_percentage = result_confidence,
 						http_code = 200,
-						color_hex = color_hex
 					)
 				)
 
@@ -143,31 +148,32 @@ class GlobalIO:
 						service = self.service,
 						request = request,
 						processing_time = result_processing_time,
-						filter_confidence_percentage = 0.0,
+						filter_confidence_percentage = result_confidence,
 						http_code = 204
 					)
 				)
 				await log(empty_response)
 				return empty_response
 
-		# except Exception as msg:
-		# 	error = Error(
-		# 		service = self.service,
-		# 		component = self.component,
-		# 		error_msg = f'Error when searching for song: "{msg}"',
-		# 		meta = Meta(
-		# 			service = self.service,
-		# 			request = request,
-		# 			processing_time = current_unix_time_ms() - start_time
-		# 		)
-		# 	)
-		# 	await log(error)
-		# 	return error
+		except Exception as msg:
+			error = Error(
+				service = self.service,
+				component = self.component,
+				error_msg = f'Error when searching for song: "{msg}"',
+				meta = Meta(
+					service = self.service,
+					request = request,
+					processing_time = {self.service: current_unix_time_ms() - start_time},
+				)
+			)
+			await log(error)
+			return error
 
 
 	
-	async def search_music_video(self, artists: list, title: str, is_explicit: bool = None, country_code: str = 'us', exclude_services: list = []) -> object:
-		request = 'search_music_video'
+	async def search_music_video(self, artists: list, title: str, is_explicit: bool = None, country_code: str = 'us', exclude_services: list = [Tidal.service]) -> object:
+		request = {'request': 'search_music_video', 'artists': artists, 'title': title, 'is_explicit': is_explicit, 'country_code': country_code, 'exclude_services': exclude_services}
+
 		try:
 			start_time = current_unix_time_ms()
 			
@@ -184,7 +190,12 @@ class GlobalIO:
 			for service in exclude_services:
 				unlabeled_results.append(Empty(
 					service = service,
-					request = {'request': 'terminated'}
+					meta = Meta(
+						service = self.service,
+						request = request,
+						processing_time = current_unix_time_ms() - start_time,
+						filter_confidence_percentage = {service: 0.0},
+					)
 				))
 
 			labeled_results = {}
@@ -211,6 +222,8 @@ class GlobalIO:
 			result_ids = {}
 			result_title = None
 			result_artists = None
+			result_processing_time = {}
+			result_confidence = {}
 			result_is_explicit = None
 			result_cover = None
 
@@ -225,12 +238,19 @@ class GlobalIO:
 					result_title = labeled_results[title_order[service_index]].title
 				if result_artists == None:
 					result_artists = labeled_results[artists_order[service_index]].artists
+				if result_processing_time == {}:
+					for result in unlabeled_results:
+						result_processing_time[result.service] = result.meta.processing_time[result.service]
+				if result_confidence == {}:
+					for result in unlabeled_results:
+						result_confidence[result.service] = result.meta.filter_confidence_percentage[result.service]
 				if result_is_explicit == None:
 					result_is_explicit = labeled_results[explicitness_order[service_index]].is_explicit
 				if result_cover == None:
 					result_cover = labeled_results[cover_order[service_index]].thumbnail_url
 
-			end_time = current_unix_time_ms()
+			result_processing_time[self.service] = current_unix_time_ms() - start_time
+			color_hex = await image_hex(result_cover)
 
 			if result_title != None:
 				return MusicVideo(
@@ -241,16 +261,27 @@ class GlobalIO:
 					artists = result_artists,
 					is_explicit = result_is_explicit,
 					thumbnail_url = result_cover,
-					api_response_time = end_time - start_time,
-					api_http_code = 200,
-					request = {'request': request, 'artists': artists, 'title': title, 'is_explicit': is_explicit, 'country_code': country_code}
+					thumbnail_color_hex = color_hex,
+					meta = Meta(
+						service = self.service,
+						request = request,
+						processing_time = result_processing_time,
+						filter_confidence_percentage = result_confidence,
+						http_code = 200,
+					)
 
 				)
 
 			else:
 				return Empty(
 					service = self.service,
-					request = {'request': request, 'artists': artists, 'title': title, 'is_explicit': is_explicit, 'country_code': country_code}
+					meta = Meta(
+						service = self.service,
+						request = request,
+						processing_time = result_processing_time,
+						filter_confidence_percentage = result_confidence,
+						http_code = 204,
+					)
 				)
 
 		except Exception as msg:
@@ -258,15 +289,20 @@ class GlobalIO:
 				service = self.service,
 				component = self.component,
 				error_msg = f'Error when searching for music video: "{msg}"',
-				request = {'request': request, 'artists': artists, 'title': title, 'is_explicit': is_explicit, 'country_code': country_code}
+				meta = Meta(
+					service = self.service,
+					request = request,
+					processing_time = {self.service: current_unix_time_ms() - start_time},
+				)
 			)
 			await log(error)
 			return error
 
 
 
-	async def search_collection(self, artists: list, title: str, year: int = None, country_code: str = 'us', exclude_services: list = []) -> object:
-		request = 'search_collection'
+	async def search_collection(self, artists: list, title: str, year: int = None, country_code: str = 'us', exclude_services: list = [Tidal.service]) -> object:
+		request = {'request': 'search_collection', 'artists': artists, 'title': title, 'year': year, 'country_code': country_code}
+		
 		try:
 			start_time = current_unix_time_ms()
 
@@ -283,7 +319,12 @@ class GlobalIO:
 			for service in exclude_services:
 				unlabeled_results.append(Empty(
 					service = service,
-					request = {'request': 'terminated'}
+					meta = Meta(
+						service = self.service,
+						request = request,
+						processing_time = current_unix_time_ms() - start_time,
+						filter_confidence_percentage = {service: 0.0},
+					)
 				))
 
 			labeled_results = {}
@@ -313,6 +354,8 @@ class GlobalIO:
 			result_ids = {}
 			result_title = None
 			result_artists = None
+			result_processing_time = {}
+			result_confidence = {}
 			result_year = None
 			result_cover = None
 
@@ -325,6 +368,12 @@ class GlobalIO:
 				if result_ids == {}:
 					for result in unlabeled_results:
 						result_ids[result.service] = result.id[result.service]
+				if result_processing_time == {}:
+					for result in unlabeled_results:
+						result_processing_time[result.service] = result.meta.processing_time[result.service]
+				if result_confidence == {}:
+					for result in unlabeled_results:
+						result_confidence[result.service] = result.meta.filter_confidence_percentage[result.service]
 				if result_title == None:
 					result_title = labeled_results[title_order[service]].title
 				if result_artists == None:
@@ -334,7 +383,8 @@ class GlobalIO:
 				if result_cover == None:
 					result_cover = labeled_results[cover_order[service]].cover_url
 
-			end_time = current_unix_time_ms()
+			result_processing_time[self.service] = current_unix_time_ms() - start_time
+			color_hex = await image_hex(result_cover)
 
 			if result_type != None:
 				return Collection(
@@ -346,15 +396,26 @@ class GlobalIO:
 					artists = result_artists,
 					release_year = result_year,
 					cover_url = result_cover,
-					api_response_time = end_time - start_time,
-					api_http_code = 200,
-					request = {'request': request, 'artists': artists, 'title': title, 'year': year, 'country_code': country_code}
+					cover_color_hex = color_hex, 
+					meta = Meta(
+						service = self.service,
+						request = request,
+						processing_time = result_processing_time,
+						filter_confidence_percentage = result_confidence,
+						http_code = 200,
+					)
 				)
 
 			else:
 				empty_response = Empty(
 					service = service,
-					request = {'request': request, 'artists': artists, 'title': title, 'year': year, 'country_code': country_code}
+					meta = Meta(
+						service = self.service,
+						request = request,
+						processing_time = result_processing_time,
+						filter_confidence_percentage = result_confidence,
+						http_code = 204,
+					)
 				)
 				await log(empty_response)
 				return empty_response
@@ -364,7 +425,11 @@ class GlobalIO:
 				service = self.service,
 				component = self.component,
 				error_msg = f'Error when searching for collection: "{msg}"',
-				request = {'request': request, 'artists': artists, 'title': title, 'year': year, 'country_code': country_code}
+				meta = Meta(
+					service = self.service,
+					request = request,
+					processing_time = {self.service: current_unix_time_ms() - start_time},
+				)
 			)
 			await log(error)
 			return error
@@ -373,7 +438,8 @@ class GlobalIO:
 
 	async def search_query(self, query: str, country_code: str = 'us') -> object:
 		try:
-			request = 'search_query'
+			request = {'request': 'search_query', 'query': query, 'country_code': country_code}
+			start_time = current_unix_time_ms()
 			result = await YouTubeMusic.search_query(query)
 
 			if result.type == 'track' or result.type == 'single':
@@ -385,10 +451,17 @@ class GlobalIO:
 			elif result.type == 'music_video':
 				return await self.search_music_video(result.artists, result.title, result.is_explicit, country_code)
 			
+			
+
 			else:
 				empty_response = Empty(
 					service = self.service,
-					request = {'request': request, 'query': query, 'country_code': country_code}
+					meta = Meta(
+						service = self.service,
+						request = request,
+						processing_time = result.meta.processing_time,
+						http_code = 204,
+					)
 				)
 				await log(empty_response)
 				return empty_response
@@ -398,8 +471,11 @@ class GlobalIO:
 				service = self.service,
 				component = self.component,
 				error_msg = f'Error when doing general query search: "{msg}"',
-				request = {'request': request, 'query': query, 'country_code': country_code}
-
+				meta = Meta(
+					service = self.service,
+					request = request,
+					processing_time = {self.service: current_unix_time_ms() - start_time},
+				)
 			)
 			await log(error)
 			return error
