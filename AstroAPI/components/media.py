@@ -144,9 +144,9 @@ class Cover:
 		self.meta = meta
 
 class Meta:
-	def __init__(self, service: str, request: dict, processing_time: int | dict, filter_confidence_percentage: float | dict = None, http_code: int = None, color_hex: int = None):
+	def __init__(self, service: str, request: dict, processing_time: int | dict, filter_confidence_percentage: dict = None, http_code: int = None):
 		self.service = service
 		self.request = request
 		self.http_code = http_code
 		self.processing_time = {service: processing_time} if isinstance(processing_time, int) else processing_time
-		self.filter_confidence_percentage = {service: filter_confidence_percentage} if isinstance(filter_confidence_percentage, float) else filter_confidence_percentage
+		self.filter_confidence_percentage = filter_confidence_percentage

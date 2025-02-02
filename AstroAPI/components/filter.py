@@ -51,7 +51,7 @@ async def filter_song(service: str, query_request: str, songs: list, query_artis
 	if data_with_similarity != []:
 		top_data = data_with_similarity[0]
 		if percentage(max_score, top_data[0]) > 30:
-			top_data[1].meta.filter_confidence_percentage = percentage(max_score, top_data[0])
+			top_data[1].meta.filter_confidence_percentage = {service: percentage(max_score, top_data[0])}
 			return top_data[1]
 		else:
 			response = Empty(
@@ -60,7 +60,7 @@ async def filter_song(service: str, query_request: str, songs: list, query_artis
 					service = top_data[1].service,
 					request = top_data[1].meta.request,
 					processing_time = top_data[1].meta.processing_time,
-					filter_confidence_percentage = percentage(max_score, top_data[0]),
+					filter_confidence_percentage = {service: percentage(max_score, top_data[0])},
 					http_code = 204
 				)
 			)
@@ -73,7 +73,7 @@ async def filter_song(service: str, query_request: str, songs: list, query_artis
 				service = service,
 				request = query_request,
 				processing_time = 0,
-				filter_confidence_percentage = 0.0,
+				filter_confidence_percentage = {service: 0.0},
 				http_code = 204
 			)
 		)
@@ -116,7 +116,7 @@ async def filter_mv(service: str, query_request: str, videos: list, query_artist
 	if data_with_similarity != []:
 		top_data = data_with_similarity[0]
 		if percentage(max_score, top_data[0]) > 30:
-			top_data[1].meta.filter_confidence_percentage = percentage(max_score, top_data[0])
+			top_data[1].meta.filter_confidence_percentage = {service: percentage(max_score, top_data[0])}
 			return top_data[1]
 		else:
 			empty_response = Empty(
@@ -125,7 +125,7 @@ async def filter_mv(service: str, query_request: str, videos: list, query_artist
 					service = top_data[1].service,
 					request = top_data[1].meta.request,
 					processing_time = top_data[1].meta.processing_time,
-					filter_confidence_percentage = percentage(max_score, top_data[0]),
+					filter_confidence_percentage = {service: percentage(max_score, top_data[0])},
 					http_code = 204
 				)
 			)
@@ -138,7 +138,7 @@ async def filter_mv(service: str, query_request: str, videos: list, query_artist
 				service = service,
 				request = query_request,
 				processing_time = 0,
-				filter_confidence_percentage = 0.0,
+				filter_confidence_percentage = {service: 0.0},
 				http_code = 204
 			)
 		)
@@ -181,7 +181,7 @@ async def filter_collection(service: str, query_request: str, collections: list,
 	if data_with_similarity != []:
 		top_data = data_with_similarity[0]
 		if percentage(max_score, data_with_similarity[0][0]) > 30:
-			top_data[1].meta.filter_confidence_percentage = percentage(max_score, top_data[0])
+			top_data[1].meta.filter_confidence_percentage = {service: percentage(max_score, top_data[0])}
 			return data_with_similarity[0][1]
 		else:
 			empty_response = Empty(
@@ -190,7 +190,7 @@ async def filter_collection(service: str, query_request: str, collections: list,
 					service = top_data[1].service,
 					request = top_data[1].meta.request,
 					processing_time = top_data[1].meta.processing_time,
-					filter_confidence_percentage = percentage(max_score, top_data[0]),
+					filter_confidence_percentage = {service: percentage(max_score, top_data[0])},
 					http_code = 204
 				)
 			)
@@ -203,7 +203,7 @@ async def filter_collection(service: str, query_request: str, collections: list,
 				service = service,
 				request = query_request,
 				processing_time = 0,
-				filter_confidence_percentage = 0.0,
+				filter_confidence_percentage = {service: 0.0},
 				http_code = 204
 			)
 		)
