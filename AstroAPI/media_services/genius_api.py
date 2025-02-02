@@ -27,8 +27,8 @@ class Genius:
 		results = requests.get(api_url, api_params, headers = api_headers)
 
 		if results.status_code == 200:
-			json = results.json()['response']
-			for result in json['hits']:
+			results_json = results.json()['response']
+			for result in results_json['hits']:
 				song_url = result['result']['url']
 				song_id = result['result']['id']
 				song_title = result['result']['title']
@@ -49,7 +49,7 @@ class Genius:
 					meta = Meta(
 						service = self.service,
 						request = request,
-						processing_time = current_unix_time_ms() - start_time,
+						processing_time = {self.service: current_unix_time_ms() - start_time},
 						http_code = results.status_code
 					)
 				))
@@ -63,7 +63,7 @@ class Genius:
 				meta = Meta(
 					service = self.service,
 					request = request,
-					processing_time = current_unix_time_ms() - start_time,
+					processing_time = {self.service: current_unix_time_ms() - start_time},
 					http_code = result.status_code
 				)			
 			)
@@ -87,15 +87,14 @@ class Genius:
 		results = requests.get(api_url, api_params, headers = api_headers)
 		
 		if results.status_code == 200:
-			results = results.json()['response']
-			for result in results['hits']:
+			results_json = results.json()['response']
+			for result in results_json['hits']:
 				mv_url = result['result']['url']
 				mv_id = result['result']['id']
 				mv_title = result['result']['title']
 				mv_artists = [result['result']['primary_artist']['name']]
 				mv_cover = result['result']['song_art_image_url']
 				mv_is_explicit = None
-				end_time = current_unix_time_ms()
 				videos.append(MusicVideo(
 					service = self.service,
 					url = mv_url,
@@ -107,7 +106,7 @@ class Genius:
 					meta = Meta(
 						service = self.service,
 						request = request,
-						processing_time = current_unix_time_ms() - start_time,
+						processing_time = {self.service: current_unix_time_ms() - start_time},
 						http_code = results.status_code
 					)
 				))
@@ -121,7 +120,7 @@ class Genius:
 				meta = Meta(
 					service = self.service,
 					request = request,
-					processing_time = current_unix_time_ms() - start_time,
+					processing_time = {self.service: current_unix_time_ms() - start_time},
 					http_code = result.status_code
 				)
 			)
@@ -159,7 +158,7 @@ class Genius:
 				meta = Meta(
 					service = self.service,
 					request = request,
-					processing_time = current_unix_time_ms() - start_time,
+					processing_time = {self.service: current_unix_time_ms() - start_time},
 					filter_confidence_percentage = 100.0,
 					http_code = result.status_code
 				)
@@ -173,7 +172,7 @@ class Genius:
 				meta = Meta(
 					service = self.service,
 					request = request,
-					processing_time = current_unix_time_ms() - start_time,
+					processing_time = {self.service: current_unix_time_ms() - start_time},
 					http_code = result.status_code
 				)
 			)
