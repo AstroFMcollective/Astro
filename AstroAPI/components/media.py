@@ -14,6 +14,14 @@ class Empty:
 		self.type = 'empty_response'
 		self.meta = meta
 
+class Meta:
+	def __init__(self, service: str, request: dict, processing_time: int | dict, filter_confidence_percentage: dict = None, http_code: int = None):
+		self.service = service
+		self.request = request
+		self.http_code = http_code
+		self.processing_time = {service: processing_time} if isinstance(processing_time, int) else processing_time
+		self.filter_confidence_percentage = filter_confidence_percentage
+
 class Song:
 	def __init__(self, service: str, type: str, url: str | dict, id: any, title: str, artists: list, cover_url: str, meta: object, cover_color_hex: int = None, collection: str = None, genre: str = None, is_explicit: bool = None) -> object:
 		self.service = service
@@ -142,11 +150,3 @@ class Cover:
 		self.lq_url = {service: lq_url} if isinstance(lq_url, str) else lq_url
 		self.color_hex = color_hex
 		self.meta = meta
-
-class Meta:
-	def __init__(self, service: str, request: dict, processing_time: int | dict, filter_confidence_percentage: dict = None, http_code: int = None):
-		self.service = service
-		self.request = request
-		self.http_code = http_code
-		self.processing_time = {service: processing_time} if isinstance(processing_time, int) else processing_time
-		self.filter_confidence_percentage = filter_confidence_percentage
