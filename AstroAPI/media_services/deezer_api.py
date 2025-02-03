@@ -179,7 +179,7 @@ class Deezer:
 							service = self.service,
 							request = request,
 							processing_time = current_unix_time_ms() - start_time,
-							filter_confidence_percentage = 100.0,
+							filter_confidence_percentage = {self.service: 100.0},
 							http_code = response.status
 						)
 					)
@@ -235,7 +235,7 @@ class Deezer:
 							service = self.service,
 							request = request,
 							processing_time = current_unix_time_ms() - start_time,
-							filter_confidence_percentage = 100.0,
+							filter_confidence_percentage = {self.service: 100.0},
 							http_code = response.status
 						)
 					)
