@@ -154,7 +154,7 @@ async def on_message(message):
 		if embeds != []:
 			for obj in media_objects:
 				if obj.type not in invalid_responses:
-					api_request_latency += obj.api_response_time
+					api_request_latency += obj.meta.processing_time['global']
 			api_request_latency = api_request_latency // len(media_objects)
 			message_embed = await message.reply(embeds = embeds, mention_author = False)
 
@@ -520,7 +520,7 @@ async def context_menu_lookup(interaction: discord.Interaction, message: discord
 	api_request_latency = 0
 	for obj in media_objects:
 		if obj.type not in invalid_responses:
-			api_request_latency += obj.api_response_time
+			api_request_latency += obj.meta.processing_time['global']
 	api_request_latency = api_request_latency // len(media_objects)
 
 	if media_object.type not in invalid_responses:
@@ -568,38 +568,38 @@ async def dashboard():
 		client_latency = client_latency // len(total_requests)
 
 	embed = discord.Embed(
-		title = "ASTRO DASHBOARD",
+		title = 'ASTRO DASHBOARD',
         colour = 0x6ae70e
 	)
 
 	embed.add_field(
-		name = "About",
-		value = f"Version: `{version}`\nDeployment channel: `{deployment_channel}`\nShards: `{config['client']['shards']}`",
+		name = 'About',
+		value = f'Version: `{version}`\nDeployment channel: `{deployment_channel}`\nShards: `{config['client']['shards']}`',
 		inline=False
 	)
 	embed.add_field(
-		name = "Stats",
-		value = f"Servers: `{len(client.guilds)}`\nAccessible users: `{len(client.users)}`",
+		name = 'Stats',
+		value = f'Servers: `{len(client.guilds)}`\nAccessible users: `{len(client.users)}`',
 		inline = False
 	)
 	embed.add_field(
-		name = "Start time",
-		value = f"<t:{app_start_time}:F>",
+		name = 'Start time',
+		value = f'<t:{app_start_time}:F>',
 		inline = True
 	)
 	embed.add_field(
-		name = "Last refreshed",
-		value = f"<t:{current_unix_time()}:F>",
+		name = 'Last refreshed',
+		value = f'<t:{current_unix_time()}:F>',
 		inline = True
 	)
 	embed.add_field(
-		name = "Average latency today",
-		value = f"API latency: `{api_latency}` ms\nClient latency: `{client_latency}` ms",
+		name = 'Average latency today',
+		value = f'API latency: `{api_latency}` ms\nClient latency: `{client_latency}` ms',
 		inline = False
 	)
 	embed.add_field(
-		name = "Requests today",
-		value = f"Total requests: `{len(total_requests)}`\nSuccessful requests: `{successful_requests}`\nFailed requests: `{failed_requests}`",
+		name = 'Requests today',
+		value = f'Total requests: `{len(total_requests)}`\nSuccessful requests: `{successful_requests}`\nFailed requests: `{failed_requests}`',
 		inline = True
 	)
 	try:
