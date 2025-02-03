@@ -1,8 +1,9 @@
 import aiohttp
-import requests
 from PIL import Image
 import numpy as np
 from io import BytesIO
+
+
 
 async def image_hex(image_url: str, quality: int = 5):
 	async with aiohttp.ClientSession() as session:
