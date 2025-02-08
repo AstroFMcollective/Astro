@@ -7,6 +7,7 @@ class AppleMusic:
 	def __init__(self):
 		self.service = 'apple_music'
 		self.component = 'Apple Music API'
+		print('[AstroAPI] Apple Music API has been initialized.')
 
 
 
@@ -221,7 +222,7 @@ class AppleMusic:
 					song = await response.json(content_type = 'text/javascript')
 					song = song['results'][0]
 					
-					song_type = ('track' if ' - Single' not in song['collectionName'] else 'single')
+					song_type = 'track' if ' - Single' not in song['collectionName'] else 'single'
 					song_url = song['trackViewUrl']
 					song_id = song['trackId']
 					song_title = song['trackName']

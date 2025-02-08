@@ -7,6 +7,9 @@ class Deezer:
 	def __init__(self):
 		self.service = 'deezer'
 		self.component = 'Deezer API'
+		print('[AstroAPI] Deezer API has been initialized.')
+
+
 
 	async def search_song(self, artists: list, title: str, song_type: str = None, collection: str = None, is_explicit: bool = None, country_code: str = 'us') -> object:
 		async with aiohttp.ClientSession() as session:

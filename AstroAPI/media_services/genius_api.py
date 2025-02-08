@@ -8,6 +8,8 @@ class Genius:
 		self.service = 'genius'
 		self.component = 'Genius API'
 		self.token = token
+		print('[AstroAPI] Genius API has been initialized.')
+
 
 
 

@@ -13,6 +13,7 @@ class Spotify:
 		self.token = None
 		self.token_expiration_date = None
 		run(self.get_token())
+		print('[AstroAPI] Spotify API has been initialized.')
 
 
 

@@ -14,6 +14,7 @@ class Tidal:
 		self.token = None
 		self.token_expiration_date = None
 		run(self.get_token())
+		print('[AstroAPI] TIDAL API has been initialized.')
 
 
 
