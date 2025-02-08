@@ -8,8 +8,8 @@ from asyncio import *
 Spotify = spotify_api.Spotify(client_id = keys['spotify']['id'], client_secret = keys['spotify']['secret'])
 AppleMusic = apple_music_api.AppleMusic()
 YouTubeMusic = youtube_music_api.YouTubeMusic()
-Tidal = tidal_api.Tidal(client_id = keys['tidal']['id'], client_secret = f'{keys['tidal']['secret']}=')
 Deezer = deezer_api.Deezer()
+Tidal = tidal_api.Tidal(client_id = keys['tidal']['id'], client_secret = f'{keys['tidal']['secret']}=')
 Genius = genius_api.Genius(token = keys['genius']['token'])
 
 
@@ -22,6 +22,7 @@ class GlobalIO:
 			'empty_response',
 			'error'
 		]
+		print('[AstroAPI] Global API has been initialized.')
 
 
 
@@ -30,8 +31,8 @@ class GlobalIO:
 		start_time = current_unix_time_ms()
 
 		try:
-			service_objs = [Spotify, AppleMusic, YouTubeMusic, Deezer, Tidal, Genius]
-			
+			service_objs = [Spotify, AppleMusic, YouTubeMusic, Deezer, Tidal]
+
 			tasks = []
 			for obj in service_objs:
 				if obj.service not in exclude_services:
@@ -54,16 +55,16 @@ class GlobalIO:
 			labeled_results = {}
 			for result in unlabeled_results:
 				labeled_results[result.service] = result
-			
-			services = [Spotify.service, AppleMusic.service, YouTubeMusic.service, Deezer.service, Tidal.service, Genius.service]
 
-			type_order = [Spotify.service, AppleMusic.service, YouTubeMusic.service, Deezer.service, Tidal.service, Genius.service]
-			title_order = [Spotify.service, AppleMusic.service, YouTubeMusic.service, Deezer.service, Tidal.service, Genius.service]
-			artists_order = [Spotify.service, Tidal.service, YouTubeMusic.service, Deezer.service, AppleMusic.service, Genius.service]
-			collection_order = [Spotify.service, AppleMusic.service, YouTubeMusic.service, Deezer.service, Tidal.service, Genius.service]
-			explicitness_order = [Spotify.service, AppleMusic.service, YouTubeMusic.service, Deezer.service, Tidal.service, Genius.service]
-			cover_order = [Spotify.service, Tidal.service, Deezer.service, AppleMusic.service, YouTubeMusic.service, Genius.service]
-			cover_single_order = [Spotify.service, Tidal.service, Deezer.service, AppleMusic.service, YouTubeMusic.service, Genius.service]
+			services = [Spotify.service, AppleMusic.service, YouTubeMusic.service, Deezer.service, Tidal.service]
+
+			type_order = [Spotify.service, AppleMusic.service, YouTubeMusic.service, Deezer.service, Tidal.service]
+			title_order = [Spotify.service, AppleMusic.service, YouTubeMusic.service, Deezer.service, Tidal.service]
+			artists_order = [Spotify.service, Tidal.service, YouTubeMusic.service, Deezer.service, AppleMusic.service]
+			collection_order = [Spotify.service, AppleMusic.service, YouTubeMusic.service, Deezer.service, Tidal.service]
+			explicitness_order = [Spotify.service, AppleMusic.service, YouTubeMusic.service, Deezer.service, Tidal.service]
+			cover_order = [Spotify.service, Tidal.service, Deezer.service, AppleMusic.service, YouTubeMusic.service]
+			cover_single_order = [Spotify.service, Tidal.service, Deezer.service, AppleMusic.service, YouTubeMusic.service]
 
 			for service in services:
 				if labeled_results[service].type != 'track' and labeled_results[service].type != 'single':
@@ -204,12 +205,12 @@ class GlobalIO:
 			for result in unlabeled_results:
 				labeled_results[result.service] = result
 			
-			services = [AppleMusic.service, YouTubeMusic.service, Tidal.service, Genius.service]
+			services = [AppleMusic.service, YouTubeMusic.service, Tidal.service]
 
-			title_order = [AppleMusic.service, YouTubeMusic.service, Tidal.service, Genius.service]
-			artists_order = [Tidal.service, YouTubeMusic.service, AppleMusic.service, Genius.service]
-			explicitness_order = [AppleMusic.service, Tidal.service, YouTubeMusic.service, Genius.service]
-			cover_order = [Tidal.service, YouTubeMusic.service, AppleMusic.service, Genius.service]
+			title_order = [AppleMusic.service, YouTubeMusic.service, Tidal.service]
+			artists_order = [Tidal.service, YouTubeMusic.service, AppleMusic.service]
+			explicitness_order = [AppleMusic.service, Tidal.service, YouTubeMusic.service]
+			cover_order = [Tidal.service, YouTubeMusic.service, AppleMusic.service]
 
 			for service in services:
 				if labeled_results[service].type != 'music_video':
@@ -485,7 +486,7 @@ class GlobalIO:
 
 
 	async def lookup_song(self, service: object, id: str, song_country_code: str = None, lookup_country_code: str = 'us') -> object:
-		request = {'request': 'lookup_song', 'id': id, 'song_country_code': song_country_code, 'lookup_country_code': lookup_country_code}
+		request = {'request': 'lookup_song', 'service': service.service, 'id': id, 'song_country_code': song_country_code, 'lookup_country_code': lookup_country_code}
 		start_time = current_unix_time_ms()
 
 		try:
@@ -494,7 +495,7 @@ class GlobalIO:
 			if song_reference.type != 'track' and song_reference.type != 'single' and song_reference.type != 'music_video':
 				return song_reference
 
-			service_objects = [Spotify, AppleMusic, YouTubeMusic, Deezer, Tidal, Genius]
+			service_objects = [Spotify, AppleMusic, YouTubeMusic, Deezer, Tidal]
 			services = [Spotify.service, AppleMusic.service, YouTubeMusic.service, Deezer.service, Tidal.service, Genius.service]
 			if service != YouTubeMusic:
 				service_objects.remove(service)
@@ -503,7 +504,6 @@ class GlobalIO:
 				song = await self.search_song(
 					artists = song_reference.artists,
 					title = song_reference.title,
-					song_type = song_reference.type,
 					is_explicit = song_reference.is_explicit,
 					country_code = lookup_country_code,
 					exclude_services = [song_reference.service, Tidal.service]
@@ -564,7 +564,7 @@ class GlobalIO:
 
 
 	async def lookup_music_video(self, service: object, id: str, mv_country_code: str = None, lookup_country_code: str = 'us') -> object:
-		request = {'request': 'lookup_music_video', 'id': id, 'mv_country_code': mv_country_code, 'lookup_country_code': lookup_country_code}
+		request = {'request': 'lookup_music_video', 'service': service.service, 'id': id, 'mv_country_code': mv_country_code, 'lookup_country_code': lookup_country_code}
 		start_time = current_unix_time_ms()
 
 		try:
@@ -633,7 +633,7 @@ class GlobalIO:
 
 
 	async def lookup_collection(self, service: object, id: str, collection_country_code: str = None, lookup_country_code: str = 'us') -> object:
-		request = {'request': 'lookup_collection', 'id': id, 'collection_country_code': collection_country_code, 'lookup_country_code': lookup_country_code}
+		request = {'request': 'lookup_collection', 'service': service.service, 'id': id, 'collection_country_code': collection_country_code, 'lookup_country_code': lookup_country_code}
 		start_time = current_unix_time_ms()
 
 		try:
@@ -700,6 +700,58 @@ class GlobalIO:
 			await log(error)
 			return error
 	
+
+
+	async def get_song_knowledge(self, service: object, song_id: str, song_country_code: str = None, knowledge_country_code: str = 'us') -> object:
+			request = {'request': 'get_song_knowledge', 'service': service.service, 'song_id': song_id, 'song_country_code': song_country_code, 'knowledge_country_code': knowledge_country_code}
+			start_time = current_unix_time_ms()
+
+		#try:
+			song_reference = await service.lookup_song(id = id, country_code = song_country_code)
+			return song_reference
+			if song_reference.type != 'track' and song_reference.type != 'single' and song_reference.type != 'music_video':
+				return song_reference
+
+			if song_reference.type == 'music_video':
+				song = await Genius.search_song(
+					artists = song_reference.artists,
+					title = song_reference.title,
+					is_explicit = song_reference.is_explicit,
+					country_code = knowledge_country_code,
+					exclude_services = [song_reference.service, Tidal.service]
+				)
+			else:
+				song = await Genius.search_song(
+					artists = song_reference.artists,
+					title = song_reference.title,
+					song_type = song_reference.type,
+					collection = song_reference.collection,
+					is_explicit = song_reference.is_explicit,
+					country_code = knowledge_country_code,
+					exclude_services = [song_reference.service, Tidal.service]
+				)
+
+			if song.type not in self.invalid_responses:
+				return song
+				song_more_data = await Genius.lookup_song(song.id[Genius.service], knowledge_country_code)
+				return song_more_data
+
+			else:
+				return song
+
+		# except Exception as msg:
+		# 	error = Error(
+		# 		service = self.service,
+		# 		component = self.component,
+		# 		error_msg = f'Error when getting song knowledge: "{msg}"',
+		# 		meta = Meta(
+		# 			service = self.service,
+		# 			request = request,
+		# 			processing_time = {self.service: current_unix_time_ms() - start_time}
+		# 		)
+		# 	)
+		# 	await log(error)
+		# 	return error
 
 
 Global = GlobalIO()

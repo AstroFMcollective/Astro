@@ -139,7 +139,7 @@ class Artist:
 		self.meta = meta
 
 class Cover:
-	def __init__(self, service: str, type: str, hq_url: str | dict, lq_url: str | dict, title: str, artists: list, meta = object, color_hex: int = None):
+	def __init__(self, service: str, type: str, hq_url: str | dict, lq_url: str | dict, title: str, artists: list, meta = object, color_hex: int = None) -> object:
 		self.service = service
 		self.type = 'cover'
 		self.media_type = type
@@ -150,3 +150,16 @@ class Cover:
 		self.lq_url = {service: lq_url} if isinstance(lq_url, str) else lq_url
 		self.color_hex = color_hex
 		self.meta = meta
+
+class Knowledge:
+	def __init__(self, service: str, url: str | dict, id: any, title: str, artists: list, description: str, cover_url: str, meta: object, cover_color_hex: int = None, collection: str = None, genre: str = None, is_explicit: bool = None) -> object:
+		self.service = service
+		self.type = 'knowledge'
+		self.url = {service: url} if isinstance(url, str) else url
+		self.id = {service: str(id)} if not isinstance(id, dict) else id
+		self.title = title
+		self.censored_title = title
+		self.artists = artists
+		self.description = description
+		self.cover_url = cover_url
+		self.cover_color_hex = cover_color_hex
