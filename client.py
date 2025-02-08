@@ -92,6 +92,7 @@ async def on_ready():
 		dashboard.start()
 	if not reset_requests.is_running():
 		reset_requests.start()
+	print('[AstroDiscord] Ready!')
 
 
 
@@ -276,7 +277,7 @@ async def searchcollection(interaction: discord.Interaction, artist: str, title:
 @app_commands.user_install()
 @app_commands.allowed_contexts(guilds = True, dms = True, private_channels = True)
 async def lookup(interaction: discord.Interaction, query: str, country_code: str = 'us'):
-	request = '/lookup'
+	request = {'request': '/lookup', 'query': query, 'country_code': country_code}
 	start_time = current_unix_time_ms()
 	await interaction.response.defer()
 	urls = find_urls(query)
@@ -288,7 +289,11 @@ async def lookup(interaction: discord.Interaction, query: str, country_code: str
 			service = service,
 			component = '`/lookup`',
 			error_msg = text['error']['invalid_link'],
-			request = {'request': request, 'query': query, 'country_code': country_code}
+			meta = astro.Meta(
+				service = service,
+				request = request,
+				processing_time = current_unix_time_ms() - start_time
+			)
 		)
 	else:
 		media_type = data[0]['media']
@@ -331,7 +336,7 @@ async def lookup(interaction: discord.Interaction, query: str, country_code: str
 @app_commands.guild_install()
 @app_commands.allowed_contexts(guilds = True, dms = False, private_channels = True)
 async def snoop(interaction: discord.Interaction, user: discord.Member = None, ephemeral: bool = False):
-	request = '/snoop'
+	request = {'request': '/snoop', 'self_snoop': (True if user == interaction.user else False)} 
 	start_time = current_unix_time_ms()
 	await interaction.response.defer(ephemeral = ephemeral)
 
@@ -357,7 +362,11 @@ async def snoop(interaction: discord.Interaction, user: discord.Member = None, e
 			service = service,
 			component = 'Snoop',
 			error_msg = error_msg,
-			request = {'request': request, 'self_snoop': (True if user == interaction.user else False)} 
+			meta = astro.Meta(
+				service = service,
+				request = request,
+				processing_time = current_unix_time_ms() - start_time
+			)
 		)
 	else:
 		song = await astro.Global.lookup_song(
@@ -398,7 +407,7 @@ async def snoop(interaction: discord.Interaction, user: discord.Member = None, e
 @app_commands.user_install()
 @app_commands.allowed_contexts(guilds = True, dms = True, private_channels = True)
 async def coverart(interaction: discord.Interaction, link: str):
-	request = '/coverart'
+	request = {'request': '/coverart', 'url': link}
 	start_time = current_unix_time_ms()
 	await interaction.response.defer()
 	data = await get_data_from_urls(link)
@@ -408,7 +417,11 @@ async def coverart(interaction: discord.Interaction, link: str):
 			service = service,
 			component = '`/coverart`',
 			error_msg = text['error']['invalid_link'],
-			request = {'request': request, 'url': link}
+			meta = astro.Meta(
+				service = service,
+				request = request,
+				processing_time = current_unix_time_ms() - start_time
+			)
 		)
 	else:
 		media_type = data[0]['media']
@@ -448,7 +461,7 @@ async def coverart(interaction: discord.Interaction, link: str):
 @app_commands.user_install()
 @app_commands.allowed_contexts(guilds = True, dms = True, private_channels = True)
 async def context_menu_lookup(interaction: discord.Interaction, message: discord.Message):
-	request = 'context_menu_lookup'
+	request = {'request': 'context_menu_lookup', 'urls': urls}
 	start_time = current_unix_time_ms()
 	await interaction.response.defer()
 	urls = find_urls(message.content)
@@ -499,7 +512,11 @@ async def context_menu_lookup(interaction: discord.Interaction, message: discord
 			service = service,
 			component = 'Context Menu Link Lookup',
 			error_msg = text['error']['no_links_detected'],
-			request = {'request': request, 'urls': urls}
+			meta = astro.Meta(
+				service = service,
+				request = request,
+				processing_time = current_unix_time_ms() - start_time
+			)
 		)
 		media_embed = Embed(
 			command = 'link',
@@ -571,11 +588,10 @@ async def dashboard():
 		title = 'ASTRO DASHBOARD',
         colour = 0x6ae70e
 	)
-
 	embed.add_field(
 		name = 'About',
 		value = f'Version: `{version}`\nDeployment channel: `{deployment_channel}`\nShards: `{config['client']['shards']}`',
-		inline=False
+		inline = False
 	)
 	embed.add_field(
 		name = 'Stats',
