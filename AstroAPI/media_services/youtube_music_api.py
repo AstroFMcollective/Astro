@@ -13,6 +13,7 @@ class YouTubeMusic:
 			'MUSIC_VIDEO_TYPE_OMV',
 			'MUSIC_VIDEO_TYPE_OFFICIAL_SOURCE_MUSIC'
 		]
+		print('[AstroAPI] YouTube Music API has been initialized.')
 
 
 
@@ -276,7 +277,9 @@ class YouTubeMusic:
 		try:
 			request = {'request': 'lookup_song', 'id': id, 'country_code': country_code, 'url': f'https://music.youtube.com/watch?v={id}'}
 			start_time = current_unix_time_ms()
-			song = self.ytm.get_song(id)['videoDetails']
+			song_data = self.ytm.get_song(id)
+			song = song_data['videoDetails']
+			save_json(song)
 
 			if 'musicVideoType' in song:
 				if song['musicVideoType'] in self.allowed_video_types:
@@ -324,15 +327,26 @@ class YouTubeMusic:
 								http_code = 200
 							)
 						)
-			else:
-				return Empty(
-					service = self.service,
-					meta = Meta(
+				
+				else:
+					return Empty(
+						service = self.service,
+						meta = Meta(
 							service = self.service,
 							request = request,
 							processing_time = current_unix_time_ms() - start_time,
 							http_code = 204
 						)
+					)
+			else:
+				return Empty(
+					service = self.service,
+					meta = Meta(
+						service = self.service,
+						request = request,
+						processing_time = current_unix_time_ms() - start_time,
+						http_code = 204
+					)
 				)
 			
 		except Exception as msg:
