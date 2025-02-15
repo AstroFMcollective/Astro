@@ -109,6 +109,7 @@ def percentage(hundred_percent: int, number: int):
 def optimize_for_search(string: str):
 	optimized_string = string
 	optimized_string = optimized_string.replace('#','')
+	optimized_string = remove_feat(optimized_string)
 	if optimized_string[0] == '&':
 		optimized_string = optimized_string[1:]
 	if ' l ' in optimized_string:
