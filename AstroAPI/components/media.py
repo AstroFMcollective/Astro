@@ -152,7 +152,24 @@ class Cover:
 		self.meta = meta
 
 class Knowledge:
-	def __init__(self, service: str, media_type: str, url: str | dict, id: any, title: str, artists: list, description: str, cover_url: str, meta: object, cover_color_hex: int = None, collection: str = None, release_date: str = None, is_explicit: bool = None, genre: str = None) -> object:
+	def __init__(self, service: str, media_type: str, url: str | dict, id: any, title: str, artists: list, cover_url: str, meta: object, description: str = None, cover_color_hex: int = None, collection: str = None, release_date: str = None, is_explicit: bool = None, genre: str = None, bpm: float = None, key: int = None, length: int = None, time_signature: int = None) -> object:
+		pitch_class = {
+			0: 'C',
+			1: 'C♯/D♭',
+			2: 'D',
+			3: 'D♯/E♭',
+			4: 'E',
+			5: 'F',
+			6: 'F♯/G♭',
+			7: 'G',
+			8: 'G♯/A♭',
+			9: 'A',
+			10: 'A♯/B♭',
+			11: 'B',
+			-1: None,
+			None: None
+		}
+
 		self.service = service
 		self.type = 'knowledge'
 		self.media_type = media_type
@@ -168,4 +185,8 @@ class Knowledge:
 		self.cover_color_hex = cover_color_hex
 		self.genre = genre
 		self.is_explicit = is_explicit
+		self.bpm = bpm
+		self.key = pitch_class[key]
+		self.length = length
+		self.time_signature = f'1/{time_signature}'
 		self.meta = meta
