@@ -118,7 +118,7 @@ class Genius:
 			error = Error(
 				service = self.service,
 				component = self.component,
-				error_msg = "HTTP error when looking up song ID",
+				error_msg = "HTTP error when looking up song knowledge",
 				meta = Meta(
 					service = self.service,
 					request = request,
