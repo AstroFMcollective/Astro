@@ -4,12 +4,14 @@ from AstroAPI.components import *
 from asyncio import *
 
 
-
+# Music API-s
 Spotify = spotify_api.Spotify(client_id = keys['spotify']['id'], client_secret = keys['spotify']['secret'])
 AppleMusic = apple_music_api.AppleMusic()
 YouTubeMusic = youtube_music_api.YouTubeMusic()
 Deezer = deezer_api.Deezer()
 Tidal = tidal_api.Tidal(client_id = keys['tidal']['id'], client_secret = f'{keys['tidal']['secret']}=')
+
+# Knowledge API-s
 Genius = genius_api.Genius(token = keys['genius']['token'])
 
 
@@ -26,12 +28,18 @@ class GlobalIO:
 
 
 
-	async def search_song(self, artists: list, title: str, song_type: str = None, collection: str = None, is_explicit: bool = None, country_code: str = 'us', exclude_services: list = [Tidal.service]) -> object:
+	async def search_song(self, artists: list, title: str, song_type: str = None, collection: str = None, is_explicit: bool = None, country_code: str = 'us', include_premade_media: list = [], exclude_services: list = [Tidal.service]) -> object:
 		request = {'request': 'search_song', 'artists': artists, 'title': title, 'song_type': song_type, 'collection': collection, 'is_explicit': is_explicit, 'country_code': country_code, 'exclude_services': exclude_services}
 		start_time = current_unix_time_ms()
 
 		try:
 			service_objs = [Spotify, AppleMusic, YouTubeMusic, Deezer, Tidal]
+
+			ignore_in_excluded_services = []
+			for premade in include_premade_media:
+				if premade.service not in exclude_services:
+					exclude_services.append(premade.service)
+					ignore_in_excluded_services.append(premade.service)
 
 			tasks = []
 			for obj in service_objs:
@@ -41,6 +49,10 @@ class GlobalIO:
 					)
 
 			unlabeled_results = await gather(*tasks)
+
+			exclude_services = [service for service in exclude_services if service not in ignore_in_excluded_services]
+			for premade in include_premade_media:
+				unlabeled_results.append(premade)
 			for service in exclude_services:
 				unlabeled_results.append(Empty(
 					service = service,
@@ -121,6 +133,23 @@ class GlobalIO:
 					if result_cover == None:
 						result_cover = labeled_results[cover_single_order[service]].cover_url
 
+			sorted_urls = {}
+			sorted_ids = {}
+			sorted_processing_time = {}
+			sorted_confidence = {}
+			for service in services:
+				try:
+					sorted_urls[service] = result_urls[service]
+					sorted_ids[service] = result_ids[service]
+					sorted_processing_time[service] = result_processing_time[service]
+					sorted_confidence[service] = result_confidence[service]
+				except:
+					pass
+			result_urls = sorted_urls
+			result_ids = sorted_ids
+			result_processing_time = sorted_processing_time
+			result_confidence = sorted_confidence
+
 			result_processing_time[self.service] = current_unix_time_ms() - start_time
 			color_hex = await image_hex(result_cover)
 
@@ -175,12 +204,18 @@ class GlobalIO:
 
 
 	
-	async def search_music_video(self, artists: list, title: str, is_explicit: bool = None, country_code: str = 'us', exclude_services: list = [Tidal.service]) -> object:
+	async def search_music_video(self, artists: list, title: str, is_explicit: bool = None, country_code: str = 'us', include_premade_media: list = [], exclude_services: list = [Tidal.service]) -> object:
 		request = {'request': 'search_music_video', 'artists': artists, 'title': title, 'is_explicit': is_explicit, 'country_code': country_code, 'exclude_services': exclude_services}
 		start_time = current_unix_time_ms()
 
 		try:
-			service_objs = [AppleMusic, YouTubeMusic, Tidal, Genius]
+			service_objs = [AppleMusic, YouTubeMusic, Tidal]
+
+			ignore_in_excluded_services = []
+			for premade in include_premade_media:
+				if premade.service not in exclude_services:
+					exclude_services.append(premade.service)
+					ignore_in_excluded_services.append(premade.service)
 
 			tasks = []
 			for obj in service_objs:
@@ -190,6 +225,10 @@ class GlobalIO:
 					)
 
 			unlabeled_results = await gather(*tasks)
+
+			exclude_services = [service for service in exclude_services if service not in ignore_in_excluded_services]
+			for premade in include_premade_media:
+				unlabeled_results.append(premade)
 			for service in exclude_services:
 				unlabeled_results.append(Empty(
 					service = service,
@@ -252,6 +291,23 @@ class GlobalIO:
 				if result_cover == None:
 					result_cover = labeled_results[cover_order[service_index]].thumbnail_url
 
+			sorted_urls = {}
+			sorted_ids = {}
+			sorted_processing_time = {}
+			sorted_confidence = {}
+			for service in services:
+				try:
+					sorted_urls[service] = result_urls[service]
+					sorted_ids[service] = result_ids[service]
+					sorted_processing_time[service] = result_processing_time[service]
+					sorted_confidence[service] = result_confidence[service]
+				except:
+					pass
+			result_urls = sorted_urls
+			result_ids = sorted_ids
+			result_processing_time = sorted_processing_time
+			result_confidence = sorted_confidence
+
 			result_processing_time[self.service] = current_unix_time_ms() - start_time
 			color_hex = await image_hex(result_cover)
 
@@ -303,12 +359,18 @@ class GlobalIO:
 
 
 
-	async def search_collection(self, artists: list, title: str, year: int = None, country_code: str = 'us', exclude_services: list = [Tidal.service]) -> object:
+	async def search_collection(self, artists: list, title: str, year: int = None, country_code: str = 'us', include_premade_media: list = [], exclude_services: list = [Tidal.service]) -> object:
 		request = {'request': 'search_collection', 'artists': artists, 'title': title, 'year': year, 'country_code': country_code}
 		start_time = current_unix_time_ms()
 
 		try:
 			service_objs = [Spotify, AppleMusic, YouTubeMusic, Deezer, Tidal]
+
+			ignore_in_excluded_services = []
+			for premade in include_premade_media:
+				if premade.service not in exclude_services:
+					exclude_services.append(premade.service)
+					ignore_in_excluded_services.append(premade.service)
 
 			tasks = []
 			for obj in service_objs:
@@ -318,6 +380,10 @@ class GlobalIO:
 					)
 
 			unlabeled_results = await gather(*tasks)
+
+			exclude_services = [service for service in exclude_services if service not in ignore_in_excluded_services]
+			for premade in include_premade_media:
+				unlabeled_results.append(premade)
 			for service in exclude_services:
 				unlabeled_results.append(Empty(
 					service = service,
@@ -384,6 +450,23 @@ class GlobalIO:
 					result_year = labeled_results[release_year_order[service]].release_year
 				if result_cover == None:
 					result_cover = labeled_results[cover_order[service]].cover_url
+
+			sorted_urls = {}
+			sorted_ids = {}
+			sorted_processing_time = {}
+			sorted_confidence = {}
+			for service in services:
+				try:
+					sorted_urls[service] = result_urls[service]
+					sorted_ids[service] = result_ids[service]
+					sorted_processing_time[service] = result_processing_time[service]
+					sorted_confidence[service] = result_confidence[service]
+				except:
+					pass
+			result_urls = sorted_urls
+			result_ids = sorted_ids
+			result_processing_time = sorted_processing_time
+			result_confidence = sorted_confidence
 
 			result_processing_time[self.service] = current_unix_time_ms() - start_time
 			color_hex = await image_hex(result_cover)
@@ -496,17 +579,18 @@ class GlobalIO:
 				return song_reference
 
 			service_objects = [Spotify, AppleMusic, YouTubeMusic, Deezer, Tidal]
-			services = [Spotify.service, AppleMusic.service, YouTubeMusic.service, Deezer.service, Tidal.service, Genius.service]
+			services = [Spotify.service, AppleMusic.service, YouTubeMusic.service, Deezer.service, Tidal.service]
 			if service != YouTubeMusic:
 				service_objects.remove(service)
-
+			
 			if song_reference.type == 'music_video':
 				song = await self.search_song(
 					artists = song_reference.artists,
 					title = song_reference.title,
 					is_explicit = song_reference.is_explicit,
 					country_code = lookup_country_code,
-					exclude_services = [song_reference.service, Tidal.service]
+					include_premade_media = [song_reference],
+					exclude_services = [Tidal.service]
 				)
 			else:
 				song = await self.search_song(
@@ -516,36 +600,39 @@ class GlobalIO:
 					collection = song_reference.collection,
 					is_explicit = song_reference.is_explicit,
 					country_code = lookup_country_code,
-					exclude_services = [song_reference.service, Tidal.service]
+					include_premade_media = [song_reference],
+					exclude_services = [Tidal.service]
 				)
 
-			if song.type not in self.invalid_responses:
-				all_urls = {}
-				all_ids = {}
-				all_latencies = {}
-				all_percentages = {}
-				for service in services:
-					if service == song_reference.service:
-						all_urls[service] = song_reference.url[service]
-						all_ids[service] = song_reference.id[service]
-						all_latencies[service] = song_reference.meta.processing_time[service]
-						all_percentages[service] = song_reference.meta.filter_confidence_percentage[service]
-					elif service in list(song.url.keys()):
-						all_urls[service] = song.url[service]
-						all_ids[service] = song.id[service]
-						all_latencies[service] = song.meta.processing_time[service]
-						all_percentages[service] = song.meta.filter_confidence_percentage[service]
+			# if song.type not in self.invalid_responses:
+			# 	all_urls = {}
+			# 	all_ids = {}
+			# 	all_latencies = {}
+			# 	all_percentages = {}
+			# 	for service in services:
+			# 		if service == song_reference.service:
+			# 			all_urls[service] = song_reference.url[service]
+			# 			all_ids[service] = song_reference.id[service]
+			# 			all_latencies[service] = song_reference.meta.processing_time[service]
+			# 			all_percentages[service] = song_reference.meta.filter_confidence_percentage[service]
+			# 		elif service in list(song.url.keys()):
+			# 			all_urls[service] = song.url[service]
+			# 			all_ids[service] = song.id[service]
+			# 			all_latencies[service] = song.meta.processing_time[service]
+			# 			all_percentages[service] = song.meta.filter_confidence_percentage[service]
 				
-				song.url = all_urls
-				song.id = all_ids
-				song.meta.processing_time = all_latencies
-				song.meta.processing_time[self.service] = current_unix_time_ms() - start_time
-				song.meta.filter_confidence_percentage = all_percentages
+				# song.title = song_reference.title
+				# song.artists = song_reference.artists
+				# song.type = song_reference.type
+				# song.collection = song_reference.collection if song_reference.collection is not None else song.colleciton
+				# song.cover_url = song_reference.cover_url
+				# song.url = all_urls
+				# song.id = all_ids
+				# song.meta.processing_time = all_latencies
+				# song.meta.processing_time[self.service] = current_unix_time_ms() - start_time
+				# song.meta.filter_confidence_percentage = all_percentages
 
-				return song
-
-			else:
-				return song
+			return song
 
 		except Exception as msg:
 			error = Error(
@@ -585,36 +672,37 @@ class GlobalIO:
 				video_reference.title,
 				video_reference.is_explicit,
 				lookup_country_code,
-				[video_reference.service, Tidal.service]
+				[video_reference],
+				[Tidal.service]
 			)
 
-			if video.type not in self.invalid_responses:
-				all_urls = {}
-				all_ids = {}
-				all_latencies = {}
-				all_percentages = {}
-				for service in services:
-					if service == video_reference.service:
-						all_urls[service] = video_reference.url[service]
-						all_ids[service] = video_reference.id[service]
-						all_latencies[service] = video_reference.meta.processing_time[service]
-						all_percentages[service] = video_reference.meta.filter_confidence_percentage[service]
-					elif service in list(video.url.keys()):
-						all_urls[service] = video.url[service]
-						all_ids[service] = video.id[service]
-						all_latencies[service] = video.meta.processing_time[service]
-						all_percentages[service] = video.meta.filter_confidence_percentage[service]
+			# if video.type not in self.invalid_responses:
+			# 	all_urls = {}
+			# 	all_ids = {}
+			# 	all_latencies = {}
+			# 	all_percentages = {}
+			# 	for service in services:
+			# 		if service == video_reference.service:
+			# 			all_urls[service] = video_reference.url[service]
+			# 			all_ids[service] = video_reference.id[service]
+			# 			all_latencies[service] = video_reference.meta.processing_time[service]
+			# 			all_percentages[service] = video_reference.meta.filter_confidence_percentage[service]
+			# 		elif service in list(video.url.keys()):
+			# 			all_urls[service] = video.url[service]
+			# 			all_ids[service] = video.id[service]
+			# 			all_latencies[service] = video.meta.processing_time[service]
+			# 			all_percentages[service] = video.meta.filter_confidence_percentage[service]
 				
-				video.url = all_urls
-				video.id = all_ids
-				video.meta.processing_time = all_latencies
-				video.meta.processing_time[self.service] = current_unix_time_ms() - start_time
-				video.meta.filter_confidence_percentage = all_percentages
+			# 	video.url = all_urls
+			# 	video.id = all_ids
+			# 	video.meta.processing_time = all_latencies
+			# 	video.meta.processing_time[self.service] = current_unix_time_ms() - start_time
+			# 	video.meta.filter_confidence_percentage = all_percentages
 
-				return video
+			return video
 
-			else:
-				return video
+			# else:
+			# 	return video
 
 		except Exception as msg:
 			error = Error(
@@ -655,36 +743,37 @@ class GlobalIO:
 				collection_reference.title,
 				collection_reference.release_year,
 				lookup_country_code,
-				[collection_reference.service, Tidal.service]
+				[collection_reference],
+				[Tidal.service]
 			)
 
-			if collection.type not in self.invalid_responses:
-				all_urls = {}
-				all_ids = {}
-				all_latencies = {}
-				all_percentages = {}
-				for service in services:
-					if service == collection_reference.service:
-						all_urls[service] = collection_reference.url[service]
-						all_ids[service] = collection_reference.id[service]
-						all_latencies[service] = collection_reference.meta.processing_time[service]
-						all_percentages[service] = collection_reference.meta.filter_confidence_percentage[service]
-					elif service in list(collection.url.keys()):
-						all_urls[service] = collection.url[service]
-						all_ids[service] = collection.id[service]
-						all_latencies[service] = collection.meta.processing_time[service]
-						all_percentages[service] = collection.meta.filter_confidence_percentage[service]
+			# if collection.type not in self.invalid_responses:
+			# 	all_urls = {}
+			# 	all_ids = {}
+			# 	all_latencies = {}
+			# 	all_percentages = {}
+			# 	for service in services:
+			# 		if service == collection_reference.service:
+			# 			all_urls[service] = collection_reference.url[service]
+			# 			all_ids[service] = collection_reference.id[service]
+			# 			all_latencies[service] = collection_reference.meta.processing_time[service]
+			# 			all_percentages[service] = collection_reference.meta.filter_confidence_percentage[service]
+			# 		elif service in list(collection.url.keys()):
+			# 			all_urls[service] = collection.url[service]
+			# 			all_ids[service] = collection.id[service]
+			# 			all_latencies[service] = collection.meta.processing_time[service]
+			# 			all_percentages[service] = collection.meta.filter_confidence_percentage[service]
 				
-				collection.url = all_urls
-				collection.id = all_ids
-				collection.meta.processing_time = all_latencies
-				collection.meta.processing_time[self.service] = current_unix_time_ms() - start_time
-				collection.meta.filter_confidence_percentage = all_percentages
+			# 	collection.url = all_urls
+			# 	collection.id = all_ids
+			# 	collection.meta.processing_time = all_latencies
+			# 	collection.meta.processing_time[self.service] = current_unix_time_ms() - start_time
+			# 	collection.meta.filter_confidence_percentage = all_percentages
 
-				return collection
+			return collection
 
-			else:
-				return collection
+			# else:
+			# 	return collection
 
 		except Exception as msg:
 			error = Error(
@@ -703,55 +792,57 @@ class GlobalIO:
 
 
 	async def get_song_knowledge(self, service: object, song_id: str, song_country_code: str = None, knowledge_country_code: str = 'us') -> object:
-			request = {'request': 'get_song_knowledge', 'service': service.service, 'song_id': song_id, 'song_country_code': song_country_code, 'knowledge_country_code': knowledge_country_code}
-			start_time = current_unix_time_ms()
+		request = {'request': 'get_song_knowledge', 'service': service.service, 'song_id': song_id, 'song_country_code': song_country_code, 'knowledge_country_code': knowledge_country_code}
+		start_time = current_unix_time_ms()
 
-		#try:
-			song_reference = await service.lookup_song(id = id, country_code = song_country_code)
-			return song_reference
+		try:
+			song_reference = await service.lookup_song(id = song_id, country_code = song_country_code)
+			#return song_reference
 			if song_reference.type != 'track' and song_reference.type != 'single' and song_reference.type != 'music_video':
-				return song_reference
+				empty_response = Empty(
+					service = self.service,
+					meta = Meta(
+						service = self.service,
+						request = request,
+						processing_time = {self.service: current_unix_time_ms() - start_time},
+						http_code = 204,
+					)
+				)
+				await log(empty_response)
+				return empty_response
 
 			if song_reference.type == 'music_video':
-				song = await Genius.search_song(
+				song = await Genius.search_song_knowledge(
 					artists = song_reference.artists,
 					title = song_reference.title,
 					is_explicit = song_reference.is_explicit,
 					country_code = knowledge_country_code,
-					exclude_services = [song_reference.service, Tidal.service]
 				)
 			else:
-				song = await Genius.search_song(
+				song = await Genius.search_song_knowledge(
 					artists = song_reference.artists,
 					title = song_reference.title,
 					song_type = song_reference.type,
 					collection = song_reference.collection,
 					is_explicit = song_reference.is_explicit,
 					country_code = knowledge_country_code,
-					exclude_services = [song_reference.service, Tidal.service]
 				)
 
-			if song.type not in self.invalid_responses:
-				return song
-				song_more_data = await Genius.lookup_song(song.id[Genius.service], knowledge_country_code)
-				return song_more_data
+			return song
 
-			else:
-				return song
-
-		# except Exception as msg:
-		# 	error = Error(
-		# 		service = self.service,
-		# 		component = self.component,
-		# 		error_msg = f'Error when getting song knowledge: "{msg}"',
-		# 		meta = Meta(
-		# 			service = self.service,
-		# 			request = request,
-		# 			processing_time = {self.service: current_unix_time_ms() - start_time}
-		# 		)
-		# 	)
-		# 	await log(error)
-		# 	return error
+		except Exception as msg:
+			error = Error(
+				service = self.service,
+				component = self.component,
+				error_msg = f'Error when getting song knowledge: "{msg}"',
+				meta = Meta(
+					service = self.service,
+					request = request,
+					processing_time = {self.service: current_unix_time_ms() - start_time}
+				)
+			)
+			await log(error)
+			return error
 
 
 Global = GlobalIO()
