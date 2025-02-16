@@ -1,6 +1,5 @@
 import discord as discord
 from AstroDiscord.components.ini import text
-#from AstroAPI.components.image_hex import image_hex
 
 
 
@@ -55,7 +54,6 @@ class Embed:
 			return
 		
 		data = [f'**{discord.utils.escape_markdown(', '.join(media_object.artists))}**']
-		genius_url = media_object.url['genius'] if 'genius' in media_object.url else None
 		is_explicit = None
 
 		if media_object.type == 'track':
@@ -70,9 +68,6 @@ class Embed:
 			is_explicit = media_object.is_explicit
 		elif media_object.type == 'album' or media_object.type == 'ep':
 			data.append(str(media_object.release_year))
-		
-		if genius_url != None:
-			data.append(f'[Lyrics]({genius_url})')
 			
 		embed = discord.Embed(
 			title = f'{f'{discord.utils.escape_markdown(media_object.title)}'}  {'`E`' if is_explicit != None and is_explicit != False else ''}',
