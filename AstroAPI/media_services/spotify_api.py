@@ -8,6 +8,10 @@ class Spotify:
 	def __init__(self, client_id: str, client_secret: str):
 		self.service = 'spotify'
 		self.component = 'Spotify API'
+		self.invalid_responses = [
+			'empty_response',
+			'error'
+		]
 		self.client_id = client_id
 		self.client_secret = client_secret
 		self.token = None
@@ -299,3 +303,70 @@ class Spotify:
 					)
 					await log(error)
 					return error
+
+
+
+	async def get_song_knowledge(self, id: str, country_code: str = 'us') -> object:
+		async with aiohttp.ClientSession() as session:
+			request = {'request': 'lookup_collection', 'id': id, 'country_code': country_code}
+			api_url = f'https://api.spotify.com/v1/audio-features/{id}'
+			api_params = {
+				'market': country_code.upper(),
+			}
+			api_headers = {'Authorization': f'Bearer {await self.get_token()}'}
+			timeout = aiohttp.ClientTimeout(total = 30)
+			start_time = current_unix_time_ms()
+
+			song_general_data = await self.lookup_song(id, country_code)
+
+			if song_general_data not in self.invalid_responses:
+				async with session.get(url = api_url, headers = api_headers, timeout = timeout, params = api_params) as response:
+					if response.status == 200:
+						song = await response.json()
+
+						song_bpm = song['bpm']
+						song_key = song['key']
+						song_time_signature = song['time_signature']
+
+						return Knowledge(
+							service = self.service,
+							media_type = song_general_data.type,
+							url = song_general_data.url[self.service],
+							id = song_general_data.id[self.service],
+							title = song_general_data.title,
+							artists = song_general_data.artists,
+							collection = song_general_data.collection,
+							cover_url = song_general_data.cover_url,
+							is_explicit = song_general_data.is_explicit,
+							bpm = song_bpm,
+							key = song_key,
+							length = None,
+							time_signature = song_time_signature,
+							meta = Meta(
+								service = self.service,
+								request = request,
+								processing_time = current_unix_time_ms() - start_time,
+								filter_confidence_percentage = {self.service: 100.0},
+								http_code = response.status
+							)
+						)
+					else:
+						data = await response.json()
+						save_json(data)
+						error = Error(
+							service = self.service,
+							component = self.component,
+							error_msg = "HTTP error when looking up song knowledge",
+							meta = Meta(
+								service = self.service,
+								request = request,
+								processing_time = current_unix_time_ms() - start_time,
+								http_code = response.status
+							)
+						)
+						await log(error)
+						return error
+
+
+			else:
+				return song_general_data
