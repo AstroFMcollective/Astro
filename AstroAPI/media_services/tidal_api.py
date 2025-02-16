@@ -4,7 +4,9 @@ from asyncio import run
 import aiohttp
 
 
-
+# TIDAL API is in shambles right now because I tried adapting it to V2 before realizing V2 is unusable so now I just don't use or work on it anymore
+# TIDAL sucks
+# (Ignore everything here until further notice)
 class Tidal:
 	def __init__(self, client_id: str, client_secret: str):
 		self.service = 'tidal'
