@@ -279,7 +279,7 @@ class YouTubeMusic:
 			start_time = current_unix_time_ms()
 			song_data = self.ytm.get_song(id)
 			song = song_data['videoDetails']
-			save_json(song)
+			save_json(song_data)
 
 			if 'musicVideoType' in song:
 				if song['musicVideoType'] in self.allowed_video_types:
