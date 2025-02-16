@@ -461,11 +461,11 @@ async def coverart(interaction: discord.Interaction, link: str):
 @app_commands.user_install()
 @app_commands.allowed_contexts(guilds = True, dms = True, private_channels = True)
 async def context_menu_lookup(interaction: discord.Interaction, message: discord.Message):
-	request = {'request': 'context_menu_lookup', 'urls': urls}
 	start_time = current_unix_time_ms()
 	await interaction.response.defer()
 	urls = find_urls(message.content)
 	data = await get_data_from_urls(urls)
+	request = {'request': 'context_menu_lookup', 'urls': urls}
 
 	media_objects = []
 	embeds = []
