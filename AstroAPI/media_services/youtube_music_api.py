@@ -281,8 +281,8 @@ class YouTubeMusic:
 			request = {'request': 'lookup_song', 'id': id, 'country_code': country_code, 'url': f'https://music.youtube.com/watch?v={id}'}
 			start_time = current_unix_time_ms()
 			song_data = self.ytm.get_song(id)
-			song = song_data['videoDetails']
 			save_json(song_data)
+			song = song_data['videoDetails']
 
 			if 'musicVideoType' in song:
 				if song['musicVideoType'] in self.allowed_video_types:
