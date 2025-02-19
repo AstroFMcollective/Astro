@@ -543,16 +543,16 @@ class GlobalIO:
 		start_time = current_unix_time_ms()
 		
 		try:
-			result = await YouTubeMusic.search_query(query)
+			result = await YouTubeMusic.search_query(query, country_code)
 
 			if result.type == 'track' or result.type == 'single':
-				return await self.search_song(result.artists, result.title, result.type, result.collection, result.is_explicit, country_code)
+				return await self.search_song(result.artists, result.title, result.type, result.collection, result.is_explicit, country_code, [result])
 			
 			elif result.type == 'album' or result.type == 'ep':
-				return await self.search_collection(result.artists, result.title, result.release_year, country_code)
+				return await self.search_collection(result.artists, result.title, result.release_year, country_code, [result])
 			
 			elif result.type == 'music_video':
-				return await self.search_music_video(result.artists, result.title, result.is_explicit, country_code)
+				return await self.search_music_video(result.artists, result.title, result.is_explicit, country_code, [result])
 
 			else:
 				empty_response = Empty(
@@ -594,7 +594,6 @@ class GlobalIO:
 				return song_reference
 
 			service_objects = [Spotify, AppleMusic, YouTubeMusic, Deezer, Tidal]
-			services = [Spotify.service, AppleMusic.service, YouTubeMusic.service, Deezer.service, Tidal.service]
 			if service != YouTubeMusic:
 				service_objects.remove(service)
 			

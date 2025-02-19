@@ -284,7 +284,7 @@ async def lookup(interaction: discord.Interaction, query: str, country_code: str
 	urls = find_urls(query)
 	data = await get_data_from_urls(urls)
 	if data == [] and len(urls) == 0:
-		media_object = await astro.Global.search_query(query = query)
+		media_object = await astro.Global.search_query(query = query, country_code = country_code)
 	elif data == [] and len(urls) >= 1:
 		media_object = astro.Error(
 			service = service,
@@ -372,7 +372,8 @@ async def snoop(interaction: discord.Interaction, user: discord.Member = None, e
 	else:
 		song = await astro.Global.lookup_song(
 			service = astro.Spotify,
-			id = identifier
+			id = identifier,
+			song_country_code = 'us'
 		)
 
 	embeds = Embed(
