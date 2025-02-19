@@ -179,7 +179,7 @@ class Knowledge:
 		self.censored_title = title
 		self.collection = collection
 		self.artists = artists
-		self.description = description
+		self.description = description if description is not '?' else None
 		self.release_date = release_date
 		self.cover_url = cover_url
 		self.cover_color_hex = cover_color_hex
@@ -188,5 +188,5 @@ class Knowledge:
 		self.bpm = bpm
 		self.key = pitch_class[key]
 		self.length = length
-		self.time_signature = f'1/{time_signature}'
+		self.time_signature = f'1/{time_signature}' if time_signature is not None else None
 		self.meta = meta
