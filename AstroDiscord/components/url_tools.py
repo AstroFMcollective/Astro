@@ -144,8 +144,8 @@ async def get_data_from_urls(urls: str | list) -> list:
 						if '?uo' in url:
 							results.append(template(types[3], url[index+1:url.index('?uo')], country_code))
 							break
-						elif '&ls' in url:
-							results.append(template(types[3], url[index+1:url.index('&ls')], country_code))
+						elif '?ls' in url:
+							results.append(template(types[3], url[index+1:url.index('?ls')], country_code))
 							break
 						else:
 							results.append(template(types[3], url[index+1:], country_code))
