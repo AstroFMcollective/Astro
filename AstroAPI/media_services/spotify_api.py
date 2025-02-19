@@ -246,7 +246,7 @@ class Spotify:
 					)
 					await log(error)
 					return error
-				
+
 
 
 	async def lookup_collection(self, id: str, country_code: str = 'us') -> object:
@@ -306,7 +306,17 @@ class Spotify:
 
 
 
-	async def get_song_knowledge(self, id: str, country_code: str = 'us') -> object:
+	async def search_song_knowledge(self, artists: list, title: str, song_type: str = None, collection: str = None, is_explicit: bool = None, country_code: str = 'us') -> object:
+		song = await self.search_song(artists, title, song_type, collection, is_explicit, country_code)
+
+		if song.type not in self.invalid_responses:
+			return await self.lookup_song_knowledge(song.id[self.service], country_code)
+		else:
+			return song
+
+
+
+	async def lookup_song_knowledge(self, id: str, country_code: str = 'us') -> object:
 		async with aiohttp.ClientSession() as session:
 			request = {'request': 'lookup_collection', 'id': id, 'country_code': country_code}
 			api_url = f'https://api.spotify.com/v1/audio-features/{id}'
@@ -320,6 +330,15 @@ class Spotify:
 			song_general_data = await self.lookup_song(id, country_code)
 
 			if song_general_data not in self.invalid_responses:
+				song_type = song_general_data.type
+				song_url = song_general_data.url
+				song_id = song_general_data.id
+				song_title = song_general_data.title
+				song_artists = song_general_data.artists
+				song_cover = song_general_data.cover_url
+				song_is_explicit = song_general_data.is_explicit
+				song_collection = song_general_data.collection
+
 				async with session.get(url = api_url, headers = api_headers, timeout = timeout, params = api_params) as response:
 					if response.status == 200:
 						song = await response.json()
@@ -327,46 +346,45 @@ class Spotify:
 						song_bpm = song['bpm']
 						song_key = song['key']
 						song_time_signature = song['time_signature']
-
-						return Knowledge(
-							service = self.service,
-							media_type = song_general_data.type,
-							url = song_general_data.url[self.service],
-							id = song_general_data.id[self.service],
-							title = song_general_data.title,
-							artists = song_general_data.artists,
-							collection = song_general_data.collection,
-							cover_url = song_general_data.cover_url,
-							is_explicit = song_general_data.is_explicit,
-							bpm = song_bpm,
-							key = song_key,
-							length = None,
-							time_signature = song_time_signature,
-							meta = Meta(
-								service = self.service,
-								request = request,
-								processing_time = current_unix_time_ms() - start_time,
-								filter_confidence_percentage = {self.service: 100.0},
-								http_code = response.status
-							)
-						)
 					else:
-						data = await response.json()
-						save_json(data)
-						error = Error(
-							service = self.service,
-							component = self.component,
-							error_msg = "HTTP error when looking up song knowledge",
-							meta = Meta(
-								service = self.service,
-								request = request,
-								processing_time = current_unix_time_ms() - start_time,
-								http_code = response.status
-							)
-						)
-						await log(error)
-						return error
+						song_bpm = None
+						song_key = None
+						song_time_signature = None
 
-
+				return Knowledge(
+					service = self.service,
+					media_type = song_type,
+					url = song_url,
+					id = song_id,
+					title = song_title,
+					artists = song_artists,
+					collection = song_collection,
+					cover_url = song_cover,
+					is_explicit = song_is_explicit,
+					bpm = song_bpm,
+					key = song_key,
+					length = None,
+					time_signature = song_time_signature,
+					meta = Meta(
+						service = self.service,
+						request = request,
+						processing_time = current_unix_time_ms() - start_time,
+						filter_confidence_percentage = {self.service: 100.0},
+						http_code = response.status
+					)
+				)
+			
 			else:
-				return song_general_data
+				error = Error(
+					service = self.service,
+					component = self.component,
+					error_msg = "HTTP error when looking up song knowledge",
+					meta = Meta(
+						service = self.service,
+						request = request,
+						processing_time = current_unix_time_ms() - start_time,
+						http_code = song_general_data.meta.http_code
+					)
+				)
+				await log(error)
+				return error

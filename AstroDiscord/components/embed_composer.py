@@ -68,6 +68,14 @@ class Embed:
 			is_explicit = media_object.is_explicit
 		elif media_object.type == 'album' or media_object.type == 'ep':
 			data.append(str(media_object.release_year))
+		elif media_object.type == 'knowledge':
+			if media_object.media_type == 'single':
+				data.append('Single')
+			else:
+				if media_object.collection != None:
+					data.append(f'{discord.utils.escape_markdown(media_object.collection)}')
+			is_explicit = media_object.is_explicit
+			data.append(str(media_object.release_date))
 			
 		embed = discord.Embed(
 			title = f'{f'{discord.utils.escape_markdown(media_object.title)}'}  {'`E`' if is_explicit != None and is_explicit != False else ''}',
@@ -87,6 +95,14 @@ class Embed:
 				name = text['embed'][command].replace('USER',f'@USER'),
 				icon_url = text['images']['default_pfp']
 			)
+		
+		if media_object.type == 'knowledge':
+			if media_object.description != None:
+				embed.add_field(
+					name = '',
+					value = media_object.description,
+					inline = False
+				)
 
 		if command != 'cover':
 			embed.add_field(
@@ -96,7 +112,7 @@ class Embed:
 			)
 			
 			
-		if media_object.type == 'music_video' or command == 'cover':
+		if media_object.type == 'music_video' or media_object.type == 'knowledge' or command == 'cover':
 			embed.set_image(
 				url = self.cover
 			)

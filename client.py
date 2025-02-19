@@ -29,6 +29,7 @@ deployment_channel = config['client']['deployment_channel']
 app_start_time = current_unix_time()
 total_requests = []
 embed_reactions = ['🔥','🗑️']
+knowledge_reactions = ['🤯','😴']
 not_found_reaction = ['🤷']
 intents = discord.Intents.all()
 intents.message_content = True
@@ -330,7 +331,7 @@ async def lookup(interaction: discord.Interaction, query: str, country_code: str
 
 
 
-@tree.command(name = 'snoop', description = 'Get the track you or another user is listening to on Spotify')
+@tree.command(name = 'snoop', description = "Get yours or someone else's currently playing song on Spotify")
 @app_commands.describe(user = 'The user you want to snoop on, defaults to you if left empty')
 @app_commands.describe(ephemeral = 'Whether the executed command should be ephemeral (only visible to you), false by default')
 @app_commands.guild_install()
@@ -401,7 +402,7 @@ async def snoop(interaction: discord.Interaction, user: discord.Member = None, e
 
 
 
-@tree.command(name = 'coverart', description = 'Get the cover art of a track or album')
+@tree.command(name = 'coverart', description = 'Get the cover art of a song or album')
 @app_commands.describe(link = 'The link of the track or album you want to retrieve the cover art from')
 @app_commands.guild_install()
 @app_commands.user_install()
@@ -453,7 +454,66 @@ async def coverart(interaction: discord.Interaction, link: str):
 		parameters = f'link:`{link}`',
 		latency = total_time
 	)
-	
+
+
+
+@tree.command(name = 'knowledge', description = 'Get some basic information about a song')
+@app_commands.describe(query = 'The link of the song you want yo retrieve information about')
+@app_commands.describe(country_code = 'The country code of the country in which you want to search, US by default')
+@app_commands.guild_install()
+@app_commands.user_install()
+@app_commands.allowed_contexts(guilds = True, dms = True, private_channels = True)
+async def knowledge(interaction: discord.Interaction, query: str, country_code: str = 'us'):
+	request = {'request': '/knowledge', 'query': query, 'country_code': country_code}
+	start_time = current_unix_time_ms()
+	await interaction.response.defer()
+	urls = find_urls(query)
+	data = await get_data_from_urls(urls)
+	if data == [] and len(urls) == 0:
+		knowledge = await astro.Global.search_query_knowledge(query = query)
+	elif data == [] and len(urls) >= 1:
+		knowledge = astro.Error(
+			service = service,
+			component = '`/lookup`',
+			error_msg = text['error']['invalid_link'],
+			meta = astro.Meta(
+				service = service,
+				request = request,
+				processing_time = current_unix_time_ms() - start_time
+			)
+		)
+	else:
+		media_type = data[0]['media']
+		media_id = data[0]['id']
+		media_country_code = data[0]['country_code']
+		knowledge = await astro.Global.lookup_song_knowledge(link_lookup_function_objects[types.index(media_type)], media_id, media_country_code)
+
+	embeds = Embed(
+		command = 'search',
+		media_object = knowledge,
+		user = interaction.user
+	)
+
+	embed = await interaction.followup.send(
+		embed = embeds.embed
+	)
+	end_time = current_unix_time_ms()
+	total_time = end_time - start_time
+
+	if knowledge.type not in invalid_responses:
+		log_request(knowledge.meta.processing_time['global'], total_time - knowledge.meta.processing_time['global'], 'success')
+		await add_reactions(embed, knowledge_reactions)
+	else:
+		log_request(0, total_time, 'failure')
+
+	await log(
+		log_embeds = [embeds.log_embed],
+		media = [knowledge],
+		command = 'knowledge',
+		parameters = f'query:`{query}`',
+		latency = total_time
+	)
+
 
 
 @tree.context_menu(name = 'Search music link(s)')
