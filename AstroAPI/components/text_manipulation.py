@@ -170,7 +170,7 @@ def convert_genius_desc_into_discord_str(description: dict):
 	converted_description = ''
 
 	description = description['dom']['children'][0]['children']
-	save_json(description)
+	#save_json(description)
 
 	for element in description:
 		if isinstance(element, str):
@@ -178,7 +178,7 @@ def convert_genius_desc_into_discord_str(description: dict):
 		elif isinstance(element, dict):
 			if element['tag'] == 'a':
 				if isinstance(element['children'][0], dict):
-					if element['children'][0]['tag'] == 'em':
+					if element['children'][0]['tag'] == 'em' or element['children'][0]['tag'] == 'i':
 						converted_description += f'*[{element['children'][0]['children'][0]}]({element['attributes']['href']})*'
 				else:
 					converted_description += f'[{element['children'][0]}]({element['attributes']['href']})'
