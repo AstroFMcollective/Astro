@@ -617,7 +617,7 @@ async def context_menu_lookup(interaction: discord.Interaction, message: discord
 
 
 
-@tasks.loop(seconds = 60)
+@tasks.loop(seconds = 300)
 async def discord_presence():
 	await client.change_presence(activity = discord.Activity(
 		type = discord.ActivityType.listening,
