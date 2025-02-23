@@ -179,7 +179,7 @@ class Knowledge:
 		self.censored_title = title
 		self.collection = collection
 		self.artists = artists
-		self.description = description if description is not '?' else None
+		self.description = description if description != '?' else None
 		self.release_date = release_date
 		self.cover_url = cover_url
 		self.cover_color_hex = cover_color_hex
