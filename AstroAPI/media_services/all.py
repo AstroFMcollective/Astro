@@ -5,11 +5,28 @@ from asyncio import *
 
 
 # --- Music API-s ---
-Spotify = spotify_api.Spotify(client_id = keys['spotify']['id'], client_secret = keys['spotify']['secret'])
+Spotify = spotify_api.Spotify(
+	client_id = keys['spotify']['id'],
+	client_secret = keys['spotify']['secret']
+)
 AppleMusic = apple_music_api.AppleMusic()
-YouTubeMusic = youtube_music_api.YouTubeMusic()
+YouTubeMusic = youtube_music_api.YouTubeMusic(
+	oauth = {
+		'scope': keys['youtube_music']['scope'],
+		'token_type': keys['youtube_music']['token_type'],
+		"access_token": keys['youtube_music']['access_token'],
+		"refresh_token": keys['youtube_music']['refresh_token'],
+		"expires_at": int(keys['youtube_music']['expires_at']),
+		"expires_in": int(keys['youtube_music']['expires_in'])
+	},
+	client_id = keys['youtube_music']['client_id'],
+	client_secret = keys['youtube_music']['client_secret']
+)
 Deezer = deezer_api.Deezer()
-Tidal = tidal_api.Tidal(client_id = keys['tidal']['id'], client_secret = f'{keys['tidal']['secret']}=')
+Tidal = tidal_api.Tidal(
+	client_id = keys['tidal']['id'],
+	client_secret = f'{keys['tidal']['secret']}='
+)
 
 # --- Knowledge API-s ---
 # Spotify is also used for knowledge

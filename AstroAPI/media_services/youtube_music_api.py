@@ -1,18 +1,24 @@
 from AstroAPI.components import *
-from ytmusicapi import YTMusic
+from ytmusicapi import YTMusic, OAuthCredentials
 
 
 
 class YouTubeMusic:
-	def __init__(self):
+	def __init__(self, oauth: dict, client_id: str, client_secret: str):
 		self.service = 'youtube_music'
 		self.component = 'YouTube Music API'
-		self.ytm = YTMusic()
+		self.ytm = YTMusic(
+			auth = oauth,
+			oauth_credentials = OAuthCredentials(client_id, client_secret)
+		)
 		self.allowed_video_types = [
 			'MUSIC_VIDEO_TYPE_ATV',
 			'MUSIC_VIDEO_TYPE_OMV',
 			'MUSIC_VIDEO_TYPE_OFFICIAL_SOURCE_MUSIC'
 		]
+		self.refresh_token = None
+		self.token = None
+		self.token_expiration_date = None
 		print('[AstroAPI] YouTube Music API has been initialized.')
 
 
@@ -277,7 +283,7 @@ class YouTubeMusic:
 
 
 	async def lookup_song(self, id: str, country_code: str = 'us') -> object:
-		try:
+		#try:
 			request = {'request': 'lookup_song', 'id': id, 'country_code': country_code, 'url': f'https://music.youtube.com/watch?v={id}'}
 			start_time = current_unix_time_ms()
 			song_data = self.ytm.get_song(id)
@@ -352,19 +358,19 @@ class YouTubeMusic:
 					)
 				)
 			
-		except Exception as msg:
-			error = Error(
-				service = self.service,
-				component = self.component,
-				error_msg = f'Error when looking up song: "{msg}"',
-				meta = Meta(
-					service = self.service,
-					request = request,
-					processing_time = current_unix_time_ms() - start_time,
-				)
-			)
-			await log(error)
-			return error
+		# except Exception as msg:
+		# 	error = Error(
+		# 		service = self.service,
+		# 		component = self.component,
+		# 		error_msg = f'Error when looking up song: "{msg}"',
+		# 		meta = Meta(
+		# 			service = self.service,
+		# 			request = request,
+		# 			processing_time = current_unix_time_ms() - start_time,
+		# 		)
+		# 	)
+		# 	await log(error)
+		# 	return error
 
 
 
