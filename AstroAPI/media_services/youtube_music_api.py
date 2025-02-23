@@ -283,11 +283,10 @@ class YouTubeMusic:
 
 
 	async def lookup_song(self, id: str, country_code: str = 'us') -> object:
-		#try:
+		try:
 			request = {'request': 'lookup_song', 'id': id, 'country_code': country_code, 'url': f'https://music.youtube.com/watch?v={id}'}
 			start_time = current_unix_time_ms()
 			song_data = self.ytm.get_song(id)
-			save_json(song_data)
 			song = song_data['videoDetails']
 
 			if 'musicVideoType' in song:
@@ -358,19 +357,19 @@ class YouTubeMusic:
 					)
 				)
 			
-		# except Exception as msg:
-		# 	error = Error(
-		# 		service = self.service,
-		# 		component = self.component,
-		# 		error_msg = f'Error when looking up song: "{msg}"',
-		# 		meta = Meta(
-		# 			service = self.service,
-		# 			request = request,
-		# 			processing_time = current_unix_time_ms() - start_time,
-		# 		)
-		# 	)
-		# 	await log(error)
-		# 	return error
+		except Exception as msg:
+			error = Error(
+				service = self.service,
+				component = self.component,
+				error_msg = f'Error when looking up song: "{msg}"',
+				meta = Meta(
+					service = self.service,
+					request = request,
+					processing_time = current_unix_time_ms() - start_time,
+				)
+			)
+			await log(error)
+			return error
 
 
 
