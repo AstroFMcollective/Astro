@@ -1,136 +1,87 @@
-import discord as discord
+from discord import Embed, User, Member, ButtonStyle
+from discord.ui import Button, View
+from discord.utils import escape_markdown
 from AstroDiscord.components.ini import text
 
-
-
-class Embed:
-	def __init__(self, command: str, media_object: object, user: object, censored: bool = False):
-		self.custom_errors = [
-			text['error']['no_spotify_you'],
-			text['error']['no_spotify_someone'],
-			text['error']['invalid_link'],
-			text['error']['no_links_detected'],
-		]
-
-		if media_object.type != 'empty_response' and media_object.type != 'error':
-			self.cover = media_object.cover_url if media_object.type != 'music_video' else media_object.thumbnail_url
-			self.embed_color = media_object.cover_color_hex if media_object.type != 'music_video' else media_object.thumbnail_color_hex
-
-		self.embed = self.create_embed(command = command, media_object = media_object, user = user, censored = censored, anonymous = False)
-		self.log_embed = self.create_embed(command = command, media_object = media_object, user = user, censored = False, anonymous = True)
-
+class EmbedComposer:
+	def __init__(self):
+		pass
 	
+	async def compose(self, user: User | Member, json_response: dict, command_type: str, anonymous: bool = False):
+		# Order in which to read the metadata from multiple services
+		service_metadata_priority = ['spotify','apple_music','youtube_music','deezer','genius']
+		song_obj_types = ['track', 'single']
+		collection_obj_types = ['album', 'ep']
+		music_video_types = ['music_video']
+		knowledge_types = ['knowledge']
 
-	def create_embed(self, command: str, media_object: object, user: object, censored: bool, anonymous: bool):
-		if media_object.type == 'empty_response' or media_object.type == 'error':
-			embed = discord.Embed(
-				title = text['error']['title'],
-				color = 0xf5c000
+		refer_to = {
+			'track': 'song',
+			'single': 'song',
+			'album': 'album',
+			'ep': 'EP',
+			'music_video': 'music video',
+		}
+
+		actions = {
+			'searchsong': 'searched',
+			'searchalbum': 'searched',
+			'lookup': 'looked up',
+			'snoop': 'is listening to',
+			'coverart': 'looked up cover art'
+		} 
+
+		username = user.display_name
+		user_pfp = user.display_avatar
+		action = actions[command_type]
+
+		if json_response['type'] in song_obj_types:
+			title = escape_markdown(json_response['title'])
+			artists = ', '.join([f'**{escape_markdown(artist['name'])}**' for artist in json_response['artists']])
+			collection = f'*{json_response['collection']['title']}*' if json_response['type'] != 'single' else None
+			genre = json_response['genre']
+			desc_elements = [artists, collection, genre]
+			for element in desc_elements:
+				if element == None:
+					desc_elements.remove(None)
+			color = 0x00b0f4 # Placeholder blue
+			cover_url = None
+			for service in service_metadata_priority:
+				if service in json_response['cover']['hq_urls']:
+					cover_url = json_response['cover']['hq_urls'][service]
+			self.embed = Embed(
+				title = title,
+				description = '  •  '.join(desc_elements),
+				color = color
 			)
-
-			if media_object.type == 'error':
-				if media_object.error_msg in self.custom_errors:
-					error_msg = media_object.error_msg
-				else:
-					error_msg = text['error']['generic'] if media_object.type == 'error' else text['error']['empty_response']
-			
-			if media_object.type == 'empty_response':
-				error_msg = text['error']['empty_response']
-
-			embed.add_field(
-				name = '',
-				value = error_msg,
-				inline = False
+			if anonymous == False:
+				self.embed.set_author(
+					name = f'{username} {action}:',
+					icon_url = user_pfp
+				)
+			else:
+				self.embed.set_author(
+					name = f'A user {action}:',
+					icon_url = text['images']['default_pfp']
+				) 
+			self.embed.set_thumbnail(
+				url = cover_url
 			)
-				
-			embed.set_footer(
-				text = text['embed']['tymsg'],
+			self.embed.set_footer(
+				text = f'{text['embed']['tymsg']} • Done in TIME ms',
 				icon_url = text['images']['pfpurl']
 			)
+			await self.service_buttons(json_response['urls'])
 
-			return embed
-		
-		if len(media_object.url) == 1 and command == 'link':
-			return
-		
-		data = [f'**{discord.utils.escape_markdown(', '.join(media_object.artists))}**']
-		is_explicit = None
+	async def service_buttons(self, urls: dict):
+		url_services =  list(urls.keys())
+		self.button_view = View()
 
-		if media_object.type == 'track':
-			if media_object.collection != None:
-				data.append(f'{discord.utils.escape_markdown(media_object.collection)}')
-			is_explicit = media_object.is_explicit
-		elif media_object.type == 'single':
-			data.append('Single')
-			is_explicit = media_object.is_explicit
-		elif media_object.type == 'music_video':
-			data.append('Music video')
-			is_explicit = media_object.is_explicit
-		elif media_object.type == 'album' or media_object.type == 'ep':
-			data.append(str(media_object.release_year))
-		elif media_object.type == 'knowledge':
-			if media_object.media_type == 'single':
-				data.append('Single')
-			else:
-				if media_object.collection != None:
-					data.append(f'{discord.utils.escape_markdown(media_object.collection)}')
-			is_explicit = media_object.is_explicit
-			data.append(str(media_object.release_date))
-			
-		embed = discord.Embed(
-			title = f'{f'{discord.utils.escape_markdown(media_object.title)}'}  {'`E`' if is_explicit != None and is_explicit != False else ''}',
-			description = f'{' • '.join(data)}',
-			color = self.embed_color
-		)
-
-		
-
-		if anonymous == False:
-			embed.set_author(
-				name = text['embed'][command].replace('USER',f'@{user.name}'),
-				icon_url = user.avatar
-			)
-		else:
-			embed.set_author(
-				name = text['embed'][command].replace('USER',f'@USER'),
-				icon_url = text['images']['default_pfp']
-			)
-		
-		if media_object.type == 'knowledge':
-			if media_object.description != None:
-				embed.add_field(
-					name = '',
-					value = media_object.description,
-					inline = False
+		for service in url_services:
+			self.button_view.add_item(
+				Button(
+					style = ButtonStyle.link,
+					url = urls[service],
+					emoji = text['emoji'][service]
 				)
-
-		if command != 'cover':
-			embed.add_field(
-				name = text['embed'][media_object.type],
-				value = self.create_anchor(media_object),
-				inline = False
 			)
-			
-			
-		if media_object.type == 'music_video' or media_object.type == 'knowledge' or command == 'cover':
-			embed.set_image(
-				url = self.cover
-			)
-		else:
-			embed.set_thumbnail(
-				url = self.cover
-			)
-
-		embed.set_footer(
-			text = text['embed']['tymsg'],
-			icon_url = text['images']['pfpurl']
-		)
-
-		return embed
-	
-	def create_anchor(self, media_object: object):
-		anchor = []
-		urls = media_object.url
-		for url in urls:
-			anchor.append(text['anchor'][url].replace('URL', urls[url]).replace('NOTEXT',''))
-		return '\n'.join(anchor)
