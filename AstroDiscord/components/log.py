@@ -1,6 +1,6 @@
 import discord as discord
 from discord import Webhook
-from AstroAPI.components.ini import config, keys, text
+# from AstroAPI.components.ini import config, keys, text
 from AstroDiscord.components.ini import config as discord_config
 import aiohttp
 
