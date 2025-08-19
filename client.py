@@ -6,9 +6,6 @@ from discord.ext import tasks
 from random import randint
 from asyncio import *
 import aiohttp
-# from AstroAPI.components.time import *
-
-# import AstroAPI as astro
 
 from AstroDiscord.components.ini import config, tokens, text, presence
 from AstroDiscord.components import *
@@ -46,55 +43,12 @@ invalid_responses = [
 
 
 
-# link_lookup_functions = [
-# 	astro.Global.lookup_song,
-# 	astro.Global.lookup_collection,
-# 	astro.Global.lookup_song,
-# 	astro.Global.lookup_collection,
-# 	astro.Global.lookup_music_video,
-# 	astro.Global.lookup_song,
-# 	astro.Global.lookup_collection,
-# 	astro.Global.lookup_song,
-# 	astro.Global.lookup_collection,
-# 	astro.Global.lookup_song,
-# 	astro.Global.lookup_collection,
-# 	astro.Global.lookup_music_video
-# ]
-
-# link_lookup_function_objects = [
-# 	astro.Spotify,
-# 	astro.Spotify,
-# 	astro.AppleMusic,
-# 	astro.AppleMusic,
-# 	astro.AppleMusic,
-# 	astro.YouTubeMusic,
-# 	astro.YouTubeMusic,
-# 	astro.Deezer,
-# 	astro.Deezer,
-# 	astro.Tidal,
-# 	astro.Tidal,
-# 	astro.Tidal
-# ]
-
-
-
-# def log_request(api_latency: int, client_latency: int, request_result_type: str):
-# 	total_requests.append({'api_latency': api_latency, 'client_latency': client_latency, 'request_result_type': request_result_type})
-
-
-
 @client.event
 async def on_ready():
 	await client.wait_until_ready()
 	if not client.synced:
 		await tree.sync()
 		client.synced = True
-	# if not discord_presence.is_running():
-	# 	discord_presence.start()
-	# if not dashboard.is_running():
-	# 	dashboard.start()
-	# if not reset_requests.is_running():
-	# 	reset_requests.start()
 	print('[AstroDiscord] Ready!')
 
 
@@ -189,10 +143,13 @@ async def on_ready():
 @app_commands.describe(from_album = 'The album, EP or collection of the song you want to search, helps with precision (ex. "IGOR")')
 @app_commands.describe(is_explicit = 'Whether the song you want to search has explicit content (has the little [E] badge next to its name on streaming platforms), helps with precision')
 @app_commands.describe(country_code = 'The country code of the country in which you want to search, US by default')
+@app_commands.describe(censor = 'Whether you want to censor the title of the song or not, False by default and forced True for User Apps')
 @app_commands.guild_install()
 @app_commands.user_install()
 @app_commands.allowed_contexts(guilds = True, dms = True, private_channels = True)
-async def searchsong(interaction: discord.Interaction, artist: str, title: str, from_album: str = None, is_explicit: bool = None, country_code: str = 'us'):
+async def searchsong(interaction: discord.Interaction, artist: str, title: str, from_album: str = None, is_explicit: bool = None, country_code: str = 'us', censor: bool = False):
+	if app_commands.AppInstallationType.user:
+		censor = True
 	await interaction.response.defer()
 	embed_composer = EmbedComposer()
 	async with aiohttp.ClientSession() as session:
@@ -210,7 +167,7 @@ async def searchsong(interaction: discord.Interaction, artist: str, title: str, 
 		async with session.get(url = api_url, params = api_params) as response:
 			if response.status == 200:
 				json_response = await response.json()
-				await embed_composer.compose(interaction.user, json_response, 'searchsong')
+				await embed_composer.compose(interaction.user, json_response, 'searchsong', False, censor)
 				await interaction.followup.send(embed = embed_composer.embed, view = embed_composer.button_view)
 			else:
 				await interaction.followup.send("fuck off")
@@ -220,179 +177,143 @@ async def searchsong(interaction: discord.Interaction, artist: str, title: str, 
 
 
 
-# @tree.command(name = 'searchalbum', description = 'Search for an album')
-# @app_commands.describe(artist = 'The artist of the album you want to search (ex. "Kendrick Lamar")')
-# @app_commands.describe(title = 'The title of the album you want to search (ex. "To Pimp A Butterfly")')
-# @app_commands.describe(year = 'The release year of the album you want to search, helps with precision (ex. "2015")')
-# @app_commands.describe(country_code = 'The country code of the country in which you want to search, US by default')
-# @app_commands.guild_install()
-# @app_commands.user_install()
-# @app_commands.allowed_contexts(guilds = True, dms = True, private_channels = True)
-# async def searchcollection(interaction: discord.Interaction, artist: str, title: str, year: int = None, country_code: str = 'us'):
-# 	start_time = current_unix_time_ms()
-# 	await interaction.response.defer()
-# 	collection = await astro.Global.search_collection(
-# 		artists = [artist],
-# 		title = title,
-# 		year = year,
-# 		country_code = country_code
-# 	)
-# 	embeds = Embed(
-# 		command = 'search',
-# 		media_object = collection,
-# 		user = interaction.user
-# 	)
-# 	embed = await interaction.followup.send(
-# 		embed = embeds.embed
-# 	)
-# 	end_time = current_unix_time_ms()
-# 	total_time = end_time - start_time
-
-# 	if collection.type not in invalid_responses:
-# 		log_request(collection.meta.processing_time['global'], total_time - collection.meta.processing_time['global'], 'success')
-# 		await add_reactions(embed, embed_reactions)
-# 	else:
-# 		log_request(0, total_time, 'failure')
-
-# 	await log(
-# 		log_embeds = [embeds.log_embed],
-# 		media = [collection],
-# 		command = 'searchalbum',
-# 		parameters = f'artist:`{artist}` title:`{title}` year:`{year}` country_code:`{country_code}`',
-# 		latency = total_time
-# 	)
+@tree.command(name = 'searchalbum', description = 'Search for an album')
+@app_commands.describe(artist = 'The artist of the album you want to search (ex. "Kendrick Lamar")')
+@app_commands.describe(title = 'The title of the album you want to search (ex. "To Pimp A Butterfly")')
+@app_commands.describe(year = 'The release year of the album you want to search, helps with precision (ex. "2015")')
+@app_commands.describe(country_code = 'The country code of the country in which you want to search, US by default')
+@app_commands.describe(censor = 'Whether you want to censor the title of the song or not, False by default and forced True for User Apps')
+@app_commands.guild_install()
+@app_commands.user_install()
+@app_commands.allowed_contexts(guilds = True, dms = True, private_channels = True)
+async def searchcollection(interaction: discord.Interaction, artist: str, title: str, year: int = None, country_code: str = 'us', censor: bool = False):
+	if app_commands.AppInstallationType.user:
+		censor = True
+	await interaction.response.defer()
+	embed_composer = EmbedComposer()
+	async with aiohttp.ClientSession() as session:
+		api_url = f'{api_endpoint}/music/global_io/search_collection'
+		api_params = {
+			'artist': artist,
+			'title': title,
+		}
+		if year != None:
+			api_params['year'] = year
+		if country_code != None:
+			api_params['country_code'] = country_code
+		async with session.get(url = api_url, params = api_params) as response:
+			if response.status == 200:
+				json_response = await response.json()
+				await embed_composer.compose(interaction.user, json_response, 'searchalbum', False, censor)
+				await interaction.followup.send(embed = embed_composer.embed, view = embed_composer.button_view)
+			else:
+				await interaction.followup.send("fuck off")
 
 
 
-# @tree.command(name = 'lookup', description = 'Search a song, music video, album or EP from a query or its link')
-# @app_commands.describe(query = 'Search query or the link of the media you want to search')
-# @app_commands.describe(country_code = 'The country code of the country in which you want to search, US by default')
-# @app_commands.guild_install()
-# @app_commands.user_install()
-# @app_commands.allowed_contexts(guilds = True, dms = True, private_channels = True)
-# async def lookup(interaction: discord.Interaction, query: str, country_code: str = 'us'):
-# 	request = {'request': '/lookup', 'query': query, 'country_code': country_code}
-# 	start_time = current_unix_time_ms()
-# 	await interaction.response.defer()
-# 	urls = find_urls(query)
-# 	data = await get_data_from_urls(urls)
-# 	if data == [] and len(urls) == 0:
-# 		media_object = await astro.Global.search_query(query = query, country_code = country_code)
-# 	elif data == [] and len(urls) >= 1:
-# 		media_object = astro.Error(
-# 			service = service,
-# 			component = '`/lookup`',
-# 			error_msg = text['error']['invalid_link'],
-# 			meta = astro.Meta(
-# 				service = service,
-# 				request = request,
-# 				processing_time = current_unix_time_ms() - start_time
-# 			)
-# 		)
-# 	else:
-# 		media_type = data[0]['media']
-# 		media_id = data[0]['id']
-# 		media_country_code = data[0]['country_code']
-# 		if country_code != 'us':
-# 			media_object = await link_lookup_functions[types.index(media_type)](link_lookup_function_objects[types.index(media_type)], media_id, media_country_code, media_country_code)
-# 		else:
-# 			media_object = await link_lookup_functions[types.index(media_type)](link_lookup_function_objects[types.index(media_type)], media_id, media_country_code, country_code)
-# 	embeds = Embed(
-# 		command = 'search',
-# 		media_object = media_object,
-# 		user = interaction.user
-# 	)
-# 	embed = await interaction.followup.send(
-# 		embed = embeds.embed
-# 	)
-# 	end_time = current_unix_time_ms()
-# 	total_time = end_time - start_time
-
-# 	if media_object.type not in invalid_responses:
-# 		log_request(media_object.meta.processing_time['global'], total_time - media_object.meta.processing_time['global'], 'success')
-# 		await add_reactions(embed, embed_reactions)
-# 	else:
-# 		log_request(0, total_time, 'failure')
-
-# 	await log(
-# 		log_embeds = [embeds.log_embed],
-# 		media = [media_object],
-# 		command = 'lookup',
-# 		parameters = f'query:{query}',
-# 		latency = total_time
-# 	)
+@tree.command(name = 'lookup', description = 'Search a song, music video, album or EP from a query or its link')
+@app_commands.describe(query = 'Search query or the link of the media you want to search')
+@app_commands.describe(country_code = 'The country code of the country in which you want to search, US by default')
+@app_commands.describe(censor = 'Whether you want to censor the title of the song or not, False by default and forced True for User Apps')
+@app_commands.guild_install()
+@app_commands.user_install()
+@app_commands.allowed_contexts(guilds = True, dms = True, private_channels = True)
+async def lookup(interaction: discord.Interaction, query: str, country_code: str = 'us', censor: bool = False):
+	if app_commands.AppInstallationType.user:
+		censor = True
+	await interaction.response.defer()
+	embed_composer = EmbedComposer()
+	async with aiohttp.ClientSession() as session:
+		api_url = f'{api_endpoint}/music/global_io/search_query'
+		api_params = {
+			'query': query,
+		}
+		if country_code != None:
+			api_params['country_code'] = country_code
+		async with session.get(url = api_url, params = api_params) as response:
+			if response.status == 200:
+				json_response = await response.json()
+				await embed_composer.compose(interaction.user, json_response, 'lookup', False, censor)
+				await interaction.followup.send(embed = embed_composer.embed, view = embed_composer.button_view)
+			else:
+				await interaction.followup.send("fuck off")
 
 
 
-# @tree.command(name = 'snoop', description = "Get yours or someone else's currently playing song on Spotify")
-# @app_commands.describe(user = 'The user you want to snoop on, defaults to you if left empty')
-# @app_commands.describe(ephemeral = 'Whether the executed command should be ephemeral (only visible to you), false by default')
-# @app_commands.guild_install()
-# @app_commands.allowed_contexts(guilds = True, dms = False, private_channels = True)
-# async def snoop(interaction: discord.Interaction, user: discord.Member = None, ephemeral: bool = False):
-# 	request = {'request': '/snoop', 'self_snoop': (True if user == interaction.user else False)} 
-# 	start_time = current_unix_time_ms()
-# 	await interaction.response.defer(ephemeral = ephemeral)
 
-# 	if user == None:
-# 		user = interaction.user
+@tree.command(name = 'search', description = 'Search a song, music video, album or EP from a query or its link')
+@app_commands.describe(query = 'Search query or the link of the media you want to search')
+@app_commands.describe(country_code = 'The country code of the country in which you want to search, US by default')
+@app_commands.describe(censor = 'Whether you want to censor the title of the song or not, False by default and forced True for User Apps')
+@app_commands.guild_install()
+@app_commands.user_install()
+@app_commands.allowed_contexts(guilds = True, dms = True, private_channels = True)
+async def lookup(interaction: discord.Interaction, query: str, country_code: str = 'us', censor: bool = False):
+	if app_commands.AppInstallationType.user:
+		censor = True
+	await interaction.response.defer()
+	embed_composer = EmbedComposer()
+	async with aiohttp.ClientSession() as session:
+		api_url = f'{api_endpoint}/music/global_io/search_query'
+		api_params = {
+			'query': query,
+		}
+		if country_code != None:
+			api_params['country_code'] = country_code
+		async with session.get(url = api_url, params = api_params) as response:
+			if response.status == 200:
+				json_response = await response.json()
+				await embed_composer.compose(interaction.user, json_response, 'search', False, censor)
+				await interaction.followup.send(embed = embed_composer.embed, view = embed_composer.button_view)
+			else:
+				await interaction.followup.send("fuck off")
 
-# 	identifier = None
 
-# 	guild = client.get_guild(interaction.guild.id)
-# 	member = guild.get_member(user.id)
 
-# 	for activity in member.activities:
-# 		if isinstance(activity, Spotify):
-# 			identifier = str(activity.track_id)
-# 			break
+@tree.command(name = 'snoop', description = "Get yours or someone else's currently playing song on Spotify")
+@app_commands.describe(user = 'The user you want to snoop on, defaults to you if left empty')
+@app_commands.describe(ephemeral = 'Whether the executed command should be ephemeral (only visible to you), false by default')
+@app_commands.describe(country_code = 'The country code of the country in which you want to search, US by default')
+@app_commands.describe(censor = 'Whether you want to censor the title of the song or not, False by default and forced True for User Apps')
+@app_commands.guild_install()
+@app_commands.allowed_contexts(guilds = True, dms = False, private_channels = True)
+async def snoop(interaction: discord.Interaction, user: discord.Member = None, ephemeral: bool = False, country_code: str = 'us', censor: bool = False):
+	if app_commands.AppInstallationType.user:
+		censor = True
+	await interaction.response.defer(ephemeral = ephemeral)
+	embed_composer = EmbedComposer()
+	if user == None:
+		user = interaction.user
+
+	identifier = None
+
+	guild = client.get_guild(interaction.guild.id)
+	member = guild.get_member(user.id)
+
+	for activity in member.activities:
+		if isinstance(activity, Spotify):
+			identifier = str(activity.track_id)
+			break
 	
-# 	if identifier == None:
-# 		if user == interaction.user:
-# 			error_msg = text['error']['no_spotify_you']
-# 		else:
-# 			error_msg = text['error']['no_spotify_someone']
-# 		song = astro.Error(
-# 			service = service,
-# 			component = 'Snoop',
-# 			error_msg = error_msg,
-# 			meta = astro.Meta(
-# 				service = service,
-# 				request = request,
-# 				processing_time = current_unix_time_ms() - start_time
-# 			)
-# 		)
-# 	else:
-# 		song = await astro.Global.lookup_song(
-# 			service = astro.Spotify,
-# 			id = identifier,
-# 			song_country_code = 'us'
-# 		)
+	if identifier == None:
+		await interaction.followup.send("no spotify activity detected")
+	else:
+		async with aiohttp.ClientSession() as session:
+			api_url = f'{api_endpoint}/music/global_io/lookup_song'
+			api_params = {
+				'id': identifier,
+				'id_service': 'spotify'
+			}
+			if country_code != None:
+				api_params['country_code'] = country_code
+			async with session.get(url = api_url, params = api_params) as response:
+				if response.status == 200:
+					json_response = await response.json()
+					await embed_composer.compose(interaction.user, json_response, 'snoop', False, censor)
+					await interaction.followup.send(embed = embed_composer.embed, view = embed_composer.button_view)
+				else:
+					await interaction.followup.send("fuck off")
 
-# 	embeds = Embed(
-# 		command = 'snoop',
-# 		media_object = song,
-# 		user = user
-# 	)
-# 	embed = await interaction.followup.send(
-# 		embed = embeds.embed
-# 	)
-# 	end_time = current_unix_time_ms()
-# 	total_time = end_time - start_time
-
-# 	if song.type not in invalid_responses:
-# 		log_request(song.meta.processing_time['global'], total_time - song.meta.processing_time['global'], 'success')
-# 		await add_reactions(embed, embed_reactions)
-# 	else:
-# 		log_request(0, total_time, 'failure')
-
-# 	await log(
-# 		log_embeds = [embeds.log_embed],
-# 		media = [song],
-# 		command = 'snoop',
-# 		parameters = f'self_snoop:`{(True if user == interaction.user else False)}`',
-# 		latency = total_time
-# 	)
 
 
 
