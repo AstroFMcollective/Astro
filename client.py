@@ -9,7 +9,7 @@ import aiohttp
 
 from AstroDiscord.components.ini import config, tokens, text, presence
 from AstroDiscord.components import *
-# from AstroDiscord.components.url_tools import types
+from AstroDiscord.components.url_tools import url_tools
 
 
 
@@ -20,7 +20,7 @@ class Client(discord.AutoShardedClient):
 	
 
 
-api_endpoint = tokens['api_endpoints']['astroapi'] 
+api = AstroAPI()
 version = config['client']['version']
 service = 'discord'
 component = 'Discord Client'
@@ -53,87 +53,39 @@ async def on_ready():
 
 
 
-# @client.event
-# async def on_message(message):
-# 	if message.author != client.user:
-# 		urls = find_urls(message.content)
-# 		data = await get_data_from_urls(urls)
-
-# 		media_objects = []
-# 		embeds = []
-# 		log_embeds = []
+@client.event
+async def on_message(message):
+	if message.author != client.user:
+		media_data = []
+		embeds = []
+		urls = await url_tools.get_urls_from_string(message.content)
 		
-# 		tasks = []
+		for url in urls:
+			metadata = await url_tools.get_metadata_from_url(url)
+			media_data.append(metadata)
+		
+		if media_data != []:
+			tasks = []
+			for data in media_data:
+				if data['id'] != None and data['type'] != None:
+					tasks.append(
+						create_task(
+							api.lookup(
+								data['type'],
+								data['id'],
+								data['service'],
+								data['country_code']
+							)
+						)
+					)
 
-# 		if data != []:
-# 			start_time = current_unix_time_ms()
-# 			if len(data) == 1:
-# 				media_type = data[0]['media']
-# 				media_id = data[0]['id']
-# 				media_country_code = data[0]['country_code']
-# 				media_object = await link_lookup_functions[types.index(media_type)](link_lookup_function_objects[types.index(media_type)], media_id, media_country_code, media_country_code)
-# 				media_embed = Embed(
-# 					command = 'link',
-# 					media_object = media_object,
-# 					user = message.author
-# 				)
-# 				if media_object.type not in invalid_responses:
-# 					media_objects.append(media_object)
-# 					embeds.append(media_embed.embed)
-# 					log_embeds.append(media_embed.log_embed)
-# 			else:
-# 				for entry in data:
-# 					media_type = entry['media']
-# 					media_id = entry['id']
-# 					media_country_code = entry['country_code']
-# 					tasks.append(
-# 						create_task(link_lookup_functions[types.index(media_type)](link_lookup_function_objects[types.index(media_type)], media_id, media_country_code, media_country_code))
-# 					)
-
-# 				results = await gather(*tasks)
-# 				for result in results:
-# 					media_embed = Embed(
-# 						command = 'link',
-# 						media_object = result,
-# 						user = message.author
-# 					)
-# 					if result.type not in invalid_responses:
-# 						media_objects.append(result)
-# 						embeds.append(media_embed.embed)
-# 						log_embeds.append(media_embed.log_embed)
-
-# 		else:
-# 			return
-
-# 		while None in embeds:
-# 			embeds.remove(None)
-
-# 		api_request_latency = 0
-# 		if embeds != []:
-# 			for obj in media_objects:
-# 				if obj.type not in invalid_responses:
-# 					api_request_latency += obj.meta.processing_time['global']
-# 			api_request_latency = api_request_latency // len(media_objects)
-# 			message_embed = await message.reply(embeds = embeds, mention_author = False)
-
-# 		end_time = current_unix_time_ms()
-# 		total_time = end_time - start_time
-
-# 		if embeds != []:
-# 			log_request(api_request_latency, total_time - api_request_latency, 'success')
-# 			await add_reactions(message_embed, embed_reactions)
+			results = await gather(*tasks)
 			
-# 		else:
-# 			log_request(api_request_latency, total_time - api_request_latency, 'failure')
-# 			await add_reactions(message, not_found_reaction)
-
-# 		await log(
-# 			log_embeds = log_embeds,
-# 			media = media_objects,
-# 			command = 'auto_link_lookup',
-# 			parameters = f'music_data:`{data}`',
-# 			latency = total_time
-# 		)
+			for result in results:
+				embed_composer = EmbedComposer()
+				if 'type' in result:
+					await embed_composer.compose(message.author, result, 'searchsong', False)
+					await message.reply(embed = embed_composer.embed, view = embed_composer.button_view, mention_author = False)
 
 
 
@@ -152,27 +104,12 @@ async def searchsong(interaction: discord.Interaction, artist: str, title: str, 
 		censor = True
 	await interaction.response.defer()
 	embed_composer = EmbedComposer()
-	async with aiohttp.ClientSession() as session:
-		api_url = f'{api_endpoint}/music/global_io/search_song'
-		api_params = {
-			'artist': artist,
-			'title': title,
-		}
-		if from_album != None:
-			api_params['collection_title'] = from_album
-		if is_explicit != None:
-			api_params['is_explicit'] = is_explicit
-		if country_code != None:
-			api_params['country_code'] = country_code
-		async with session.get(url = api_url, params = api_params) as response:
-			if response.status == 200:
-				json_response = await response.json()
-				await embed_composer.compose(interaction.user, json_response, 'searchsong', False, censor)
-				await interaction.followup.send(embed = embed_composer.embed, view = embed_composer.button_view)
-			else:
-				await interaction.followup.send("fuck off")
-
-	
+	json = await api.search_song(artist, title, from_album, is_explicit, country_code)
+	if 'type' in json:
+		await embed_composer.compose(interaction.user, json, 'searchsong', False, censor)
+		await interaction.followup.send(embed = embed_composer.embed, view = embed_composer.button_view)
+	else:
+		await interaction.followup.send("fuck off")	
 
 
 
@@ -186,28 +123,17 @@ async def searchsong(interaction: discord.Interaction, artist: str, title: str, 
 @app_commands.guild_install()
 @app_commands.user_install()
 @app_commands.allowed_contexts(guilds = True, dms = True, private_channels = True)
-async def searchcollection(interaction: discord.Interaction, artist: str, title: str, year: int = None, country_code: str = 'us', censor: bool = False):
+async def searchalbum(interaction: discord.Interaction, artist: str, title: str, year: int = None, country_code: str = 'us', censor: bool = False):
 	if app_commands.AppInstallationType.user:
 		censor = True
 	await interaction.response.defer()
 	embed_composer = EmbedComposer()
-	async with aiohttp.ClientSession() as session:
-		api_url = f'{api_endpoint}/music/global_io/search_collection'
-		api_params = {
-			'artist': artist,
-			'title': title,
-		}
-		if year != None:
-			api_params['year'] = year
-		if country_code != None:
-			api_params['country_code'] = country_code
-		async with session.get(url = api_url, params = api_params) as response:
-			if response.status == 200:
-				json_response = await response.json()
-				await embed_composer.compose(interaction.user, json_response, 'searchalbum', False, censor)
-				await interaction.followup.send(embed = embed_composer.embed, view = embed_composer.button_view)
-			else:
-				await interaction.followup.send("fuck off")
+	json = await api.search_album(artist, title, year, country_code)
+	if 'type' in json:
+		await embed_composer.compose(interaction.user, json, 'searchalbum', False, censor)
+		await interaction.followup.send(embed = embed_composer.embed, view = embed_composer.button_view)
+	else:
+		await interaction.followup.send("fuck off")	
 
 
 
@@ -223,20 +149,16 @@ async def lookup(interaction: discord.Interaction, query: str, country_code: str
 		censor = True
 	await interaction.response.defer()
 	embed_composer = EmbedComposer()
-	async with aiohttp.ClientSession() as session:
-		api_url = f'{api_endpoint}/music/global_io/search_query'
-		api_params = {
-			'query': query,
-		}
-		if country_code != None:
-			api_params['country_code'] = country_code
-		async with session.get(url = api_url, params = api_params) as response:
-			if response.status == 200:
-				json_response = await response.json()
-				await embed_composer.compose(interaction.user, json_response, 'lookup', False, censor)
-				await interaction.followup.send(embed = embed_composer.embed, view = embed_composer.button_view)
-			else:
-				await interaction.followup.send("fuck off")
+	metadata = url_tools.get_metadata_from_url(query)
+	if metadata['id'] != None and metadata['type'] != None:
+		json = await api.search(query, country_code)
+	else:
+		json = await api.lookup(metadata['type'], metadata['id'], metadata['service'], country_code)
+	if 'type' in json:
+		await embed_composer.compose(interaction.user, json, 'lookup', False, censor)
+		await interaction.followup.send(embed = embed_composer.embed, view = embed_composer.button_view)
+	else:
+		await interaction.followup.send("fuck off")
 
 
 
@@ -248,25 +170,21 @@ async def lookup(interaction: discord.Interaction, query: str, country_code: str
 @app_commands.guild_install()
 @app_commands.user_install()
 @app_commands.allowed_contexts(guilds = True, dms = True, private_channels = True)
-async def lookup(interaction: discord.Interaction, query: str, country_code: str = 'us', censor: bool = False):
+async def search(interaction: discord.Interaction, query: str, country_code: str = 'us', censor: bool = False):
 	if app_commands.AppInstallationType.user:
 		censor = True
 	await interaction.response.defer()
 	embed_composer = EmbedComposer()
-	async with aiohttp.ClientSession() as session:
-		api_url = f'{api_endpoint}/music/global_io/search_query'
-		api_params = {
-			'query': query,
-		}
-		if country_code != None:
-			api_params['country_code'] = country_code
-		async with session.get(url = api_url, params = api_params) as response:
-			if response.status == 200:
-				json_response = await response.json()
-				await embed_composer.compose(interaction.user, json_response, 'search', False, censor)
-				await interaction.followup.send(embed = embed_composer.embed, view = embed_composer.button_view)
-			else:
-				await interaction.followup.send("fuck off")
+	metadata = await url_tools.get_metadata_from_url(query)
+	if metadata['id'] == None and metadata['type'] == None:
+		json = await api.search(query, country_code)
+	else:
+		json = await api.lookup(metadata['type'], metadata['id'], metadata['service'], country_code)
+	if 'type' in json:
+		await embed_composer.compose(interaction.user, json, 'search', False, censor)
+		await interaction.followup.send(embed = embed_composer.embed, view = embed_composer.button_view)
+	else:
+		await interaction.followup.send("fuck off")
 
 
 
@@ -298,77 +216,38 @@ async def snoop(interaction: discord.Interaction, user: discord.Member = None, e
 	if identifier == None:
 		await interaction.followup.send("no spotify activity detected")
 	else:
-		async with aiohttp.ClientSession() as session:
-			api_url = f'{api_endpoint}/music/global_io/lookup_song'
-			api_params = {
-				'id': identifier,
-				'id_service': 'spotify'
-			}
-			if country_code != None:
-				api_params['country_code'] = country_code
-			async with session.get(url = api_url, params = api_params) as response:
-				if response.status == 200:
-					json_response = await response.json()
-					await embed_composer.compose(interaction.user, json_response, 'snoop', False, censor)
-					await interaction.followup.send(embed = embed_composer.embed, view = embed_composer.button_view)
-				else:
-					await interaction.followup.send("fuck off")
+		json = await api.lookup('song', identifier, 'spotify', country_code)	
+		if 'type' in json:
+			await embed_composer.compose(interaction.user, json, 'snoop', False, censor)
+			await interaction.followup.send(embed = embed_composer.embed, view = embed_composer.button_view)
+		else:
+			await interaction.followup.send("fuck off")	
 
 
 
 
-# @tree.command(name = 'coverart', description = 'Get the cover art of a song or album')
-# @app_commands.describe(link = 'The link of the track or album you want to retrieve the cover art from')
-# @app_commands.guild_install()
-# @app_commands.user_install()
-# @app_commands.allowed_contexts(guilds = True, dms = True, private_channels = True)
-# async def coverart(interaction: discord.Interaction, link: str):
-# 	request = {'request': '/coverart', 'url': link}
-# 	start_time = current_unix_time_ms()
-# 	await interaction.response.defer()
-# 	data = await get_data_from_urls(link)
-
-# 	if data == []:
-# 		media_object = astro.Error(
-# 			service = service,
-# 			component = '`/coverart`',
-# 			error_msg = text['error']['invalid_link'],
-# 			meta = astro.Meta(
-# 				service = service,
-# 				request = request,
-# 				processing_time = current_unix_time_ms() - start_time
-# 			)
-# 		)
-# 	else:
-# 		media_type = data[0]['media']
-# 		media_id = data[0]['id']
-# 		media_country_code = data[0]['country_code']
-# 		media_object = await link_lookup_functions[types.index(media_type)](link_lookup_function_objects[types.index(media_type)], media_id, media_country_code)
-
-# 	embeds = Embed(
-# 		command = 'cover',
-# 		media_object = media_object,
-# 		user = interaction.user
-# 	)
-# 	embed = await interaction.followup.send(
-# 		embed = embeds.embed
-# 	)
-# 	end_time = current_unix_time_ms()
-# 	total_time = end_time - start_time
-
-# 	if media_object.type not in invalid_responses:
-# 		log_request(media_object.meta.processing_time['global'], total_time - media_object.meta.processing_time['global'], 'success')
-# 		await add_reactions(embed, embed_reactions)
-# 	else:
-# 		log_request(0, total_time, 'failure')
-
-# 	await log(
-# 		log_embeds = [embeds.log_embed],
-# 		media = [media_object],
-# 		command = 'coverart',
-# 		parameters = f'link:`{link}`',
-# 		latency = total_time
-# 	)
+@tree.command(name = 'coverart', description = 'Get the cover art of a song or album')
+@app_commands.describe(link = 'The link of the track or album you want to retrieve the cover art from')
+@app_commands.guild_install()
+@app_commands.user_install()
+@app_commands.allowed_contexts(guilds = True, dms = True, private_channels = True)
+async def coverart(interaction: discord.Interaction, link: str):
+	if app_commands.AppInstallationType.user:
+		censor = True
+	else:
+		censor = False
+	await interaction.response.defer()
+	embed_composer = EmbedComposer()
+	metadata = await url_tools.get_metadata_from_url(link)
+	if metadata['id'] != None and metadata['type'] != None:
+		json = await api.lookup(metadata['type'], metadata['id'], metadata['service'], metadata['country_code'])
+		if 'type' in json:
+			await embed_composer.compose(interaction.user, json, 'coverart', False, censor)
+			await interaction.followup.send(embed = embed_composer.embed, view = embed_composer.button_view)
+		else:
+			await interaction.followup.send("fuck off")	
+	else:
+		await interaction.followup.send("invalid link")
 
 
 
