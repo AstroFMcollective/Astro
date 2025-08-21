@@ -51,9 +51,8 @@ class EmbedComposer:
 			collection = f'*{json_response['collection']['title']}*' if json_response['type'] != 'single' else None # Get collection if found
 			genre = json_response['genre'] # Get genre
 			desc_elements = [artists, collection, genre]
-			for element in desc_elements: # Remove anything without a value
-				if element == None:
-					desc_elements.remove(None)
+			while None in desc_elements: # Remove anything without a value
+				desc_elements.remove(None)
 			color = 0x00b0f4 # Placeholder blue
 			cover_url = None
 			for service in service_metadata_priority: # Get cover art URL
@@ -75,9 +74,14 @@ class EmbedComposer:
 					name = f'A user {action}:',
 					icon_url = text['images']['default_pfp']
 				) 
-			self.embed.set_thumbnail( # Cover art
-				url = cover_url
-			)
+			if command_type != 'coverart':
+				self.embed.set_thumbnail( # Cover art
+					url = cover_url
+				)
+			else:
+				self.embed.set_image( # Cover art but small
+					url = cover_url
+				)
 			self.embed.set_footer( # Thanks and API latency report
 				text = f'{text['embed']['tymsg']} • Done in {json_response['meta']['processing_time']['global_io']} ms',
 				icon_url = text['images']['pfpurl']
@@ -137,7 +141,6 @@ class EmbedComposer:
 		 
 		elif json_response['type'] in collection_obj_types:
 			title = escape_markdown(json_response['title']) if censor == False else escape_markdown(json_response['censored_title'])
-			title = f'{title} `E`' if json_response['is_explicit'] == True else title
 			artists = ', '.join([f'**{escape_markdown(artist['name'])}**' for artist in json_response['artists']])
 			year = json_response['release_year']
 			genre = json_response['genre']
@@ -165,9 +168,14 @@ class EmbedComposer:
 					name = f'A user {action}:',
 					icon_url = text['images']['default_pfp']
 				) 
-			self.embed.set_thumbnail(
-				url = cover_url
-			)
+			if command_type != 'coverart':
+				self.embed.set_thumbnail( # Cover art
+					url = cover_url
+				)
+			else:
+				self.embed.set_image( # Cover art but small
+					url = cover_url
+				)
 			self.embed.set_footer(
 				text = f'{text['embed']['tymsg']} • Done in {json_response['meta']['processing_time']['global_io']} ms',
 				icon_url = text['images']['pfpurl']
