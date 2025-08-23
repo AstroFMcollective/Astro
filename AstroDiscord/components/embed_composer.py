@@ -2,6 +2,12 @@ from discord import Embed, User, Member, ButtonStyle
 from discord.ui import Button, View
 from discord.utils import escape_markdown
 from AstroDiscord.components.ini import text
+import aiohttp
+from PIL import Image
+import numpy as np
+from io import BytesIO
+
+
 
 class EmbedComposer:
 	def __init__(self):
@@ -35,7 +41,8 @@ class EmbedComposer:
 			'search': 'searched for',
 			'lookup': 'searched for',
 			'snoop': 'is listening to',
-			'coverart': 'looked up cover art for'
+			'coverart': 'looked up cover art for',
+			'link': 'sent a link to'
 		} 
 
 		# User metadata
@@ -48,17 +55,26 @@ class EmbedComposer:
 			title = escape_markdown(json_response['title']) if censor == False else escape_markdown(json_response['censored_title']) # Get title
 			title = f'{title} `E`' if json_response['is_explicit'] == True else title # Add an explicit market if the song is explicit
 			artists = ', '.join([f'**{escape_markdown(artist['name'])}**' for artist in json_response['artists']]) # Get artists
-			collection = f'*{json_response['collection']['title']}*' if json_response['type'] != 'single' else None # Get collection if found
+			if 'collection' in json_response:
+				if json_response['collection'] != None:
+					if json_response['type'] != 'single':
+						collection = f'*{escape_markdown(json_response['collection']['title'])}*' if censor == False else f'*{escape_markdown(json_response['collection']['censored_title'])}*'
+					else:
+						collection = None
+				else:
+					collection = None
+			else:
+				collection = None
 			genre = json_response['genre'] # Get genre
 			desc_elements = [artists, collection, genre]
 			while None in desc_elements: # Remove anything without a value
 				desc_elements.remove(None)
-			color = 0x00b0f4 # Placeholder blue
 			cover_url = None
 			for service in service_metadata_priority: # Get cover art URL
 				if service in json_response['cover']['hq_urls']:
 					cover_url = json_response['cover']['hq_urls'][service]
 					break
+			color = await self.image_hex(cover_url)
 			self.embed = Embed( # Basic embed data
 				title = title,
 				description = '  •  '.join(desc_elements),
@@ -102,12 +118,12 @@ class EmbedComposer:
 			desc_elements = [artists, 'Music Video', genre]
 			while None in desc_elements: # Remove anything without a value
 				desc_elements.remove(None)
-			color = 0x00b0f4 # Placeholder blue
 			cover_url = None
 			for service in mv_thumbnail_priority:
 				if service in json_response['cover']['hq_urls']:
 					cover_url = json_response['cover']['hq_urls'][service]
 					break
+			color = await self.image_hex(cover_url)
 			self.embed = Embed(
 				title = title,
 				description = '  •  '.join(desc_elements),
@@ -146,11 +162,11 @@ class EmbedComposer:
 			desc_elements = [artists, year, genre]
 			while None in desc_elements: # Remove anything without a value
 				desc_elements.remove(None)
-			color = 0x00b0f4 # Placeholder blue
 			for service in service_metadata_priority:
 				if service in json_response['cover']['hq_urls']:
 					cover_url = json_response['cover']['hq_urls'][service]
 					break
+			color = await self.image_hex(cover_url)
 			self.embed = Embed(
 				title = title,
 				description = '  •  '.join(desc_elements),
@@ -185,18 +201,25 @@ class EmbedComposer:
 			artists = ', '.join([f'**{escape_markdown(artist['name'])}**' for artist in json_response['artists']])
 			if 'collection' in json_response:
 				if json_response['collection'] != None:
-					collection = f'*{escape_markdown(json_response['collection']['title'])}*' if censor == False else escape_markdown(json_response['collection']['censored_title'])
+					if json_response['media_type'] != 'single':
+						collection = f'*{escape_markdown(json_response['collection']['title'])}*' if censor == False else f'*{escape_markdown(json_response['collection']['censored_title'])}*'
+					else:
+						collection = None
+				else:
+					collection = None
+			else:
+				collection = None
 			date = json_response['release_date']
 			genre = json_response['genre']
 			description = json_response['description'] if censor == False else json_response['censored_description']
 			desc_elements = [artists, collection, date, genre]
 			while None in desc_elements: # Remove anything without a value
 				desc_elements.remove(None)
-			color = 0x00b0f4 # Placeholder blue
 			for service in service_metadata_priority:
 				if service in json_response['cover']['hq_urls']:
 					cover_url = json_response['cover']['hq_urls'][service]
 					break
+			color = await self.image_hex(cover_url)
 			self.embed = Embed(
 				title = title,
 				description = '  •  '.join(desc_elements),
@@ -238,3 +261,23 @@ class EmbedComposer:
 					emoji = text['emoji'][service]
 				)
 			)
+	
+	async def image_hex(self, image_url: str, quality: int = 5):
+		async with aiohttp.ClientSession() as session:
+			async with session.get(url = image_url) as response:
+				if response.status == 200:
+					image_bytes = await response.read()
+					image = Image.open(BytesIO(image_bytes))
+
+					width, height = image.size
+					new_width = width // quality
+					new_height = height // quality
+					image = image.resize((new_width, new_height))
+
+					pixels = image.convert('RGB').getdata()
+					average_color = np.mean(pixels, axis = 0).astype(int)
+
+					hex_color = "#{:02x}{:02x}{:02x}".format(*average_color)
+					return int(hex_color[1:], base = 16)
+				else:
+					return 0xf5c000
