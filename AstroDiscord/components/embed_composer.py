@@ -212,6 +212,7 @@ class EmbedComposer:
 			date = json_response['release_date']
 			genre = json_response['genre']
 			description = json_response['description'] if censor == False else json_response['censored_description']
+			description = description[:description.index("\n\n\n\n")]
 			desc_elements = [artists, collection, date, genre]
 			while None in desc_elements: # Remove anything without a value
 				desc_elements.remove(None)
