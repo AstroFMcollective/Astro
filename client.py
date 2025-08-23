@@ -5,7 +5,6 @@ from discord.ext import tasks
 
 from random import randint
 from asyncio import *
-import aiohttp
 
 from AstroDiscord.components.ini import config, tokens, text, presence
 from AstroDiscord.components import *
@@ -25,11 +24,6 @@ version = config['client']['version']
 service = 'discord'
 component = 'Discord Client'
 deployment_channel = config['client']['deployment_channel']
-# app_start_time = current_unix_time()
-# total_requests = []
-# embed_reactions = ['🔥','🗑️']
-# knowledge_reactions = ['🤯','😴']
-# not_found_reaction = ['🤷']
 intents = discord.Intents.all()
 intents.message_content = True
 intents.presences = True
@@ -49,6 +43,8 @@ async def on_ready():
 	if not client.synced:
 		await tree.sync()
 		client.synced = True
+	if not discord_presence.is_running():
+		discord_presence.start()
 	print('[AstroDiscord] Ready!')
 
 
@@ -84,7 +80,7 @@ async def on_message(message):
 			for result in results:
 				embed_composer = EmbedComposer()
 				if 'type' in result:
-					await embed_composer.compose(message.author, result, 'searchsong', False)
+					await embed_composer.compose(message.author, result, 'link', False)
 					await message.reply(embed = embed_composer.embed, view = embed_composer.button_view, mention_author = False)
 
 
@@ -261,7 +257,6 @@ async def coverart(interaction: discord.Interaction, link: str, country_code: st
 async def knowledge(interaction: discord.Interaction, query: str, country_code: str = 'us', censor: bool = False):
 	if app_commands.AppInstallationType.user == True:
 		censor = True
-	print(censor)
 	await interaction.response.defer()
 	embed_composer = EmbedComposer()
 	metadata = await url_tools.get_metadata_from_url(query)
@@ -277,112 +272,58 @@ async def knowledge(interaction: discord.Interaction, query: str, country_code: 
 
 
 
-# @tree.context_menu(name = 'Search music link(s)')
-# @app_commands.guild_install()
-# @app_commands.user_install()
-# @app_commands.allowed_contexts(guilds = True, dms = True, private_channels = True)
-# async def context_menu_lookup(interaction: discord.Interaction, message: discord.Message):
-# 	start_time = current_unix_time_ms()
-# 	await interaction.response.defer()
-# 	urls = find_urls(message.content)
-# 	data = await get_data_from_urls(urls)
-# 	request = {'request': 'context_menu_lookup', 'urls': urls}
-
-# 	media_objects = []
-# 	embeds = []
-# 	log_embeds = []
-
-# 	tasks = []
-
-# 	if data != []:
-# 		if len(data) == 1:
-# 			media_type = data[0]['media']
-# 			media_id = data[0]['id']
-# 			media_country_code = data[0]['country_code']
-# 			media_object = await link_lookup_functions[types.index(media_type)](link_lookup_function_objects[types.index(media_type)], media_id, media_country_code)
-# 			media_embed = Embed(
-# 				command = 'link',
-# 				media_object = media_object,
-# 				user = message.author
-# 			)
-# 			media_objects.append(media_object)
-# 			embeds.append(media_embed.embed)
-# 			log_embeds.append(media_embed.log_embed)
-# 		else:
-# 			for entry in data:
-# 				media_type = entry['media']
-# 				media_id = entry['id']
-# 				media_country_code = entry['country_code']
-# 				tasks.append(
-# 					create_task(link_lookup_functions[types.index(media_type)](link_lookup_function_objects[types.index(media_type)], media_id, media_country_code))
-# 				)
-
-# 			results = await gather(*tasks)
-# 			for result in results:
-# 				media_embed = Embed(
-# 					command = 'link',
-# 					media_object = result,
-# 					user = message.author
-# 				)
-# 				media_objects.append(result)
-# 				embeds.append(media_embed.embed)
-# 				log_embeds.append(media_embed.log_embed)
-
-# 	else:
-# 		media_object = astro.Error(
-# 			service = service,
-# 			component = 'Context Menu Link Lookup',
-# 			error_msg = text['error']['no_links_detected'],
-# 			meta = astro.Meta(
-# 				service = service,
-# 				request = request,
-# 				processing_time = current_unix_time_ms() - start_time
-# 			)
-# 		)
-# 		media_embed = Embed(
-# 			command = 'link',
-# 			media_object = media_object,
-# 			user = message.author
-# 		)
-# 		media_objects.append(media_object)
-# 		embeds.append(media_embed.embed)
-
-# 	while None in embeds:
-# 		embeds.remove(None)
-
-# 	message_embed = await interaction.followup.send(embeds = embeds)
-
-# 	end_time = current_unix_time_ms()
-# 	total_time = end_time - start_time
-
-# 	api_request_latency = 0
-# 	for obj in media_objects:
-# 		if obj.type not in invalid_responses:
-# 			api_request_latency += obj.meta.processing_time['global']
-# 	api_request_latency = api_request_latency // len(media_objects)
-
-# 	if media_object.type not in invalid_responses:
-# 		log_request(api_request_latency, total_time - api_request_latency, 'success')
-# 		await add_reactions(message_embed, embed_reactions)
-# 	else:
-# 		log_request(api_request_latency, total_time - api_request_latency, 'failure')
-
-# 	await log(
-# 		log_embeds = log_embeds,
-# 		media = media_objects,
-# 		command = 'context_menu_link_lookup',
-# 		parameters = f'urls:`{urls}`',
-# 		latency = total_time
-# 	)
+@tree.context_menu(name = 'Search music link(s)')
+@app_commands.guild_install()
+@app_commands.user_install()
+@app_commands.allowed_contexts(guilds = True, dms = True, private_channels = True)
+async def context_menu_lookup(interaction: discord.Interaction, message: discord.Message):
+	if app_commands.AppInstallationType.user == True:
+		censor = True
+	else:
+		censor = False
+	await interaction.response.defer(ephemeral = True)
+	media_data = []
+	embeds = []
+	urls = await url_tools.get_urls_from_string(message.content)
+		
+	for url in urls:
+		metadata = await url_tools.get_metadata_from_url(url)
+		media_data.append(metadata)
+		
+	if media_data != []:
+		tasks = []
+		for data in media_data:
+			if data['id'] != None and data['type'] != None:
+				tasks.append(
+					create_task(
+						api.lookup(
+							data['type'],
+							data['id'],
+							data['service'],
+							data['country_code']
+						)
+					)
+				)
+		await interaction.followup.send(f"Looking up {len(tasks)} link(s), please wait...")
+		results = await gather(*tasks)
+		
+		for result in results:
+			embed_composer = EmbedComposer()
+			if 'type' in result:
+				await embed_composer.compose(message.author, result, 'link', False, censor)
+				embeds.append(embed_composer.embed)
+				await message.reply(embed = embed_composer.embed, view = embed_composer.button_view, mention_author = False)
+	else:
+		await interaction.followup.send(f"no valid urls found")
 
 
 
-# @tasks.loop(seconds = 300)
-# async def discord_presence():
-# 	await client.change_presence(activity = discord.Activity(
-# 		type = discord.ActivityType.listening,
-# 		name = presence[randint(0, len(presence)-1)],
-# 	))
+@tasks.loop(seconds = 60)
+async def discord_presence():
+	await client.change_presence(activity = discord.Activity(
+		type = discord.ActivityType.listening,
+		name = presence[randint(0, len(presence)-1)],
+	))
 
 
 
