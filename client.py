@@ -100,7 +100,7 @@ async def on_message(message):
 @app_commands.user_install()
 @app_commands.allowed_contexts(guilds = True, dms = True, private_channels = True)
 async def searchsong(interaction: discord.Interaction, artist: str, title: str, from_album: str = None, is_explicit: bool = None, country_code: str = 'us', censor: bool = False):
-	if app_commands.AppInstallationType.user:
+	if app_commands.AppInstallationType.user == True:
 		censor = True
 	await interaction.response.defer()
 	embed_composer = EmbedComposer()
@@ -124,7 +124,7 @@ async def searchsong(interaction: discord.Interaction, artist: str, title: str, 
 @app_commands.user_install()
 @app_commands.allowed_contexts(guilds = True, dms = True, private_channels = True)
 async def searchalbum(interaction: discord.Interaction, artist: str, title: str, year: int = None, country_code: str = 'us', censor: bool = False):
-	if app_commands.AppInstallationType.user:
+	if app_commands.AppInstallationType.user == True:
 		censor = True
 	await interaction.response.defer()
 	embed_composer = EmbedComposer()
@@ -145,7 +145,7 @@ async def searchalbum(interaction: discord.Interaction, artist: str, title: str,
 @app_commands.user_install()
 @app_commands.allowed_contexts(guilds = True, dms = True, private_channels = True)
 async def lookup(interaction: discord.Interaction, query: str, country_code: str = 'us', censor: bool = False):
-	if app_commands.AppInstallationType.user:
+	if app_commands.AppInstallationType.user == True:
 		censor = True
 	await interaction.response.defer()
 	embed_composer = EmbedComposer()
@@ -158,7 +158,7 @@ async def lookup(interaction: discord.Interaction, query: str, country_code: str
 		await embed_composer.compose(interaction.user, json, 'lookup', False, censor)
 		await interaction.followup.send(embed = embed_composer.embed, view = embed_composer.button_view)
 	else:
-		await interaction.followup.send("fuck off")
+		await interaction.followup.send("HTTP error")
 
 
 
@@ -171,7 +171,7 @@ async def lookup(interaction: discord.Interaction, query: str, country_code: str
 @app_commands.user_install()
 @app_commands.allowed_contexts(guilds = True, dms = True, private_channels = True)
 async def search(interaction: discord.Interaction, query: str, country_code: str = 'us', censor: bool = False):
-	if app_commands.AppInstallationType.user:
+	if app_commands.AppInstallationType.user == True:
 		censor = True
 	await interaction.response.defer()
 	embed_composer = EmbedComposer()
@@ -196,7 +196,7 @@ async def search(interaction: discord.Interaction, query: str, country_code: str
 @app_commands.guild_install()
 @app_commands.allowed_contexts(guilds = True, dms = False, private_channels = True)
 async def snoop(interaction: discord.Interaction, user: discord.Member = None, ephemeral: bool = False, country_code: str = 'us', censor: bool = False):
-	if app_commands.AppInstallationType.user:
+	if app_commands.AppInstallationType.user == True:
 		censor = True
 	await interaction.response.defer(ephemeral = ephemeral)
 	embed_composer = EmbedComposer()
@@ -228,14 +228,14 @@ async def snoop(interaction: discord.Interaction, user: discord.Member = None, e
 
 @tree.command(name = 'coverart', description = 'Get the cover art of a song or album')
 @app_commands.describe(link = 'The link of the track or album you want to retrieve the cover art from')
+@app_commands.describe(country_code = 'The country code of the country in which you want to search, US by default')
+@app_commands.describe(censor = 'Whether you want to censor the title of the song or not, False by default and forced True for User Apps')
 @app_commands.guild_install()
 @app_commands.user_install()
 @app_commands.allowed_contexts(guilds = True, dms = True, private_channels = True)
-async def coverart(interaction: discord.Interaction, link: str):
-	if app_commands.AppInstallationType.user:
+async def coverart(interaction: discord.Interaction, link: str, country_code: str = 'us', censor: bool = False):
+	if app_commands.AppInstallationType.user == True:
 		censor = True
-	else:
-		censor = False
 	await interaction.response.defer()
 	embed_composer = EmbedComposer()
 	metadata = await url_tools.get_metadata_from_url(link)
@@ -251,62 +251,29 @@ async def coverart(interaction: discord.Interaction, link: str):
 
 
 
-# @tree.command(name = 'knowledge', description = 'Get some basic information about a song')
-# @app_commands.describe(query = 'The link of the song you want yo retrieve information about')
-# @app_commands.describe(country_code = 'The country code of the country in which you want to search, US by default')
-# @app_commands.guild_install()
-# @app_commands.user_install()
-# @app_commands.allowed_contexts(guilds = True, dms = True, private_channels = True)
-# async def knowledge(interaction: discord.Interaction, query: str, country_code: str = 'us'):
-# 	request = {'request': '/knowledge', 'query': query, 'country_code': country_code}
-# 	start_time = current_unix_time_ms()
-# 	await interaction.response.defer()
-# 	urls = find_urls(query)
-# 	data = await get_data_from_urls(urls)
-# 	if data == [] and len(urls) == 0:
-# 		knowledge = await astro.Global.search_query_knowledge(query = query)
-# 	elif data == [] and len(urls) >= 1:
-# 		knowledge = astro.Error(
-# 			service = service,
-# 			component = '`/lookup`',
-# 			error_msg = text['error']['invalid_link'],
-# 			meta = astro.Meta(
-# 				service = service,
-# 				request = request,
-# 				processing_time = current_unix_time_ms() - start_time
-# 			)
-# 		)
-# 	else:
-# 		media_type = data[0]['media']
-# 		media_id = data[0]['id']
-# 		media_country_code = data[0]['country_code']
-# 		knowledge = await astro.Global.lookup_song_knowledge(link_lookup_function_objects[types.index(media_type)], media_id, media_country_code)
-
-# 	embeds = Embed(
-# 		command = 'search',
-# 		media_object = knowledge,
-# 		user = interaction.user
-# 	)
-
-# 	embed = await interaction.followup.send(
-# 		embed = embeds.embed
-# 	)
-# 	end_time = current_unix_time_ms()
-# 	total_time = end_time - start_time
-
-# 	if knowledge.type not in invalid_responses:
-# 		log_request(knowledge.meta.processing_time['global'], total_time - knowledge.meta.processing_time['global'], 'success')
-# 		await add_reactions(embed, knowledge_reactions)
-# 	else:
-# 		log_request(0, total_time, 'failure')
-
-# 	await log(
-# 		log_embeds = [embeds.log_embed],
-# 		media = [knowledge],
-# 		command = 'knowledge',
-# 		parameters = f'query:`{query}`',
-# 		latency = total_time
-# 	)
+@tree.command(name = 'knowledge', description = 'Get some basic information about a song')
+@app_commands.describe(query = 'Search query or the link of the media you want to search')
+@app_commands.describe(country_code = 'The country code of the country in which you want to search, US by default')
+@app_commands.describe(censor = 'Whether you want to censor the title of the song or not, False by default and forced True for User Apps')
+@app_commands.guild_install()
+@app_commands.user_install()
+@app_commands.allowed_contexts(guilds = True, dms = True, private_channels = True)
+async def knowledge(interaction: discord.Interaction, query: str, country_code: str = 'us', censor: bool = False):
+	if app_commands.AppInstallationType.user == True:
+		censor = True
+	print(censor)
+	await interaction.response.defer()
+	embed_composer = EmbedComposer()
+	metadata = await url_tools.get_metadata_from_url(query)
+	if metadata['id'] == None and metadata['type'] == None:
+		json = await api.search_knowledge(query, country_code)
+	else:
+		json = await api.lookup_knowledge(metadata['id'], metadata['service'], country_code)
+	if 'type' in json:
+		await embed_composer.compose(interaction.user, json, 'search', False, censor)
+		await interaction.followup.send(embed = embed_composer.embed, view = embed_composer.button_view)
+	else:
+		await interaction.followup.send("fuck off")
 
 
 

@@ -65,3 +65,30 @@ class AstroAPI:
             async with session.get(url = api_url, params = api_params) as response:
                 json_response = dict(await response.json())
                 return json_response
+            
+    async def lookup_knowledge(self, id: str, id_service: str, country_code: str = 'us'):
+        async with aiohttp.ClientSession() as session:
+            if country_code == None:
+                country_code = 'us'
+            api_url = f'{self.api_endpoint}/knowledge/global_io/lookup_song'
+            api_params = {
+                'id': id,
+                'id_service': id_service,
+                'country_code': country_code
+            }
+            async with session.get(url = api_url, params = api_params) as response:
+                json_response = dict(await response.json())
+                return json_response
+            
+    async def search_knowledge(self, query: str, country_code: str = 'us'):
+        async with aiohttp.ClientSession() as session:
+            if country_code == None:
+                country_code = 'us'
+            api_url = f'{self.api_endpoint}/knowledge/global_io/search_query'
+            api_params = {
+                'query': query,
+                'country_code': country_code
+            }
+            async with session.get(url = api_url, params = api_params) as response:
+                json_response = dict(await response.json())
+                return json_response

@@ -100,9 +100,8 @@ class EmbedComposer:
 			artists = ', '.join([f'**{escape_markdown(artist['name'])}**' for artist in json_response['artists']])
 			genre = json_response['genre']
 			desc_elements = [artists, 'Music Video', genre]
-			for element in desc_elements:
-				if element == None:
-					desc_elements.remove(None)
+			while None in desc_elements: # Remove anything without a value
+				desc_elements.remove(None)
 			color = 0x00b0f4 # Placeholder blue
 			cover_url = None
 			for service in mv_thumbnail_priority:
@@ -145,9 +144,8 @@ class EmbedComposer:
 			year = json_response['release_year']
 			genre = json_response['genre']
 			desc_elements = [artists, year, genre]
-			for element in desc_elements:
-				if element == None:
-					desc_elements.remove(None)
+			while None in desc_elements: # Remove anything without a value
+				desc_elements.remove(None)
 			color = 0x00b0f4 # Placeholder blue
 			for service in service_metadata_priority:
 				if service in json_response['cover']['hq_urls']:
@@ -181,9 +179,52 @@ class EmbedComposer:
 				icon_url = text['images']['pfpurl']
 			)
 			await self.service_buttons(json_response['urls'])
-			
-			
-
+		
+		elif json_response['type'] in knowledge_types:
+			title = escape_markdown(json_response['title']) if censor == False else escape_markdown(json_response['censored_title'])
+			artists = ', '.join([f'**{escape_markdown(artist['name'])}**' for artist in json_response['artists']])
+			if 'collection' in json_response:
+				if json_response['collection'] != None:
+					collection = f'*{escape_markdown(json_response['collection']['title'])}*' if censor == False else escape_markdown(json_response['collection']['censored_title'])
+			date = json_response['release_date']
+			genre = json_response['genre']
+			description = json_response['description'] if censor == False else json_response['censored_description']
+			desc_elements = [artists, collection, date, genre]
+			while None in desc_elements: # Remove anything without a value
+				desc_elements.remove(None)
+			color = 0x00b0f4 # Placeholder blue
+			for service in service_metadata_priority:
+				if service in json_response['cover']['hq_urls']:
+					cover_url = json_response['cover']['hq_urls'][service]
+					break
+			self.embed = Embed(
+				title = title,
+				description = '  •  '.join(desc_elements),
+				color = color
+			)
+			if anonymous == False:
+				self.embed.set_author(
+					name = f'{username} {action}:',
+					icon_url = user_pfp
+				)
+			else:
+				self.embed.set_author(
+					name = f'A user {action}:',
+					icon_url = text['images']['default_pfp']
+				) 
+			self.embed.set_image( # Cover art but small
+				url = cover_url
+			)
+			self.embed.add_field(
+					name = '',
+                	value = description,
+                	inline = False
+				)
+			self.embed.set_footer(
+				text = f'{text['embed']['tymsg']} • Done in {'time'} ms',
+				icon_url = text['images']['pfpurl']
+			)
+			await self.service_buttons(json_response['urls'])
 
 	async def service_buttons(self, urls: dict):
 		url_services =  list(urls.keys())
