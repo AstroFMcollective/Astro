@@ -105,7 +105,7 @@ async def searchsong(interaction: discord.Interaction, artist: str, title: str, 
 		await embed_composer.compose(interaction.user, json, 'searchsong', False, censor)
 		await interaction.followup.send(embed = embed_composer.embed, view = embed_composer.button_view)
 	else:
-		await interaction.followup.send("fuck off")	
+		await interaction.followup.send("Failed/invalid API response, try again")	
 
 
 
@@ -129,7 +129,7 @@ async def searchalbum(interaction: discord.Interaction, artist: str, title: str,
 		await embed_composer.compose(interaction.user, json, 'searchalbum', False, censor)
 		await interaction.followup.send(embed = embed_composer.embed, view = embed_composer.button_view)
 	else:
-		await interaction.followup.send("fuck off")	
+		await interaction.followup.send("Failed/invalid API response, try again")	
 
 
 
@@ -154,7 +154,7 @@ async def lookup(interaction: discord.Interaction, query: str, country_code: str
 		await embed_composer.compose(interaction.user, json, 'lookup', False, censor)
 		await interaction.followup.send(embed = embed_composer.embed, view = embed_composer.button_view)
 	else:
-		await interaction.followup.send("HTTP error")
+		await interaction.followup.send("Failed/invalid API response, try again")
 
 
 
@@ -180,7 +180,7 @@ async def search(interaction: discord.Interaction, query: str, country_code: str
 		await embed_composer.compose(interaction.user, json, 'search', False, censor)
 		await interaction.followup.send(embed = embed_composer.embed, view = embed_composer.button_view)
 	else:
-		await interaction.followup.send("fuck off")
+		await interaction.followup.send("Failed/invalid API response, try again")
 
 
 
@@ -210,14 +210,14 @@ async def snoop(interaction: discord.Interaction, user: discord.Member = None, e
 			break
 	
 	if identifier == None:
-		await interaction.followup.send("no spotify activity detected")
+		await interaction.followup.send("No Spotify listening activity detected")
 	else:
 		json = await api.lookup('song', identifier, 'spotify', country_code)	
 		if 'type' in json:
 			await embed_composer.compose(interaction.user, json, 'snoop', False, censor)
 			await interaction.followup.send(embed = embed_composer.embed, view = embed_composer.button_view)
 		else:
-			await interaction.followup.send("fuck off")	
+			await interaction.followup.send("Failed/invalid API response, try again")	
 
 
 
@@ -241,9 +241,9 @@ async def coverart(interaction: discord.Interaction, link: str, country_code: st
 			await embed_composer.compose(interaction.user, json, 'coverart', False, censor)
 			await interaction.followup.send(embed = embed_composer.embed, view = embed_composer.button_view)
 		else:
-			await interaction.followup.send("fuck off")	
+			await interaction.followup.send("Failed/invalid API response, try again")	
 	else:
-		await interaction.followup.send("invalid link")
+		await interaction.followup.send("Invalid link(s) provided")
 
 
 
@@ -268,7 +268,7 @@ async def knowledge(interaction: discord.Interaction, query: str, country_code: 
 		await embed_composer.compose(interaction.user, json, 'search', False, censor)
 		await interaction.followup.send(embed = embed_composer.embed, view = embed_composer.button_view)
 	else:
-		await interaction.followup.send("fuck off")
+		await interaction.followup.send("Failed/invalid API response, try again")
 
 
 
@@ -314,7 +314,7 @@ async def context_menu_lookup(interaction: discord.Interaction, message: discord
 				embeds.append(embed_composer.embed)
 				await message.reply(embed = embed_composer.embed, view = embed_composer.button_view, mention_author = False)
 	else:
-		await interaction.followup.send(f"no valid urls found")
+		await interaction.followup.send(f"Invalid link(s) provided")
 
 
 
