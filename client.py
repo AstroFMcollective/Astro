@@ -143,7 +143,7 @@ async def lookup(interaction: discord.Interaction, query: str, country_code: str
 	await interaction.response.defer()
 	embed_composer = EmbedComposer()
 	metadata = await url_tools.get_metadata_from_url(query)
-	if metadata['id'] != None and metadata['type'] != None:
+	if metadata['id'] == None and metadata['type'] == None:
 		json = await api.search(query, country_code)
 	else:
 		json = await api.lookup(metadata['type'], metadata['id'], metadata['service'], country_code)
