@@ -92,8 +92,7 @@ async def on_message(message):
 @app_commands.describe(is_explicit = 'Whether the song you want to search has explicit content (has the little [E] badge next to its name on streaming platforms), helps with precision')
 @app_commands.describe(country_code = 'The country code of the country in which you want to search, US by default')
 @app_commands.describe(censor = 'Whether you want to censor the title of the song or not, False by default and forced True for User Apps')
-@app_commands.guild_install()
-@app_commands.user_install()
+@discord.app_commands.allowed_installs(guilds = True, users = True)
 @app_commands.allowed_contexts(guilds = True, dms = True, private_channels = True)
 async def searchsong(interaction: discord.Interaction, artist: str, title: str, from_album: str = None, is_explicit: bool = None, country_code: str = 'us', censor: bool = False):
 	if app_commands.AppInstallationType.user == True:
@@ -116,8 +115,7 @@ async def searchsong(interaction: discord.Interaction, artist: str, title: str, 
 @app_commands.describe(year = 'The release year of the album you want to search, helps with precision (ex. "2015")')
 @app_commands.describe(country_code = 'The country code of the country in which you want to search, US by default')
 @app_commands.describe(censor = 'Whether you want to censor the title of the song or not, False by default and forced True for User Apps')
-@app_commands.guild_install()
-@app_commands.user_install()
+@discord.app_commands.allowed_installs(guilds = True, users = True)
 @app_commands.allowed_contexts(guilds = True, dms = True, private_channels = True)
 async def searchalbum(interaction: discord.Interaction, artist: str, title: str, year: int = None, country_code: str = 'us', censor: bool = False):
 	if app_commands.AppInstallationType.user == True:
@@ -137,8 +135,7 @@ async def searchalbum(interaction: discord.Interaction, artist: str, title: str,
 @app_commands.describe(query = 'Search query or the link of the media you want to search')
 @app_commands.describe(country_code = 'The country code of the country in which you want to search, US by default')
 @app_commands.describe(censor = 'Whether you want to censor the title of the song or not, False by default and forced True for User Apps')
-@app_commands.guild_install()
-@app_commands.user_install()
+@discord.app_commands.allowed_installs(guilds = True, users = True)
 @app_commands.allowed_contexts(guilds = True, dms = True, private_channels = True)
 async def lookup(interaction: discord.Interaction, query: str, country_code: str = 'us', censor: bool = False):
 	if app_commands.AppInstallationType.user == True:
@@ -163,8 +160,7 @@ async def lookup(interaction: discord.Interaction, query: str, country_code: str
 @app_commands.describe(query = 'Search query or the link of the media you want to search')
 @app_commands.describe(country_code = 'The country code of the country in which you want to search, US by default')
 @app_commands.describe(censor = 'Whether you want to censor the title of the song or not, False by default and forced True for User Apps')
-@app_commands.guild_install()
-@app_commands.user_install()
+@discord.app_commands.allowed_installs(guilds = True, users = True)
 @app_commands.allowed_contexts(guilds = True, dms = True, private_channels = True)
 async def search(interaction: discord.Interaction, query: str, country_code: str = 'us', censor: bool = False):
 	if app_commands.AppInstallationType.user == True:
@@ -189,7 +185,7 @@ async def search(interaction: discord.Interaction, query: str, country_code: str
 @app_commands.describe(ephemeral = 'Whether the executed command should be ephemeral (only visible to you), false by default')
 @app_commands.describe(country_code = 'The country code of the country in which you want to search, US by default')
 @app_commands.describe(censor = 'Whether you want to censor the title of the song or not, False by default and forced True for User Apps')
-@app_commands.guild_install()
+@discord.app_commands.allowed_installs(guilds = True, users = False)
 @app_commands.allowed_contexts(guilds = True, dms = False, private_channels = True)
 async def snoop(interaction: discord.Interaction, user: discord.Member = None, ephemeral: bool = False, country_code: str = 'us', censor: bool = False):
 	if app_commands.AppInstallationType.user == True:
@@ -226,8 +222,7 @@ async def snoop(interaction: discord.Interaction, user: discord.Member = None, e
 @app_commands.describe(link = 'The link of the track or album you want to retrieve the cover art from')
 @app_commands.describe(country_code = 'The country code of the country in which you want to search, US by default')
 @app_commands.describe(censor = 'Whether you want to censor the title of the song or not, False by default and forced True for User Apps')
-@app_commands.guild_install()
-@app_commands.user_install()
+@discord.app_commands.allowed_installs(guilds = True, users = True)
 @app_commands.allowed_contexts(guilds = True, dms = True, private_channels = True)
 async def coverart(interaction: discord.Interaction, link: str, country_code: str = 'us', censor: bool = False):
 	if app_commands.AppInstallationType.user == True:
@@ -251,8 +246,7 @@ async def coverart(interaction: discord.Interaction, link: str, country_code: st
 @app_commands.describe(query = 'Search query or the link of the media you want to search')
 @app_commands.describe(country_code = 'The country code of the country in which you want to search, US by default')
 @app_commands.describe(censor = 'Whether you want to censor the title of the song or not, False by default and forced True for User Apps')
-@app_commands.guild_install()
-@app_commands.user_install()
+@discord.app_commands.allowed_installs(guilds = True, users = True)
 @app_commands.allowed_contexts(guilds = True, dms = True, private_channels = True)
 async def knowledge(interaction: discord.Interaction, query: str, country_code: str = 'us', censor: bool = False):
 	if app_commands.AppInstallationType.user == True:
@@ -273,8 +267,7 @@ async def knowledge(interaction: discord.Interaction, query: str, country_code: 
 
 
 @tree.context_menu(name = 'Search music link(s)')
-@app_commands.guild_install()
-@app_commands.user_install()
+@discord.app_commands.allowed_installs(guilds = True, users = True)
 @app_commands.allowed_contexts(guilds = True, dms = True, private_channels = True)
 async def context_menu_lookup(interaction: discord.Interaction, message: discord.Message):
 	if app_commands.AppInstallationType.user == True:
