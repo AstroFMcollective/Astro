@@ -245,7 +245,7 @@ class EmbedComposer:
                 	inline = False
 				)
 			self.embed.set_footer(
-				text = f'{text['embed']['tymsg']} • Done in {'time'} ms',
+				text = f'{text['embed']['tymsg']} • Done in {json_response['meta']['processing_time']['global_io']} ms',
 				icon_url = text['images']['pfpurl']
 			)
 			await self.service_buttons(json_response['urls'])
