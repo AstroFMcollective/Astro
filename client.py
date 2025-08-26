@@ -103,6 +103,8 @@ async def searchsong(interaction: discord.Interaction, artist: str, title: str, 
 	if 'type' in json:
 		await embed_composer.compose(interaction.user, json, 'searchsong', False, censor)
 		await interaction.followup.send(embed = embed_composer.embed, view = embed_composer.button_view)
+	elif json == {}:
+		await interaction.followup.send("Couldn't find what you were looking for, check your request for typos and try again")
 	else:
 		await interaction.followup.send("Failed/invalid API response, try again")	
 
