@@ -20,8 +20,11 @@ class AstroAPI:
             if is_explicit != None:
                 api_params['is_explicit'] = is_explicit
             async with session.get(url = api_url, params = api_params) as response:
-                json_response = dict(await response.json())
-                return json_response
+                if response.status != 204:
+                    json_response = dict(await response.json())
+                    return json_response
+                else:
+                    return {}
             
     async def search_album(self, artist: str, title: str, year: str = None, country_code: str = 'us'):
         async with aiohttp.ClientSession() as session:
@@ -36,8 +39,11 @@ class AstroAPI:
             if year != None:
                 api_params['year'] = year
             async with session.get(url = api_url, params = api_params) as response:
-                json_response = dict(await response.json())
-                return json_response
+                if response.status != 204:
+                    json_response = dict(await response.json())
+                    return json_response
+                else:
+                    return {}
             
     async def search(self, query: str, country_code: str = 'us'):
         async with aiohttp.ClientSession() as session:
@@ -49,8 +55,11 @@ class AstroAPI:
                 'country_code': country_code
             }
             async with session.get(url = api_url, params = api_params) as response:
-                json_response = await response.json()
-                return json_response
+                if response.status != 204:
+                    json_response = await response.json()
+                    return json_response
+                else:
+                    return {}
     
     async def lookup(self, media_type: str, id: str, id_service: str, country_code: str = 'us'):
         async with aiohttp.ClientSession() as session:
@@ -63,8 +72,11 @@ class AstroAPI:
                 'country_code': country_code
             }
             async with session.get(url = api_url, params = api_params) as response:
-                json_response = dict(await response.json())
-                return json_response
+                if response.status != 204:
+                    json_response = dict(await response.json())
+                    return json_response
+                else:
+                    return {}
             
     async def lookup_knowledge(self, id: str, id_service: str, country_code: str = 'us'):
         async with aiohttp.ClientSession() as session:
@@ -77,8 +89,11 @@ class AstroAPI:
                 'country_code': country_code
             }
             async with session.get(url = api_url, params = api_params) as response:
-                json_response = dict(await response.json())
-                return json_response
+                if response.status != 204:
+                    json_response = dict(await response.json())
+                    return json_response
+                else:
+                    return {}
             
     async def search_knowledge(self, query: str, country_code: str = 'us'):
         async with aiohttp.ClientSession() as session:
@@ -90,5 +105,8 @@ class AstroAPI:
                 'country_code': country_code
             }
             async with session.get(url = api_url, params = api_params) as response:
-                json_response = dict(await response.json())
-                return json_response
+                if response.status != 204:
+                    json_response = dict(await response.json())
+                    return json_response
+                else:
+                    return {}
