@@ -43,7 +43,7 @@ class EmbedComposer:
 			'snoop': 'is listening to',
 			'coverart': 'looked up cover art for',
 			'link': 'sent a link to'
-		} 
+		}
 
 		# User metadata
 		username = user.display_name
