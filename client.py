@@ -104,9 +104,12 @@ async def searchsong(interaction: discord.Interaction, artist: str, title: str, 
 		await embed_composer.compose(interaction.user, json, 'searchsong', False, censor)
 		await interaction.followup.send(embed = embed_composer.embed, view = embed_composer.button_view)
 	elif json == {}:
-		await interaction.followup.send("Couldn't find what you were looking for, check your request for typos and try again")
+		await embed_composer.error(204)
+		await interaction.followup.send(embed = embed_composer.embed)
 	else:
-		await interaction.followup.send("Failed/invalid API response, try again")	
+		await embed_composer.error(json['status'])
+		await interaction.followup.send(embed = embed_composer.embed)
+
 
 
 
@@ -129,9 +132,11 @@ async def searchalbum(interaction: discord.Interaction, artist: str, title: str,
 		await embed_composer.compose(interaction.user, json, 'searchalbum', False, censor)
 		await interaction.followup.send(embed = embed_composer.embed, view = embed_composer.button_view)
 	elif json == {}:
-		await interaction.followup.send("Couldn't find what you were looking for, check your request for typos and try again")
+		await embed_composer.error(204)
+		await interaction.followup.send(embed = embed_composer.embed)
 	else:
-		await interaction.followup.send("Failed/invalid API response, try again")
+		await embed_composer.error(json['status'])
+		await interaction.followup.send(embed = embed_composer.embed)
 
 
 
@@ -155,9 +160,11 @@ async def lookup(interaction: discord.Interaction, query: str, country_code: str
 		await embed_composer.compose(interaction.user, json, 'lookup', False, censor)
 		await interaction.followup.send(embed = embed_composer.embed, view = embed_composer.button_view)
 	elif json == {}:
-		await interaction.followup.send("Couldn't find what you were looking for, check your request for typos and try again")
+		await embed_composer.error(204)
+		await interaction.followup.send(embed = embed_composer.embed)
 	else:
-		await interaction.followup.send("Failed/invalid API response, try again")
+		await embed_composer.error(json['status'])
+		await interaction.followup.send(embed = embed_composer.embed)
 
 
 
@@ -182,9 +189,11 @@ async def search(interaction: discord.Interaction, query: str, country_code: str
 		await embed_composer.compose(interaction.user, json, 'search', False, censor)
 		await interaction.followup.send(embed = embed_composer.embed, view = embed_composer.button_view)
 	elif json == {}:
-		await interaction.followup.send("Couldn't find what you were looking for, check your request for typos and try again")
+		await embed_composer.error(204)
+		await interaction.followup.send(embed = embed_composer.embed)
 	else:
-		await interaction.followup.send("Failed/invalid API response, try again")
+		await embed_composer.error(json['status'])
+		await interaction.followup.send(embed = embed_composer.embed)
 
 
 
@@ -214,16 +223,25 @@ async def snoop(interaction: discord.Interaction, user: discord.Member = None, e
 			break
 	
 	if identifier == None:
-		await interaction.followup.send("No Spotify listening activity detected")
+		person = 'You are' if interaction.user == user else 'This person is'
+		grammar = 'have' if interaction.user == user else 'has'
+		await embed_composer.error(400, {
+			'title': "No Spotify listening activity detected.",
+			'description': f'{person} not listening to a Spotify track, or {grammar} Spotify activity disabled in Discord settings. [Learn here](https://support.discord.com/hc/en-us/articles/360000167212-Discord-Spotify-Connection) how to connect Spotify to Discord and enable Spotify activity on your profile.',
+			'meaning': 'Bad request'
+		})
+		await interaction.followup.send(embed = embed_composer.embed)
 	else:
 		json = await api.lookup('song', identifier, 'spotify', country_code)	
 		if 'type' in json:
 			await embed_composer.compose(interaction.user, json, 'snoop', False, censor)
 			await interaction.followup.send(embed = embed_composer.embed, view = embed_composer.button_view)
 		elif json == {}:
-			await interaction.followup.send("Couldn't find what you were looking for, check your request for typos and try again")
+			await embed_composer.error(204)
+			await interaction.followup.send(embed = embed_composer.embed)
 		else:
-			await interaction.followup.send("Failed/invalid API response, try again")	
+			await embed_composer.error(json['status'])
+			await interaction.followup.send(embed = embed_composer.embed)
 
 
 
@@ -246,11 +264,18 @@ async def coverart(interaction: discord.Interaction, link: str, country_code: st
 			await embed_composer.compose(interaction.user, json, 'coverart', False, censor)
 			await interaction.followup.send(embed = embed_composer.embed, view = embed_composer.button_view)
 		elif json == {}:
-			await interaction.followup.send("Couldn't find what you were looking for, check your request for typos and try again")
+			await embed_composer.error(204)
+			await interaction.followup.send(embed = embed_composer.embed)
 		else:
-			await interaction.followup.send("Failed/invalid API response, try again")	
+			await embed_composer.error(json['status'])
+			await interaction.followup.send(embed = embed_composer.embed)
 	else:
-		await interaction.followup.send("Invalid link(s) provided")
+		await embed_composer.error(400, {
+			'title': "Invalid link provided.",
+			'description': f'This command only works with songs, albums, EP-s and music videos from Spotify, Apple Music, YouTube (Music), and Deezer.',
+			'meaning': 'Bad request'
+		})
+		await interaction.followup.send(embed = embed_composer.embed)
 
 
 
@@ -274,9 +299,11 @@ async def knowledge(interaction: discord.Interaction, query: str, country_code: 
 		await embed_composer.compose(interaction.user, json, 'search', False, censor)
 		await interaction.followup.send(embed = embed_composer.embed, view = embed_composer.button_view)
 	elif json == {}:
-		await interaction.followup.send("Couldn't find what you were looking for, check your request for typos and try again")
+		await embed_composer.error(204)
+		await interaction.followup.send(embed = embed_composer.embed)
 	else:
-		await interaction.followup.send("Failed/invalid API response, try again")
+		await embed_composer.error(json['status'])
+		await interaction.followup.send(embed = embed_composer.embed)
 
 
 
@@ -321,16 +348,24 @@ async def context_menu_lookup(interaction: discord.Interaction, message: discord
 				embeds.append(embed_composer.embed)
 				await message.reply(embed = embed_composer.embed, view = embed_composer.button_view, mention_author = False)
 	else:
-		await interaction.followup.send(f"Invalid link(s) provided")
+		await embed_composer.error(400, {
+			'title': "Invalid link(s) provided.",
+			'description': f'This command only works with songs, albums, EP-s and music videos from Spotify, Apple Music, YouTube (Music), and Deezer.',
+			'meaning': 'Bad request'
+		})
+		await interaction.followup.send(embed = embed_composer.embed)
+
 
 
 
 @tasks.loop(seconds = 60)
 async def discord_presence():
-	await client.change_presence(activity = discord.Activity(
-		type = discord.ActivityType.listening,
-		name = presence[randint(0, len(presence)-1)],
-	))
+	await client.change_presence(
+		activity = discord.Activity(
+			type = discord.ActivityType.listening,
+			name = presence[randint(0, len(presence)-1)],
+		)
+	)
 
 
 

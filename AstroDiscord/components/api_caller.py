@@ -22,6 +22,7 @@ class AstroAPI:
             async with session.get(url = api_url, params = api_params) as response:
                 if response.status != 204:
                     json_response = dict(await response.json())
+                    json_response['status'] = response.status
                     return json_response
                 else:
                     return {}
@@ -41,6 +42,7 @@ class AstroAPI:
             async with session.get(url = api_url, params = api_params) as response:
                 if response.status != 204:
                     json_response = dict(await response.json())
+                    json_response['status'] = response.status
                     return json_response
                 else:
                     return {}
@@ -57,6 +59,7 @@ class AstroAPI:
             async with session.get(url = api_url, params = api_params) as response:
                 if response.status != 204:
                     json_response = await response.json()
+                    json_response['status'] = response.status
                     return json_response
                 else:
                     return {}
@@ -74,6 +77,7 @@ class AstroAPI:
             async with session.get(url = api_url, params = api_params) as response:
                 if response.status != 204:
                     json_response = dict(await response.json())
+                    json_response['status'] = response.status
                     return json_response
                 else:
                     return {}
@@ -91,6 +95,7 @@ class AstroAPI:
             async with session.get(url = api_url, params = api_params) as response:
                 if response.status != 204:
                     json_response = dict(await response.json())
+                    json_response['status'] = response.status
                     return json_response
                 else:
                     return {}
@@ -107,6 +112,7 @@ class AstroAPI:
             async with session.get(url = api_url, params = api_params) as response:
                 if response.status != 204:
                     json_response = dict(await response.json())
+                    json_response['status'] = response.status
                     return json_response
                 else:
                     return {}
