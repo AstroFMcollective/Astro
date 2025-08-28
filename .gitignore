@@ -4,3 +4,5 @@ __pycache__
 test.py
 save_json_data.json
 .DS_Store
+stats.ini
+venv
