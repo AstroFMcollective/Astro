@@ -89,7 +89,8 @@ class EmbedComposer:
 			'lookup': 'searched for',
 			'snoop': 'is listening to',
 			'coverart': 'looked up cover art for',
-			'link': 'sent a link to'
+			'link': 'sent a link to',
+			'knowledge': 'searched for knowledge about'
 		}
 
 		# User metadata
