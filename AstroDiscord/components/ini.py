@@ -10,3 +10,6 @@ text.read('AstroDiscord/text.ini')
 
 config = configparser.ConfigParser()
 config.read('AstroDiscord/config.ini')
+
+stats = configparser.ConfigParser()
+stats.read('AstroDiscord/stats.ini')
