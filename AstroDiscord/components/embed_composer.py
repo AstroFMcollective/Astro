@@ -11,7 +11,8 @@ from io import BytesIO
 
 class EmbedComposer:
 	def __init__(self):
-		pass
+		self.button_view = None
+		self.embed = None
 	
 	async def error(self, error: int, custom: dict = None):
 		error_titles = {
@@ -97,221 +98,222 @@ class EmbedComposer:
 		action = actions[command_type]
 
 		# Embed composing
-		if json_response['type'] in song_obj_types: # If the media object is a song
-			title = escape_markdown(json_response['title']) if censor == False else escape_markdown(json_response['censored_title']) # Get title
-			title = f'{title} `E`' if json_response['is_explicit'] == True else title # Add an explicit marker if the song is explicit
-			artists = ', '.join([f'**{escape_markdown(artist['name'])}**' for artist in json_response['artists']]) # Get artists
-			if 'collection' in json_response: # Get collection
-				if json_response['collection'] != None:
-					if json_response['type'] != 'single':
-						collection = f'*{escape_markdown(json_response['collection']['title'])}*' if censor == False else f'*{escape_markdown(json_response['collection']['censored_title'])}*'
+		if 'type' in json_response:
+			if json_response['type'] in song_obj_types: # If the media object is a song
+				title = escape_markdown(json_response['title']) if censor == False else escape_markdown(json_response['censored_title']) # Get title
+				title = f'{title} `E`' if json_response['is_explicit'] == True else title # Add an explicit marker if the song is explicit
+				artists = ', '.join([f'**{escape_markdown(artist['name'])}**' for artist in json_response['artists']]) # Get artists
+				if 'collection' in json_response: # Get collection
+					if json_response['collection'] != None:
+						if json_response['type'] != 'single':
+							collection = f'*{escape_markdown(json_response['collection']['title'])}*' if censor == False else f'*{escape_markdown(json_response['collection']['censored_title'])}*'
+						else:
+							collection = None
 					else:
 						collection = None
 				else:
 					collection = None
-			else:
-				collection = None
-			genre = json_response['genre'] # Get genre
-			desc_elements = [artists, collection, genre]
-			while None in desc_elements: # Remove anything without a value
-				desc_elements.remove(None)
-			cover_url = None
-			for service in service_metadata_priority: # Get cover art URL
-				if service in json_response['cover']['hq_urls']:
-					cover_url = json_response['cover']['hq_urls'][service]
-					break
-			color = await self.image_hex(cover_url) # Get color from average color in cover
-			self.embed = Embed( # Basic embed data
-				title = title,
-				description = '  •  '.join(desc_elements),
-				color = color
-			)
-			if anonymous == False: # Set author and action of the command (ex. 'sushi searched for:')
-				self.embed.set_author(
-					name = f'{username} {action}:',
-					icon_url = user_pfp
+				genre = json_response['genre'] # Get genre
+				desc_elements = [artists, collection, genre]
+				while None in desc_elements: # Remove anything without a value
+					desc_elements.remove(None)
+				cover_url = None
+				for service in service_metadata_priority: # Get cover art URL
+					if service in json_response['cover']['hq_urls']:
+						cover_url = json_response['cover']['hq_urls'][service]
+						break
+				color = await self.image_hex(cover_url) # Get color from average color in cover
+				self.embed = Embed( # Basic embed data
+					title = title,
+					description = '  •  '.join(desc_elements),
+					color = color
 				)
-			else:
-				self.embed.set_author( # Anonymous author and action for logging (ex. 'A user searched for:')
-					name = f'A user {action}:',
-					icon_url = text['images']['default_pfp']
-				) 
-			if command_type != 'coverart':
-				self.embed.set_thumbnail( # Cover art but small
-					url = cover_url
+				if anonymous == False: # Set author and action of the command (ex. 'sushi searched for:')
+					self.embed.set_author(
+						name = f'{username} {action}:',
+						icon_url = user_pfp
+					)
+				else:
+					self.embed.set_author( # Anonymous author and action for logging (ex. 'A user searched for:')
+						name = f'A user {action}:',
+						icon_url = text['images']['default_pfp']
+					) 
+				if command_type != 'coverart':
+					self.embed.set_thumbnail( # Cover art but small
+						url = cover_url
+					)
+				else:
+					self.embed.set_image( # Cover art
+						url = cover_url
+					)
+				self.embed.set_footer( # Thanks and API latency report
+					text = f'{text['embed']['tymsg']} • Done in {json_response['meta']['processing_time']['global_io']} ms',
+					icon_url = text['images']['pfpurl']
 				)
-			else:
-				self.embed.set_image( # Cover art
-					url = cover_url
+				if command_type == 'lookup': # Temporary notice for people using the /lookup command
+					self.embed.add_field(
+						name = 'Important notice',
+						value = '`/lookup` is getting deprecated starting with Astro 2.3.1, please use `/search` instead. Thank you!',
+						inline = False
+					)
+				await self.service_buttons(json_response['urls']) # Get service button components
+			
+			if json_response['type'] in music_video_types: # If the media object is a music video
+				title = escape_markdown(json_response['title']) if censor == False else escape_markdown(json_response['censored_title']) # Get title
+				title = f'{title} `E`' if json_response['is_explicit'] == True else title # Add an explicit marker if the song is explicit
+				artists = ', '.join([f'**{escape_markdown(artist['name'])}**' for artist in json_response['artists']]) # Get artists
+				genre = json_response['genre'] # Get genre
+				desc_elements = [artists, 'Music Video', genre]
+				while None in desc_elements: # Remove anything without a value
+					desc_elements.remove(None)
+				cover_url = None
+				for service in mv_thumbnail_priority: # Get cover art URL
+					if service in json_response['cover']['hq_urls']:
+						cover_url = json_response['cover']['hq_urls'][service]
+						break
+				color = await self.image_hex(cover_url) # Get color from average color in cover
+				self.embed = Embed( # Basic embed data
+					title = title,
+					description = '  •  '.join(desc_elements),
+					color = color
 				)
-			self.embed.set_footer( # Thanks and API latency report
-				text = f'{text['embed']['tymsg']} • Done in {json_response['meta']['processing_time']['global_io']} ms',
-				icon_url = text['images']['pfpurl']
-			)
-			if command_type == 'lookup': # Temporary notice for people using the /lookup command
-				self.embed.add_field(
-					name = 'Important notice',
-					value = '`/lookup` is getting deprecated starting with Astro 2.3.1, please use `/search` instead. Thank you!',
-					inline = False
+				if anonymous == False: # Set author and action of the command (ex. 'sushi searched for:')
+					self.embed.set_author(
+						name = f'{username} {action}:',
+						icon_url = user_pfp
+					)
+				else:
+					self.embed.set_author( # Anonymous author and action for logging (ex. 'A user searched for:')
+						name = f'A user {action}:',
+						icon_url = text['images']['default_pfp']
+					) 
+				if command_type != 'coverart':
+					self.embed.set_thumbnail( # Cover art but small
+						url = cover_url
+					)
+				else:
+					self.embed.set_image( # Cover art
+						url = cover_url
+					)
+				self.embed.set_footer( # Thanks and API latency report
+					text = f'{text['embed']['tymsg']} • Done in {json_response['meta']['processing_time']['global_io']} ms',
+					icon_url = text['images']['pfpurl']
 				)
-			await self.service_buttons(json_response['urls']) # Get service button components
-		
-		if json_response['type'] in music_video_types: # If the media object is a music video
-			title = escape_markdown(json_response['title']) if censor == False else escape_markdown(json_response['censored_title']) # Get title
-			title = f'{title} `E`' if json_response['is_explicit'] == True else title # Add an explicit marker if the song is explicit
-			artists = ', '.join([f'**{escape_markdown(artist['name'])}**' for artist in json_response['artists']]) # Get artists
-			genre = json_response['genre'] # Get genre
-			desc_elements = [artists, 'Music Video', genre]
-			while None in desc_elements: # Remove anything without a value
-				desc_elements.remove(None)
-			cover_url = None
-			for service in mv_thumbnail_priority: # Get cover art URL
-				if service in json_response['cover']['hq_urls']:
-					cover_url = json_response['cover']['hq_urls'][service]
-					break
-			color = await self.image_hex(cover_url) # Get color from average color in cover
-			self.embed = Embed( # Basic embed data
-				title = title,
-				description = '  •  '.join(desc_elements),
-				color = color
-			)
-			if anonymous == False: # Set author and action of the command (ex. 'sushi searched for:')
-				self.embed.set_author(
-					name = f'{username} {action}:',
-					icon_url = user_pfp
+				if command_type == 'lookup': # Temporary notice for people using the /lookup command
+					self.embed.add_field(
+						name = 'Important notice',
+						value = '`/lookup` is getting deprecated starting with Astro 2.3.1, please use `/search` instead. Thank you!',
+						inline = False
+					)
+				await self.service_buttons(json_response['urls'])
+			
+			elif json_response['type'] in collection_obj_types: # If the media object is a collection
+				title = escape_markdown(json_response['title']) if censor == False else escape_markdown(json_response['censored_title']) # Get title
+				artists = ', '.join([f'**{escape_markdown(artist['name'])}**' for artist in json_response['artists']]) # Get artists
+				year = json_response['release_year'] # Get release year
+				genre = json_response['genre'] # Get genre
+				desc_elements = [artists, year, genre] 
+				while None in desc_elements: # Remove anything without a value
+					desc_elements.remove(None)
+				cover_url = None
+				for service in service_metadata_priority: # Get cover art URL
+					if service in json_response['cover']['hq_urls']:
+						cover_url = json_response['cover']['hq_urls'][service]
+						break
+				color = await self.image_hex(cover_url) # Get color from average color in cover
+				self.embed = Embed( # Basic embed data
+					title = title,
+					description = '  •  '.join(desc_elements),
+					color = color
 				)
-			else:
-				self.embed.set_author( # Anonymous author and action for logging (ex. 'A user searched for:')
-					name = f'A user {action}:',
-					icon_url = text['images']['default_pfp']
-				) 
-			if command_type != 'coverart':
-				self.embed.set_thumbnail( # Cover art but small
-					url = cover_url
+				if anonymous == False: # Set author and action of the command (ex. 'sushi searched for:')
+					self.embed.set_author(
+						name = f'{username} {action}:',
+						icon_url = user_pfp
+					)
+				else:
+					self.embed.set_author( 
+						name = f'A user {action}:',
+						icon_url = text['images']['default_pfp']
+					) 
+				if command_type != 'coverart':
+					self.embed.set_thumbnail( # Cover art but small
+						url = cover_url
+					)
+				else:
+					self.embed.set_image( # Cover art
+						url = cover_url
+					)
+				self.embed.set_footer( # Thanks and API latency report
+					text = f'{text['embed']['tymsg']} • Done in {json_response['meta']['processing_time']['global_io']} ms',
+					icon_url = text['images']['pfpurl']
 				)
-			else:
-				self.embed.set_image( # Cover art
-					url = cover_url
-				)
-			self.embed.set_footer( # Thanks and API latency report
-				text = f'{text['embed']['tymsg']} • Done in {json_response['meta']['processing_time']['global_io']} ms',
-				icon_url = text['images']['pfpurl']
-			)
-			if command_type == 'lookup': # Temporary notice for people using the /lookup command
-				self.embed.add_field(
-					name = 'Important notice',
-					value = '`/lookup` is getting deprecated starting with Astro 2.3.1, please use `/search` instead. Thank you!',
-					inline = False
-				)
-			await self.service_buttons(json_response['urls'])
-		 
-		elif json_response['type'] in collection_obj_types: # If the media object is a collection
-			title = escape_markdown(json_response['title']) if censor == False else escape_markdown(json_response['censored_title']) # Get title
-			artists = ', '.join([f'**{escape_markdown(artist['name'])}**' for artist in json_response['artists']]) # Get artists
-			year = json_response['release_year'] # Get release year
-			genre = json_response['genre'] # Get genre
-			desc_elements = [artists, year, genre] 
-			while None in desc_elements: # Remove anything without a value
-				desc_elements.remove(None)
-			cover_url = None
-			for service in service_metadata_priority: # Get cover art URL
-				if service in json_response['cover']['hq_urls']:
-					cover_url = json_response['cover']['hq_urls'][service]
-					break
-			color = await self.image_hex(cover_url) # Get color from average color in cover
-			self.embed = Embed( # Basic embed data
-				title = title,
-				description = '  •  '.join(desc_elements),
-				color = color
-			)
-			if anonymous == False: # Set author and action of the command (ex. 'sushi searched for:')
-				self.embed.set_author(
-					name = f'{username} {action}:',
-					icon_url = user_pfp
-				)
-			else:
-				self.embed.set_author( 
-					name = f'A user {action}:',
-					icon_url = text['images']['default_pfp']
-				) 
-			if command_type != 'coverart':
-				self.embed.set_thumbnail( # Cover art but small
-					url = cover_url
-				)
-			else:
-				self.embed.set_image( # Cover art
-					url = cover_url
-				)
-			self.embed.set_footer( # Thanks and API latency report
-				text = f'{text['embed']['tymsg']} • Done in {json_response['meta']['processing_time']['global_io']} ms',
-				icon_url = text['images']['pfpurl']
-			)
-			if command_type == 'lookup': # Temporary notice for people using the /lookup command
-				self.embed.add_field(
-					name = 'Important notice',
-					value = '`/lookup` is getting deprecated starting with Astro 2.3.1, please use `/search` instead. Thank you!',
-					inline = False
-				)
-			await self.service_buttons(json_response['urls'])
-		
-		elif json_response['type'] in knowledge_types: # If the media object is a knowledge object
-			title = escape_markdown(json_response['title']) if censor == False else escape_markdown(json_response['censored_title']) # Get title
-			artists = ', '.join([f'**{escape_markdown(artist['name'])}**' for artist in json_response['artists']]) # Get artists
-			if 'collection' in json_response: # Get collection
-				if json_response['collection'] != None:
-					if json_response['media_type'] != 'single':
-						collection = f'*{escape_markdown(json_response['collection']['title'])}*' if censor == False else f'*{escape_markdown(json_response['collection']['censored_title'])}*'
+				if command_type == 'lookup': # Temporary notice for people using the /lookup command
+					self.embed.add_field(
+						name = 'Important notice',
+						value = '`/lookup` is getting deprecated starting with Astro 2.3.1, please use `/search` instead. Thank you!',
+						inline = False
+					)
+				await self.service_buttons(json_response['urls'])
+			
+			elif json_response['type'] in knowledge_types: # If the media object is a knowledge object
+				title = escape_markdown(json_response['title']) if censor == False else escape_markdown(json_response['censored_title']) # Get title
+				artists = ', '.join([f'**{escape_markdown(artist['name'])}**' for artist in json_response['artists']]) # Get artists
+				if 'collection' in json_response: # Get collection
+					if json_response['collection'] != None:
+						if json_response['media_type'] != 'single':
+							collection = f'*{escape_markdown(json_response['collection']['title'])}*' if censor == False else f'*{escape_markdown(json_response['collection']['censored_title'])}*'
+						else:
+							collection = None
 					else:
 						collection = None
 				else:
 					collection = None
-			else:
-				collection = None
-			date = json_response['release_date'] # Get release date
-			genre = json_response['genre'] # Get genre
-			description = json_response['description'] if censor == False else json_response['censored_description'] # Get description
-			description = description[:description.index('\n\n\n\n')] # Cut out anything that is not the first paragraph of the description
-			desc_elements = [artists, collection, date, genre]
-			while None in desc_elements: # Remove anything without a value
-				desc_elements.remove(None)
-			for service in service_metadata_priority: # Get cover art
-				if service in json_response['cover']['hq_urls']:
-					cover_url = json_response['cover']['hq_urls'][service]
-					break
-			color = await self.image_hex(cover_url) # Get color from average color in cover
-			self.embed = Embed( # Basic embed data
-				title = title,
-				description = '  •  '.join(desc_elements),
-				color = color
-			)
-			if anonymous == False: # Set author and action of the command (ex. 'sushi searched for:')
-				self.embed.set_author(
-					name = f'{username} {action}:',
-					icon_url = user_pfp
+				date = json_response['release_date'] # Get release date
+				genre = json_response['genre'] # Get genre
+				description = json_response['description'] if censor == False else json_response['censored_description'] # Get description
+				description = description[:description.index('\n\n\n\n')] # Cut out anything that is not the first paragraph of the description
+				desc_elements = [artists, collection, date, genre]
+				while None in desc_elements: # Remove anything without a value
+					desc_elements.remove(None)
+				for service in service_metadata_priority: # Get cover art
+					if service in json_response['cover']['hq_urls']:
+						cover_url = json_response['cover']['hq_urls'][service]
+						break
+				color = await self.image_hex(cover_url) # Get color from average color in cover
+				self.embed = Embed( # Basic embed data
+					title = title,
+					description = '  •  '.join(desc_elements),
+					color = color
 				)
-			else:
-				self.embed.set_author( # Anonymous author and action for logging (ex. 'A user searched for:')
-					name = f'A user {action}:',
-					icon_url = text['images']['default_pfp']
-				) 
-			if command_type != 'coverart':
-				self.embed.set_thumbnail( # Cover art but small
-					url = cover_url
+				if anonymous == False: # Set author and action of the command (ex. 'sushi searched for:')
+					self.embed.set_author(
+						name = f'{username} {action}:',
+						icon_url = user_pfp
+					)
+				else:
+					self.embed.set_author( # Anonymous author and action for logging (ex. 'A user searched for:')
+						name = f'A user {action}:',
+						icon_url = text['images']['default_pfp']
+					) 
+				if command_type != 'coverart':
+					self.embed.set_thumbnail( # Cover art but small
+						url = cover_url
+					)
+				else:
+					self.embed.set_image( # Cover art
+						url = cover_url
+					)
+				self.embed.add_field( # Add description
+						name = '',
+						value = description,
+						inline = False
+					)
+				self.embed.set_footer( # Thanks and API latency report
+					text = f'{text['embed']['tymsg']} • Done in {json_response['meta']['processing_time']['global_io']} ms',
+					icon_url = text['images']['pfpurl']
 				)
-			else:
-				self.embed.set_image( # Cover art
-					url = cover_url
-				)
-			self.embed.add_field( # Add description
-					name = '',
-					value = description,
-					inline = False
-				)
-			self.embed.set_footer( # Thanks and API latency report
-				text = f'{text['embed']['tymsg']} • Done in {json_response['meta']['processing_time']['global_io']} ms',
-				icon_url = text['images']['pfpurl']
-			)
-			await self.service_buttons(json_response['urls'])
+				await self.service_buttons(json_response['urls'])
 
 	async def service_buttons(self, urls: dict):
 		"""
