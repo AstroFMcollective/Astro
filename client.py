@@ -6,9 +6,69 @@ from discord.ext import tasks
 from random import randint
 from asyncio import *
 
-from AstroDiscord.components.ini import config, tokens, text, presence
+from AstroDiscord.components.ini import config, tokens, text, presence, stats
 from AstroDiscord.components import *
 from AstroDiscord.components.url_tools import url_tools
+from AstroDiscord.components.time import current_unix_time
+
+
+
+def reset():
+	stats.set('runtime', 'api_time_spent', str(0))
+	with open('AstroDiscord/stats.ini', 'w') as stats_file:
+		stats.write(stats_file)
+	stats.set('runtime', 'client_time_spent', str(0))
+	with open('AstroDiscord/stats.ini', 'w') as stats_file:
+		stats.write(stats_file)
+	stats.set('runtime', 'avg_api_latency', str(0))
+	with open('AstroDiscord/stats.ini', 'w') as stats_file:
+		stats.write(stats_file)
+	stats.set('runtime', 'avg_client_latency', str(0))
+	with open('AstroDiscord/stats.ini', 'w') as stats_file:
+		stats.write(stats_file)
+	stats.set('runtime', 'successful_requests', str(0))
+	with open('AstroDiscord/stats.ini', 'w') as stats_file:
+		stats.write(stats_file)
+	stats.set('runtime', 'failed_requests', str(0))
+	with open('AstroDiscord/stats.ini', 'w') as stats_file:
+		stats.write(stats_file)
+	print('[AstroDiscord] Runtime stats reset')
+
+def successful_request():
+	stats.set('runtime', 'successful_requests', str(int(stats['runtime']['successful_requests']) + 1))
+	with open('AstroDiscord/stats.ini', 'w') as stats_file:
+		stats.write(stats_file)
+	stats.set('lifetime', 'total_successful_requests', str(int(stats['lifetime']['total_successful_requests']) + 1))
+	with open('AstroDiscord/stats.ini', 'w') as stats_file:
+		stats.write(stats_file)
+	print('[AstroDiscord] Successful request counted')
+
+def failed_request():
+	stats.set('runtime', 'failed_requests', str(int(stats['runtime']['failed_requests']) + 1))
+	with open('AstroDiscord/stats.ini', 'w') as stats_file:
+		stats.write(stats_file)
+	stats.set('lifetime', 'total_failed_requests', str(int(stats['lifetime']['total_failed_requests']) + 1))
+	with open('AstroDiscord/stats.ini', 'w') as stats_file:
+		stats.write(stats_file)
+	print('[AstroDiscord] Failed request counted')
+
+def api_latency(global_io_latency: int):
+	stats.set('runtime', 'api_time_spent', str(int(stats['runtime']['api_time_spent']) + global_io_latency))
+	with open('AstroDiscord/stats.ini', 'w') as stats_file:
+		stats.write(stats_file)
+	stats.set('runtime', 'avg_api_latency', str(int(stats['runtime']['api_time_spent']) // int(stats['runtime']['successful_requests'])))
+	with open('AstroDiscord/stats.ini', 'w') as stats_file:
+		stats.write(stats_file)
+	print('[AstroDiscord] API latency logged')
+
+def client_latency(client_latency: int):
+	stats.set('runtime', 'client_time_spent', str(int(stats['runtime']['client_time_spent']) + client_latency))
+	with open('AstroDiscord/stats.ini', 'w') as stats_file:
+		stats.write(stats_file)
+	stats.set('runtime', 'avg_client_latency', str(int(stats['runtime']['client_time_spent']) // (int(stats['runtime']['successful_requests']) + int(stats['runtime']['failed_requests']))))
+	with open('AstroDiscord/stats.ini', 'w') as stats_file:
+		stats.write(stats_file)
+	print('[AstroDiscord] Client latency logged')
 
 
 
@@ -28,6 +88,7 @@ intents = discord.Intents.all()
 intents.message_content = True
 intents.presences = True
 intents.members = True
+app_start_time = current_unix_time()
 client = Client(shard_count = int(config['client']['shards']), intents = intents)
 tree = app_commands.CommandTree(client)
 invalid_responses = [
@@ -45,21 +106,21 @@ async def on_ready():
 		client.synced = True
 	if not discord_presence.is_running():
 		discord_presence.start()
+	if not dashboard.is_running():
+		dashboard.start()
 	print('[AstroDiscord] Ready!')
-
+	
 
 
 @client.event
 async def on_message(message):
 	if message.author != client.user:
+		start_time = current_unix_time_ms()
 		media_data = []
-		embeds = []
 		urls = await url_tools.get_urls_from_string(message.content)
-		
 		for url in urls:
 			metadata = await url_tools.get_metadata_from_url(url)
 			media_data.append(metadata)
-		
 		if media_data != []:
 			tasks = []
 			for data in media_data:
@@ -74,14 +135,22 @@ async def on_message(message):
 							)
 						)
 					)
-
 			results = await gather(*tasks)
-			
 			for result in results:
 				embed_composer = EmbedComposer()
 				if 'type' in result:
 					await embed_composer.compose(message.author, result, 'link', False)
 					await message.reply(embed = embed_composer.embed, view = embed_composer.button_view, mention_author = False)
+					successful_request()
+					api_latency(result['meta']['processing_time']['global_io'])
+				else:
+					failed_request()
+				await embed_composer.compose(message.author, result, 'link', True)
+				url_with_id = next((url for url in urls if result.get('meta', {}).get('request', {}).get('id') in url), None)
+				await log([embed_composer.embed], [result], 'link', url_with_id, current_unix_time_ms() - start_time, embed_composer.button_view)
+		else: 
+			return
+		client_latency(current_unix_time_ms() - start_time)
 
 
 
@@ -95,6 +164,7 @@ async def on_message(message):
 @discord.app_commands.allowed_installs(guilds = True, users = True)
 @app_commands.allowed_contexts(guilds = True, dms = True, private_channels = True)
 async def searchsong(interaction: discord.Interaction, artist: str, title: str, from_album: str = None, is_explicit: bool = None, country_code: str = 'us', censor: bool = False):
+	start_time = current_unix_time_ms()
 	if app_commands.AppInstallationType.user == True:
 		censor = True
 	await interaction.response.defer()
@@ -103,14 +173,26 @@ async def searchsong(interaction: discord.Interaction, artist: str, title: str, 
 	if 'type' in json:
 		await embed_composer.compose(interaction.user, json, 'searchsong', False, censor)
 		await interaction.followup.send(embed = embed_composer.embed, view = embed_composer.button_view)
+		successful_request()
+		api_latency(json['meta']['processing_time']['global_io'])
 	elif json == {}:
 		await embed_composer.error(204)
 		await interaction.followup.send(embed = embed_composer.embed)
+		failed_request()
 	else:
 		await embed_composer.error(json['status'])
 		await interaction.followup.send(embed = embed_composer.embed)
-
-
+		failed_request()
+	await embed_composer.compose(interaction.user, json, 'searchsong', True, censor)
+	await log(
+		[embed_composer.embed],
+		[json],
+		'searchsong',
+		f'artist:`{artist}` title:`{title}` from_album:`{from_album}` is_explicit:`{is_explicit}` country_code:`{country_code}` censor:`{censor}`',
+		current_unix_time_ms() - start_time,
+		embed_composer.button_view
+	)
+	client_latency(current_unix_time_ms() - start_time)
 
 
 
@@ -123,6 +205,7 @@ async def searchsong(interaction: discord.Interaction, artist: str, title: str, 
 @discord.app_commands.allowed_installs(guilds = True, users = True)
 @app_commands.allowed_contexts(guilds = True, dms = True, private_channels = True)
 async def searchalbum(interaction: discord.Interaction, artist: str, title: str, year: int = None, country_code: str = 'us', censor: bool = False):
+	start_time = current_unix_time_ms()
 	if app_commands.AppInstallationType.user == True:
 		censor = True
 	await interaction.response.defer()
@@ -131,12 +214,26 @@ async def searchalbum(interaction: discord.Interaction, artist: str, title: str,
 	if 'type' in json:
 		await embed_composer.compose(interaction.user, json, 'searchalbum', False, censor)
 		await interaction.followup.send(embed = embed_composer.embed, view = embed_composer.button_view)
+		successful_request()
+		api_latency(json['meta']['processing_time']['global_io'])
 	elif json == {}:
 		await embed_composer.error(204)
 		await interaction.followup.send(embed = embed_composer.embed)
+		failed_request()
 	else:
 		await embed_composer.error(json['status'])
 		await interaction.followup.send(embed = embed_composer.embed)
+		failed_request()
+	await embed_composer.compose(interaction.user, json, 'searchalbum', True, censor)
+	await log(
+		[embed_composer.embed],
+		[json],
+		'searchalbum',
+		f'artist:`{artist}` title:`{title}` year:`{year}` country_code:`{country_code}` censor:`{censor}`',
+		current_unix_time_ms() - start_time,
+		embed_composer.button_view
+	)
+	client_latency(current_unix_time_ms() - start_time)
 
 
 
@@ -147,6 +244,8 @@ async def searchalbum(interaction: discord.Interaction, artist: str, title: str,
 @discord.app_commands.allowed_installs(guilds = True, users = True)
 @app_commands.allowed_contexts(guilds = True, dms = True, private_channels = True)
 async def lookup(interaction: discord.Interaction, query: str, country_code: str = 'us', censor: bool = False):
+	start_time = current_unix_time_ms()
+	json = {}
 	if app_commands.AppInstallationType.user == True:
 		censor = True
 	await interaction.response.defer()
@@ -159,13 +258,26 @@ async def lookup(interaction: discord.Interaction, query: str, country_code: str
 	if 'type' in json:
 		await embed_composer.compose(interaction.user, json, 'lookup', False, censor)
 		await interaction.followup.send(embed = embed_composer.embed, view = embed_composer.button_view)
+		successful_request()
+		api_latency(json['meta']['processing_time']['global_io'])
 	elif json == {}:
 		await embed_composer.error(204)
 		await interaction.followup.send(embed = embed_composer.embed)
+		failed_request()
 	else:
 		await embed_composer.error(json['status'])
 		await interaction.followup.send(embed = embed_composer.embed)
-
+		failed_request()
+	await embed_composer.compose(interaction.user, json, 'lookup', True, censor)
+	await log(
+		[embed_composer.embed],
+		[json],
+		'lookup',
+		f'query:`{query}` country_code:`{country_code}` censor:`{censor}`',
+		current_unix_time_ms() - start_time,
+		embed_composer.button_view
+	)
+	client_latency(current_unix_time_ms() - start_time)
 
 
 
@@ -176,6 +288,8 @@ async def lookup(interaction: discord.Interaction, query: str, country_code: str
 @discord.app_commands.allowed_installs(guilds = True, users = True)
 @app_commands.allowed_contexts(guilds = True, dms = True, private_channels = True)
 async def search(interaction: discord.Interaction, query: str, country_code: str = 'us', censor: bool = False):
+	start_time = current_unix_time_ms()
+	json = {}
 	if app_commands.AppInstallationType.user == True:
 		censor = True
 	await interaction.response.defer()
@@ -188,12 +302,26 @@ async def search(interaction: discord.Interaction, query: str, country_code: str
 	if 'type' in json:
 		await embed_composer.compose(interaction.user, json, 'search', False, censor)
 		await interaction.followup.send(embed = embed_composer.embed, view = embed_composer.button_view)
+		successful_request()
+		api_latency(json['meta']['processing_time']['global_io'])
 	elif json == {}:
 		await embed_composer.error(204)
 		await interaction.followup.send(embed = embed_composer.embed)
+		failed_request()
 	else:
 		await embed_composer.error(json['status'])
 		await interaction.followup.send(embed = embed_composer.embed)
+		failed_request()
+	await embed_composer.compose(interaction.user, json, 'search', True, censor)
+	await log(
+		[embed_composer.embed],
+		[json],
+		'search',
+		f'query:`{query}` country_code:`{country_code}` censor:`{censor}`',
+		current_unix_time_ms() - start_time,
+		embed_composer.button_view
+	)
+	client_latency(current_unix_time_ms() - start_time)
 
 
 
@@ -205,13 +333,14 @@ async def search(interaction: discord.Interaction, query: str, country_code: str
 @discord.app_commands.allowed_installs(guilds = True, users = False)
 @app_commands.allowed_contexts(guilds = True, dms = False, private_channels = True)
 async def snoop(interaction: discord.Interaction, user: discord.Member = None, ephemeral: bool = False, country_code: str = 'us', censor: bool = False):
+	start_time = current_unix_time_ms()
+	json = {}
 	if app_commands.AppInstallationType.user == True:
 		censor = True
 	await interaction.response.defer(ephemeral = ephemeral)
 	embed_composer = EmbedComposer()
 	if user == None:
 		user = interaction.user
-
 	identifier = None
 
 	guild = client.get_guild(interaction.guild.id)
@@ -231,18 +360,32 @@ async def snoop(interaction: discord.Interaction, user: discord.Member = None, e
 			'meaning': 'Bad request'
 		})
 		await interaction.followup.send(embed = embed_composer.embed)
+		failed_request()
 	else:
 		json = await api.lookup('song', identifier, 'spotify', country_code)	
 		if 'type' in json:
 			await embed_composer.compose(interaction.user, json, 'snoop', False, censor)
 			await interaction.followup.send(embed = embed_composer.embed, view = embed_composer.button_view)
+			successful_request()
+			api_latency(json['meta']['processing_time']['global_io'])
 		elif json == {}:
 			await embed_composer.error(204)
 			await interaction.followup.send(embed = embed_composer.embed)
+			failed_request()
 		else:
 			await embed_composer.error(json['status'])
 			await interaction.followup.send(embed = embed_composer.embed)
-
+			failed_request()
+	await embed_composer.compose(interaction.user, json, 'snoop', True, censor)
+	await log(
+		[embed_composer.embed],
+		[json],
+		'snoop',
+		f'user:`{'self' if user == interaction.user else 'member'}` ephemeral:`{ephemeral}` country_code:`{country_code}` censor:`{censor}`',
+		current_unix_time_ms() - start_time,
+		embed_composer.button_view
+	)
+	client_latency(current_unix_time_ms() - start_time)
 
 
 
@@ -253,6 +396,8 @@ async def snoop(interaction: discord.Interaction, user: discord.Member = None, e
 @discord.app_commands.allowed_installs(guilds = True, users = True)
 @app_commands.allowed_contexts(guilds = True, dms = True, private_channels = True)
 async def coverart(interaction: discord.Interaction, link: str, country_code: str = 'us', censor: bool = False):
+	start_time = current_unix_time_ms()
+	json = {}
 	if app_commands.AppInstallationType.user == True:
 		censor = True
 	await interaction.response.defer()
@@ -263,12 +408,16 @@ async def coverart(interaction: discord.Interaction, link: str, country_code: st
 		if 'type' in json:
 			await embed_composer.compose(interaction.user, json, 'coverart', False, censor)
 			await interaction.followup.send(embed = embed_composer.embed, view = embed_composer.button_view)
+			successful_request()
+			api_latency(json['meta']['processing_time']['global_io'])
 		elif json == {}:
 			await embed_composer.error(204)
 			await interaction.followup.send(embed = embed_composer.embed)
+			failed_request()
 		else:
 			await embed_composer.error(json['status'])
 			await interaction.followup.send(embed = embed_composer.embed)
+			failed_request()
 	else:
 		await embed_composer.error(400, {
 			'title': "Invalid link provided.",
@@ -276,6 +425,17 @@ async def coverart(interaction: discord.Interaction, link: str, country_code: st
 			'meaning': 'Bad request'
 		})
 		await interaction.followup.send(embed = embed_composer.embed)
+		failed_request()
+	await embed_composer.compose(interaction.user, json, 'coverart', True, censor)
+	await log(
+		[embed_composer.embed],
+		[json],
+		'coverart',
+		f'link:`{link}` country_code:`{country_code}` censor:`{censor}`',
+		current_unix_time_ms() - start_time,
+		embed_composer.button_view
+	)
+	client_latency(current_unix_time_ms() - start_time)
 
 
 
@@ -286,6 +446,8 @@ async def coverart(interaction: discord.Interaction, link: str, country_code: st
 @discord.app_commands.allowed_installs(guilds = True, users = True)
 @app_commands.allowed_contexts(guilds = True, dms = True, private_channels = True)
 async def knowledge(interaction: discord.Interaction, query: str, country_code: str = 'us', censor: bool = False):
+	start_time = current_unix_time_ms()
+	json = {}
 	if app_commands.AppInstallationType.user == True:
 		censor = True
 	await interaction.response.defer()
@@ -296,14 +458,28 @@ async def knowledge(interaction: discord.Interaction, query: str, country_code: 
 	else:
 		json = await api.lookup_knowledge(metadata['id'], metadata['service'], country_code)
 	if 'type' in json:
-		await embed_composer.compose(interaction.user, json, 'search', False, censor)
+		await embed_composer.compose(interaction.user, json, 'knowledge', False, censor)
 		await interaction.followup.send(embed = embed_composer.embed, view = embed_composer.button_view)
+		successful_request()
+		api_latency(json['meta']['processing_time']['global_io'])
 	elif json == {}:
 		await embed_composer.error(204)
 		await interaction.followup.send(embed = embed_composer.embed)
+		failed_request()
 	else:
 		await embed_composer.error(json['status'])
 		await interaction.followup.send(embed = embed_composer.embed)
+		failed_request()
+	await embed_composer.compose(interaction.user, json, 'knowledge', True, censor)
+	await log(
+		[embed_composer.embed],
+		[json],
+		'knowledge',
+		f'query:`{query}` country_code:`{country_code}` censor:`{censor}`',
+		current_unix_time_ms() - start_time,
+		embed_composer.button_view
+	)
+	client_latency(current_unix_time_ms() - start_time)
 
 
 
@@ -311,6 +487,7 @@ async def knowledge(interaction: discord.Interaction, query: str, country_code: 
 @discord.app_commands.allowed_installs(guilds = True, users = True)
 @app_commands.allowed_contexts(guilds = True, dms = True, private_channels = True)
 async def context_menu_lookup(interaction: discord.Interaction, message: discord.Message):
+	start_time = current_unix_time_ms()
 	if app_commands.AppInstallationType.user == True:
 		censor = True
 	else:
@@ -347,6 +524,11 @@ async def context_menu_lookup(interaction: discord.Interaction, message: discord
 				await embed_composer.compose(message.author, result, 'link', False, censor)
 				embeds.append(embed_composer.embed)
 				await message.reply(embed = embed_composer.embed, view = embed_composer.button_view, mention_author = False)
+				successful_request()
+				api_latency(json['meta']['processing_time']['global_io'])
+			await embed_composer.compose(message.author, result, 'link', True)
+			url_with_id = next((url for url in urls if result.get('meta', {}).get('request', {}).get('id') in url), None)
+			await log([embed_composer.embed], [result], 'link', url_with_id, current_unix_time_ms() - start_time, embed_composer.button_view)
 	else:
 		await embed_composer.error(400, {
 			'title': "Invalid link(s) provided.",
@@ -354,7 +536,8 @@ async def context_menu_lookup(interaction: discord.Interaction, message: discord
 			'meaning': 'Bad request'
 		})
 		await interaction.followup.send(embed = embed_composer.embed)
-
+		failed_request()
+	client_latency(current_unix_time_ms() - start_time)
 
 
 
@@ -369,78 +552,64 @@ async def discord_presence():
 
 
 
-# @tasks.loop(seconds = 60)
-# async def dashboard():
-# 	api_latency = 0
-# 	client_latency = 0
-# 	successful_requests = 0
-# 	failed_requests = 0
-
-# 	for request in total_requests:
-# 		api_latency += request['api_latency']
-# 		client_latency += request['client_latency']
-# 		successful_requests += 1 if request['request_result_type'] == 'success' else 0
-# 		failed_requests += 1 if request['request_result_type'] == 'failure' else 0
-
-# 	if api_latency != 0:
-# 		api_latency = api_latency // len(total_requests)
-	
-# 	if client_latency != 0:
-# 		client_latency = client_latency // len(total_requests)
-
-# 	embed = discord.Embed(
-# 		title = 'ASTRO DASHBOARD',
-#         colour = 0x6ae70e
-# 	)
-# 	embed.add_field(
-# 		name = 'About',
-# 		value = f'Version: `{version}`\nDeployment channel: `{deployment_channel}`\nShards: `{config['client']['shards']}`',
-# 		inline = False
-# 	)
-# 	embed.add_field(
-# 		name = 'Stats',
-# 		value = f'Servers: `{len(client.guilds)}`\nAccessible users: `{len(client.users)}`',
-# 		inline = False
-# 	)
-# 	embed.add_field(
-# 		name = 'Start time',
-# 		value = f'<t:{app_start_time}:F>',
-# 		inline = True
-# 	)
-# 	embed.add_field(
-# 		name = 'Last refreshed',
-# 		value = f'<t:{current_unix_time()}:F>',
-# 		inline = True
-# 	)
-# 	embed.add_field(
-# 		name = 'Average latency today',
-# 		value = f'API latency: `{api_latency}` ms\nClient latency: `{client_latency}` ms',
-# 		inline = False
-# 	)
-# 	embed.add_field(
-# 		name = 'Requests today',
-# 		value = f'Total requests: `{len(total_requests)}`\nSuccessful requests: `{successful_requests}`\nFailed requests: `{failed_requests}`',
-# 		inline = True
-# 	)
-# 	try:
-# 		server = await client.fetch_guild(tokens['dashboard']['astro_server_id'])
-# 		channel = await server.fetch_channel(tokens['dashboard']['dashboard_channel_id'])
-# 		dash = await channel.fetch_message(str(tokens['dashboard']['dashboard_message_id']))
-# 		await dash.edit(embed = embed)
-# 	except:
-# 		server = await client.fetch_guild(tokens['dashboard']['astro_server_id'])
-# 		channel = await server.fetch_channel(tokens['dashboard']['dashboard_channel_id'])
-# 		message = await channel.send(embed = embed)
-# 		tokens.set('dashboard', 'dashboard_message_id', str(message.id))
-# 		with open('AstroDiscord/tokens.ini', 'w') as token_file:
-# 			tokens.write(token_file)
+@tasks.loop(seconds = 60)
+async def dashboard():
+	embed = discord.Embed(
+		title = 'ASTRO DASHBOARD',
+        colour = 0x6ae70e
+	)
+	embed.add_field(
+		name = 'About',
+		value = f'Version: `{version}`\nDeployment channel: `{deployment_channel}`\nShards: `{config['client']['shards']}`',
+		inline = False
+	)
+	embed.add_field(
+		name = 'Stats',
+		value = f'Servers: `{len(client.guilds)}`\nAccessible users: `{len(client.users)}`',
+		inline = False
+	)
+	embed.add_field(
+		name = 'Start time',
+		value = f'<t:{app_start_time}:F>',
+		inline = True
+	)
+	embed.add_field(
+		name = 'Last refreshed',
+		value = f'<t:{current_unix_time()}:F>',
+		inline = True
+	)
+	embed.add_field(
+		name = 'Average latency today',
+		value = f'API latency: `{stats['runtime']['avg_api_latency']}` ms\nClient latency: `{stats['runtime']['avg_client_latency']}` ms',
+		inline = False
+	)
+	embed.add_field(
+		name = 'Requests today',
+		value = f'Total requests: `{int(stats['runtime']['successful_requests']) + int(stats['runtime']['failed_requests'])}`\nSuccessful requests: `{stats['runtime']['successful_requests']}`\nFailed requests: `{stats['runtime']['failed_requests']}`',
+		inline = True
+	)
+	embed.add_field(
+		name = 'Lifetime requests',
+		value = f'Total requests: `{int(stats['lifetime']['total_successful_requests']) + int(stats['lifetime']['total_failed_requests'])}`\nSuccessful requests: `{stats['lifetime']['total_successful_requests']}`\nFailed requests: `{stats['lifetime']['total_failed_requests']}`',
+		inline = True
+	)
+	try:
+		server = await client.fetch_guild(tokens['dashboard']['astro_server_id'])
+		channel = await server.fetch_channel(tokens['dashboard']['dashboard_channel_id'])
+		dash = await channel.fetch_message(str(tokens['dashboard']['dashboard_message_id']))
+		await dash.edit(embed = embed)
+		print('[AstroDiscord] Dashboard refreshed')
+	except:
+		print('[AstroDiscord] Dashboard refresh failed, creating new one as fallback')
+		server = await client.fetch_guild(tokens['dashboard']['astro_server_id'])
+		channel = await server.fetch_channel(tokens['dashboard']['dashboard_channel_id'])
+		message = await channel.send(embed = embed)
+		tokens.set('dashboard', 'dashboard_message_id', str(message.id))
+		with open('AstroDiscord/tokens.ini', 'w') as token_file:
+			tokens.write(token_file)
+		print('[AstroDiscord] New dashboard created')
 
 
 
-# @tasks.loop(seconds = 86400)
-# async def reset_requests():
-# 	total_requests.clear()
-	
-
-
+reset()
 client.run(tokens['tokens'][deployment_channel])
