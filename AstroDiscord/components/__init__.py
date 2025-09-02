@@ -6,3 +6,4 @@ from AstroDiscord.components.reactions import add_reactions, check_for_reaction
 from AstroDiscord.components.log import log
 from AstroDiscord.components.time import *
 from AstroDiscord.components.ini import presence, stats
+from AstroDiscord.components.paginator import PaginatorView

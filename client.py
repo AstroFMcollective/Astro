@@ -147,7 +147,7 @@ async def on_message(message):
 					failed_request()
 				await embed_composer.compose(message.author, result, 'link', True)
 				url_with_id = next((url for url in urls if result.get('meta', {}).get('request', {}).get('id') in url), None)
-				await log([embed_composer.embed], [result], 'link', url_with_id, current_unix_time_ms() - start_time, embed_composer.button_view)
+				await log([embed_composer.embed], [result], 'Auto Link Lookup', f'url:`{url_with_id}`', current_unix_time_ms() - start_time, embed_composer.button_view)
 		else: 
 			return
 		client_latency(current_unix_time_ms() - start_time)
@@ -492,10 +492,23 @@ async def context_menu_lookup(interaction: discord.Interaction, message: discord
 		censor = True
 	else:
 		censor = False
-	await interaction.response.defer(ephemeral = True)
+	await interaction.response.defer()
 	media_data = []
 	embeds = []
+	buttons = []
 	urls = await url_tools.get_urls_from_string(message.content)
+
+	if urls == []:
+		embed_composer = EmbedComposer()
+		await embed_composer.error(400, {
+			'title': "No links provided.",
+			'description': f'This command only works with links of songs, albums, EP-s and music videos from Spotify, Apple Music, YouTube/YouTube Music, and Deezer.',
+			'meaning': 'Bad request'
+		})
+		await interaction.followup.send(embed = embed_composer.embed)
+		failed_request()
+		client_latency(current_unix_time_ms() - start_time)
+		return
 		
 	for url in urls:
 		metadata = await url_tools.get_metadata_from_url(url)
@@ -515,28 +528,39 @@ async def context_menu_lookup(interaction: discord.Interaction, message: discord
 						)
 					)
 				)
-		await interaction.followup.send(f"Looking up {len(tasks)} link(s), please wait...")
-		results = await gather(*tasks)
-		
-		for result in results:
+		if len(tasks) != 0:
+			results = await gather(*tasks)
+			
+			for result in results:
+				embed_composer = EmbedComposer()
+				if 'type' in result:
+					await embed_composer.compose(message.author, result, 'link', False, censor)
+
+					successful_request()
+					api_latency(result['meta']['processing_time']['global_io'])
+					if len(results) == 1:
+						await interaction.followup.send(embed = embed_composer.embed, view = embed_composer.button_view)
+					else:
+						embeds.append(embed_composer.embed)
+						buttons.append(embed_composer.button_view)
+
+				await embed_composer.compose(message.author, result, 'link', True)
+				url_with_id = next((url for url in urls if result.get('meta', {}).get('request', {}).get('id') in url), None)
+				await log([embed_composer.embed], [result], 'Search music link(s)', f'url:`{url_with_id}`', current_unix_time_ms() - start_time, embed_composer.button_view)
+
+			if embeds != []:
+				pagination = PaginatorView(embeds = embeds, button_views = buttons)
+				pagination.message = await interaction.followup.send(embed = pagination.initial_embed, view = pagination)
+
+		else:
 			embed_composer = EmbedComposer()
-			if 'type' in result:
-				await embed_composer.compose(message.author, result, 'link', False, censor)
-				embeds.append(embed_composer.embed)
-				await message.reply(embed = embed_composer.embed, view = embed_composer.button_view, mention_author = False)
-				successful_request()
-				api_latency(json['meta']['processing_time']['global_io'])
-			await embed_composer.compose(message.author, result, 'link', True)
-			url_with_id = next((url for url in urls if result.get('meta', {}).get('request', {}).get('id') in url), None)
-			await log([embed_composer.embed], [result], 'link', url_with_id, current_unix_time_ms() - start_time, embed_composer.button_view)
-	else:
-		await embed_composer.error(400, {
-			'title': "Invalid link(s) provided.",
-			'description': f'This command only works with songs, albums, EP-s and music videos from Spotify, Apple Music, YouTube (Music), and Deezer.',
-			'meaning': 'Bad request'
-		})
-		await interaction.followup.send(embed = embed_composer.embed)
-		failed_request()
+			await embed_composer.error(400, {
+				'title': "Invalid link(s) provided.",
+				'description': f'This command only works with songs, albums, EP-s and music videos from Spotify, Apple Music, YouTube/YouTube Music, and Deezer.',
+				'meaning': 'Bad request'
+			})
+			await interaction.followup.send(embed = embed_composer.embed)
+			failed_request()
 	client_latency(current_unix_time_ms() - start_time)
 
 

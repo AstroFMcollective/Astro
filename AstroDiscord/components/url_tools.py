@@ -45,6 +45,11 @@ class URLTools:
 		return regular_url
 	
 	async def get_metadata_from_url(self, url: str):
+		identifier = None
+		media_service = None
+		media_type = None
+		media_country_code = None
+
 		is_url = await self.get_urls_from_string(url)
 		if is_url == []:
 			return {
