@@ -6,3 +6,4 @@ save_json_data.json
 .DS_Store
 stats.ini
 venv
+.venv
