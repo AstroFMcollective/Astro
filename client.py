@@ -116,40 +116,44 @@ async def on_ready():
 async def on_message(message):
 	if message.author != client.user:
 		start_time = current_unix_time_ms()
-		media_data = []
-		urls = await url_tools.get_urls_from_string(message.content)
-		for url in urls:
-			metadata = await url_tools.get_metadata_from_url(url)
-			media_data.append(metadata)
-		if media_data != []:
-			tasks = []
-			for data in media_data:
-				if data['id'] != None and data['type'] != None:
-					tasks.append(
-						create_task(
-							api.lookup(
-								data['type'],
-								data['id'],
-								data['service'],
-								data['country_code']
+		try:
+			media_data = []
+			urls = await url_tools.get_urls_from_string(message.content)
+			for url in urls:
+				metadata = await url_tools.get_metadata_from_url(url)
+				media_data.append(metadata)
+			if media_data != []:
+				tasks = []
+				for data in media_data:
+					if data['id'] != None and data['type'] != None:
+						tasks.append(
+							create_task(
+								api.lookup(
+									data['type'],
+									data['id'],
+									data['service'],
+									data['country_code']
+								)
 							)
 						)
-					)
-			results = await gather(*tasks)
-			for result in results:
-				embed_composer = EmbedComposer()
-				if 'type' in result:
-					await embed_composer.compose(message.author, result, 'link', False)
-					await message.reply(embed = embed_composer.embed, view = embed_composer.button_view, mention_author = False)
-					successful_request()
-					api_latency(result['meta']['processing_time']['global_io'])
-				else:
-					failed_request()
-				await embed_composer.compose(message.author, result, 'link', True)
-				url_with_id = next((url for url in urls if result.get('meta', {}).get('request', {}).get('id') in url), None)
-				await log([embed_composer.embed], [result], 'Auto Link Lookup', f'url:`{url_with_id}`', current_unix_time_ms() - start_time, embed_composer.button_view)
-		else: 
-			return
+				results = await gather(*tasks)
+				for result in results:
+					embed_composer = EmbedComposer()
+					if 'type' in result:
+						await embed_composer.compose(message.author, result, 'link', False)
+						await message.reply(embed = embed_composer.embed, view = embed_composer.button_view, mention_author = False)
+						successful_request()
+						api_latency(result['meta']['processing_time']['global_io'])
+					else:
+						failed_request()
+					await embed_composer.compose(message.author, result, 'link', True)
+					url_with_id = next((url for url in urls if result.get('meta', {}).get('request', {}).get('id') in url), None)
+					await log([embed_composer.embed], [result], 'Auto Link Lookup', f'url:`{url_with_id}`', current_unix_time_ms() - start_time, embed_composer.button_view)
+			else: 
+				return
+		except Exception as error:
+			failed_request()
+			print(f'[AstroDiscord] Undocumented error in on_message has occurred: {error}')
 		client_latency(current_unix_time_ms() - start_time)
 
 
@@ -169,29 +173,35 @@ async def searchsong(interaction: discord.Interaction, artist: str, title: str, 
 		censor = True
 	await interaction.response.defer()
 	embed_composer = EmbedComposer()
-	json = await api.search_song(artist, title, from_album, is_explicit, country_code)
-	if 'type' in json:
-		await embed_composer.compose(interaction.user, json, 'searchsong', False, censor)
-		await interaction.followup.send(embed = embed_composer.embed, view = embed_composer.button_view)
-		successful_request()
-		api_latency(json['meta']['processing_time']['global_io'])
-	elif json == {}:
-		await embed_composer.error(204)
+	try:
+		json = await api.search_song(artist, title, from_album, is_explicit, country_code)
+		if 'type' in json:
+			await embed_composer.compose(interaction.user, json, 'searchsong', False, censor)
+			await interaction.followup.send(embed = embed_composer.embed, view = embed_composer.button_view)
+			successful_request()
+			api_latency(json['meta']['processing_time']['global_io'])
+		elif json == {}:
+			await embed_composer.error(204)
+			await interaction.followup.send(embed = embed_composer.embed)
+			failed_request()
+		else:
+			await embed_composer.error(json['status'])
+			await interaction.followup.send(embed = embed_composer.embed)
+			failed_request()
+		await embed_composer.compose(interaction.user, json, 'searchsong', True, censor)
+		await log(
+			[embed_composer.embed],
+			[json],
+			'searchsong',
+			f'artist:`{artist}` title:`{title}` from_album:`{from_album}` is_explicit:`{is_explicit}` country_code:`{country_code}` censor:`{censor}`',
+			current_unix_time_ms() - start_time,
+			embed_composer.button_view
+		)
+	except Exception as error:
+		await embed_composer.error('other')
 		await interaction.followup.send(embed = embed_composer.embed)
 		failed_request()
-	else:
-		await embed_composer.error(json['status'])
-		await interaction.followup.send(embed = embed_composer.embed)
-		failed_request()
-	await embed_composer.compose(interaction.user, json, 'searchsong', True, censor)
-	await log(
-		[embed_composer.embed],
-		[json],
-		'searchsong',
-		f'artist:`{artist}` title:`{title}` from_album:`{from_album}` is_explicit:`{is_explicit}` country_code:`{country_code}` censor:`{censor}`',
-		current_unix_time_ms() - start_time,
-		embed_composer.button_view
-	)
+		print(f'[AstroDiscord] Undocumented error in search_song has occurred: {error}')
 	client_latency(current_unix_time_ms() - start_time)
 
 
@@ -210,29 +220,35 @@ async def searchalbum(interaction: discord.Interaction, artist: str, title: str,
 		censor = True
 	await interaction.response.defer()
 	embed_composer = EmbedComposer()
-	json = await api.search_album(artist, title, year, country_code)
-	if 'type' in json:
-		await embed_composer.compose(interaction.user, json, 'searchalbum', False, censor)
-		await interaction.followup.send(embed = embed_composer.embed, view = embed_composer.button_view)
-		successful_request()
-		api_latency(json['meta']['processing_time']['global_io'])
-	elif json == {}:
-		await embed_composer.error(204)
+	try:
+		json = await api.search_album(artist, title, year, country_code)
+		if 'type' in json:
+			await embed_composer.compose(interaction.user, json, 'searchalbum', False, censor)
+			await interaction.followup.send(embed = embed_composer.embed, view = embed_composer.button_view)
+			successful_request()
+			api_latency(json['meta']['processing_time']['global_io'])
+		elif json == {}:
+			await embed_composer.error(204)
+			await interaction.followup.send(embed = embed_composer.embed)
+			failed_request()
+		else:
+			await embed_composer.error(json['status'])
+			await interaction.followup.send(embed = embed_composer.embed)
+			failed_request()
+		await embed_composer.compose(interaction.user, json, 'searchalbum', True, censor)
+		await log(
+			[embed_composer.embed],
+			[json],
+			'searchalbum',
+			f'artist:`{artist}` title:`{title}` year:`{year}` country_code:`{country_code}` censor:`{censor}`',
+			current_unix_time_ms() - start_time,
+			embed_composer.button_view
+		)
+	except Exception as error:
+		await embed_composer.error('other')
 		await interaction.followup.send(embed = embed_composer.embed)
 		failed_request()
-	else:
-		await embed_composer.error(json['status'])
-		await interaction.followup.send(embed = embed_composer.embed)
-		failed_request()
-	await embed_composer.compose(interaction.user, json, 'searchalbum', True, censor)
-	await log(
-		[embed_composer.embed],
-		[json],
-		'searchalbum',
-		f'artist:`{artist}` title:`{title}` year:`{year}` country_code:`{country_code}` censor:`{censor}`',
-		current_unix_time_ms() - start_time,
-		embed_composer.button_view
-	)
+		print(f'[AstroDiscord] Undocumented error in searchalbum has occurred: {error}')
 	client_latency(current_unix_time_ms() - start_time)
 
 
@@ -250,33 +266,39 @@ async def lookup(interaction: discord.Interaction, query: str, country_code: str
 		censor = True
 	await interaction.response.defer()
 	embed_composer = EmbedComposer()
-	metadata = await url_tools.get_metadata_from_url(query)
-	if metadata['id'] == None and metadata['type'] == None:
-		json = await api.search(query, country_code)
-	else:
-		json = await api.lookup(metadata['type'], metadata['id'], metadata['service'], country_code)
-	if 'type' in json:
-		await embed_composer.compose(interaction.user, json, 'lookup', False, censor)
-		await interaction.followup.send(embed = embed_composer.embed, view = embed_composer.button_view)
-		successful_request()
-		api_latency(json['meta']['processing_time']['global_io'])
-	elif json == {}:
-		await embed_composer.error(204)
+	try:
+		metadata = await url_tools.get_metadata_from_url(query)
+		if metadata['id'] == None and metadata['type'] == None:
+			json = await api.search(query, country_code)
+		else:
+			json = await api.lookup(metadata['type'], metadata['id'], metadata['service'], country_code)
+		if 'type' in json:
+			await embed_composer.compose(interaction.user, json, 'lookup', False, censor)
+			await interaction.followup.send(embed = embed_composer.embed, view = embed_composer.button_view)
+			successful_request()
+			api_latency(json['meta']['processing_time']['global_io'])
+		elif json == {}:
+			await embed_composer.error(204)
+			await interaction.followup.send(embed = embed_composer.embed)
+			failed_request()
+		else:
+			await embed_composer.error(json['status'])
+			await interaction.followup.send(embed = embed_composer.embed)
+			failed_request()
+		await embed_composer.compose(interaction.user, json, 'lookup', True, censor)
+		await log(
+			[embed_composer.embed],
+			[json],
+			'lookup',
+			f'query:`{query}` country_code:`{country_code}` censor:`{censor}`',
+			current_unix_time_ms() - start_time,
+			embed_composer.button_view
+		)
+	except Exception as error:
+		await embed_composer.error('other')
 		await interaction.followup.send(embed = embed_composer.embed)
 		failed_request()
-	else:
-		await embed_composer.error(json['status'])
-		await interaction.followup.send(embed = embed_composer.embed)
-		failed_request()
-	await embed_composer.compose(interaction.user, json, 'lookup', True, censor)
-	await log(
-		[embed_composer.embed],
-		[json],
-		'lookup',
-		f'query:`{query}` country_code:`{country_code}` censor:`{censor}`',
-		current_unix_time_ms() - start_time,
-		embed_composer.button_view
-	)
+		print(f'[AstroDiscord] Undocumented error in lookup has occurred: {error}')
 	client_latency(current_unix_time_ms() - start_time)
 
 
@@ -294,33 +316,39 @@ async def search(interaction: discord.Interaction, query: str, country_code: str
 		censor = True
 	await interaction.response.defer()
 	embed_composer = EmbedComposer()
-	metadata = await url_tools.get_metadata_from_url(query)
-	if metadata['id'] == None and metadata['type'] == None:
-		json = await api.search(query, country_code)
-	else:
-		json = await api.lookup(metadata['type'], metadata['id'], metadata['service'], country_code)
-	if 'type' in json:
-		await embed_composer.compose(interaction.user, json, 'search', False, censor)
-		await interaction.followup.send(embed = embed_composer.embed, view = embed_composer.button_view)
-		successful_request()
-		api_latency(json['meta']['processing_time']['global_io'])
-	elif json == {}:
-		await embed_composer.error(204)
+	try:
+		metadata = await url_tools.get_metadata_from_url(query)
+		if metadata['id'] == None and metadata['type'] == None:
+			json = await api.search(query, country_code)
+		else:
+			json = await api.lookup(metadata['type'], metadata['id'], metadata['service'], country_code)
+		if 'type' in json:
+			await embed_composer.compose(interaction.user, json, 'search', False, censor)
+			await interaction.followup.send(embed = embed_composer.embed, view = embed_composer.button_view)
+			successful_request()
+			api_latency(json['meta']['processing_time']['global_io'])
+		elif json == {}:
+			await embed_composer.error(204)
+			await interaction.followup.send(embed = embed_composer.embed)
+			failed_request()
+		else:
+			await embed_composer.error(json['status'])
+			await interaction.followup.send(embed = embed_composer.embed)
+			failed_request()
+		await embed_composer.compose(interaction.user, json, 'search', True, censor)
+		await log(
+			[embed_composer.embed],
+			[json],
+			'search',
+			f'query:`{query}` country_code:`{country_code}` censor:`{censor}`',
+			current_unix_time_ms() - start_time,
+			embed_composer.button_view
+		)
+	except Exception as error:
+		await embed_composer.error('other')
 		await interaction.followup.send(embed = embed_composer.embed)
 		failed_request()
-	else:
-		await embed_composer.error(json['status'])
-		await interaction.followup.send(embed = embed_composer.embed)
-		failed_request()
-	await embed_composer.compose(interaction.user, json, 'search', True, censor)
-	await log(
-		[embed_composer.embed],
-		[json],
-		'search',
-		f'query:`{query}` country_code:`{country_code}` censor:`{censor}`',
-		current_unix_time_ms() - start_time,
-		embed_composer.button_view
-	)
+		print(f'[AstroDiscord] Undocumented error in search has occurred: {error}')
 	client_latency(current_unix_time_ms() - start_time)
 
 
@@ -338,53 +366,59 @@ async def snoop(interaction: discord.Interaction, user: discord.Member = None, e
 	if app_commands.AppInstallationType.user == True:
 		censor = True
 	await interaction.response.defer(ephemeral = ephemeral)
-	embed_composer = EmbedComposer()
-	if user == None:
-		user = interaction.user
-	identifier = None
+	try:
+		embed_composer = EmbedComposer()
+		if user == None:
+			user = interaction.user
+		identifier = None
 
-	guild = client.get_guild(interaction.guild.id)
-	member = guild.get_member(user.id)
+		guild = client.get_guild(interaction.guild.id)
+		member = guild.get_member(user.id)
 
-	for activity in member.activities:
-		if isinstance(activity, Spotify):
-			identifier = str(activity.track_id)
-			break
-	
-	if identifier == None:
-		person = 'You are' if interaction.user == user else 'This person is'
-		grammar = 'have' if interaction.user == user else 'has'
-		await embed_composer.error(400, {
-			'title': "No Spotify listening activity detected.",
-			'description': f'{person} not listening to a Spotify track, or {grammar} Spotify activity disabled in Discord settings. [Learn here](https://support.discord.com/hc/en-us/articles/360000167212-Discord-Spotify-Connection) how to connect Spotify to Discord and enable Spotify activity on your profile.',
-			'meaning': 'Bad request'
-		})
-		await interaction.followup.send(embed = embed_composer.embed)
-		failed_request()
-	else:
-		json = await api.lookup('song', identifier, 'spotify', country_code)	
-		if 'type' in json:
-			await embed_composer.compose(interaction.user, json, 'snoop', False, censor)
-			await interaction.followup.send(embed = embed_composer.embed, view = embed_composer.button_view)
-			successful_request()
-			api_latency(json['meta']['processing_time']['global_io'])
-		elif json == {}:
-			await embed_composer.error(204)
+		for activity in member.activities:
+			if isinstance(activity, Spotify):
+				identifier = str(activity.track_id)
+				break
+		
+		if identifier == None:
+			person = 'You are' if interaction.user == user else 'This person is'
+			grammar = 'have' if interaction.user == user else 'has'
+			await embed_composer.error(400, {
+				'title': "No Spotify listening activity detected.",
+				'description': f'{person} not listening to a Spotify track, or {grammar} Spotify activity disabled in Discord settings. [Learn here](https://support.discord.com/hc/en-us/articles/360000167212-Discord-Spotify-Connection) how to connect Spotify to Discord and enable Spotify activity on your profile.',
+				'meaning': 'Bad request'
+			})
 			await interaction.followup.send(embed = embed_composer.embed)
 			failed_request()
 		else:
-			await embed_composer.error(json['status'])
-			await interaction.followup.send(embed = embed_composer.embed)
-			failed_request()
-	await embed_composer.compose(interaction.user, json, 'snoop', True, censor)
-	await log(
-		[embed_composer.embed],
-		[json],
-		'snoop',
-		f'user:`{'self' if user == interaction.user else 'member'}` ephemeral:`{ephemeral}` country_code:`{country_code}` censor:`{censor}`',
-		current_unix_time_ms() - start_time,
-		embed_composer.button_view
-	)
+			json = await api.lookup('song', identifier, 'spotify', country_code)	
+			if 'type' in json:
+				await embed_composer.compose(interaction.user, json, 'snoop', False, censor)
+				await interaction.followup.send(embed = embed_composer.embed, view = embed_composer.button_view)
+				successful_request()
+				api_latency(json['meta']['processing_time']['global_io'])
+			elif json == {}:
+				await embed_composer.error(204)
+				await interaction.followup.send(embed = embed_composer.embed)
+				failed_request()
+			else:
+				await embed_composer.error(json['status'])
+				await interaction.followup.send(embed = embed_composer.embed)
+				failed_request()
+		await embed_composer.compose(interaction.user, json, 'snoop', True, censor)
+		await log(
+			[embed_composer.embed],
+			[json],
+			'snoop',
+			f'user:`{'self' if user == interaction.user else 'member'}` ephemeral:`{ephemeral}` country_code:`{country_code}` censor:`{censor}`',
+			current_unix_time_ms() - start_time,
+			embed_composer.button_view
+		)
+	except Exception as error:
+		await embed_composer.error('other')
+		await interaction.followup.send(embed = embed_composer.embed)
+		failed_request()
+		print(f'[AstroDiscord] Undocumented error has occurred: {error}')
 	client_latency(current_unix_time_ms() - start_time)
 
 
@@ -402,39 +436,45 @@ async def coverart(interaction: discord.Interaction, link: str, country_code: st
 		censor = True
 	await interaction.response.defer()
 	embed_composer = EmbedComposer()
-	metadata = await url_tools.get_metadata_from_url(link)
-	if metadata['id'] != None and metadata['type'] != None:
-		json = await api.lookup(metadata['type'], metadata['id'], metadata['service'], metadata['country_code'])
-		if 'type' in json:
-			await embed_composer.compose(interaction.user, json, 'coverart', False, censor)
-			await interaction.followup.send(embed = embed_composer.embed, view = embed_composer.button_view)
-			successful_request()
-			api_latency(json['meta']['processing_time']['global_io'])
-		elif json == {}:
-			await embed_composer.error(204)
-			await interaction.followup.send(embed = embed_composer.embed)
-			failed_request()
+	try:
+		metadata = await url_tools.get_metadata_from_url(link)
+		if metadata['id'] != None and metadata['type'] != None:
+			json = await api.lookup(metadata['type'], metadata['id'], metadata['service'], metadata['country_code'])
+			if 'type' in json:
+				await embed_composer.compose(interaction.user, json, 'coverart', False, censor)
+				await interaction.followup.send(embed = embed_composer.embed, view = embed_composer.button_view)
+				successful_request()
+				api_latency(json['meta']['processing_time']['global_io'])
+			elif json == {}:
+				await embed_composer.error(204)
+				await interaction.followup.send(embed = embed_composer.embed)
+				failed_request()
+			else:
+				await embed_composer.error(json['status'])
+				await interaction.followup.send(embed = embed_composer.embed)
+				failed_request()
 		else:
-			await embed_composer.error(json['status'])
+			await embed_composer.error(400, {
+				'title': "Invalid link provided.",
+				'description': f'This command only works with songs, albums, EP-s and music videos from Spotify, Apple Music, YouTube (Music), and Deezer.',
+				'meaning': 'Bad request'
+			})
 			await interaction.followup.send(embed = embed_composer.embed)
 			failed_request()
-	else:
-		await embed_composer.error(400, {
-			'title': "Invalid link provided.",
-			'description': f'This command only works with songs, albums, EP-s and music videos from Spotify, Apple Music, YouTube (Music), and Deezer.',
-			'meaning': 'Bad request'
-		})
+		await embed_composer.compose(interaction.user, json, 'coverart', True, censor)
+		await log(
+			[embed_composer.embed],
+			[json],
+			'coverart',
+			f'link:`{link}` country_code:`{country_code}` censor:`{censor}`',
+			current_unix_time_ms() - start_time,
+			embed_composer.button_view
+		)
+	except Exception as error:
+		await embed_composer.error('other')
 		await interaction.followup.send(embed = embed_composer.embed)
 		failed_request()
-	await embed_composer.compose(interaction.user, json, 'coverart', True, censor)
-	await log(
-		[embed_composer.embed],
-		[json],
-		'coverart',
-		f'link:`{link}` country_code:`{country_code}` censor:`{censor}`',
-		current_unix_time_ms() - start_time,
-		embed_composer.button_view
-	)
+		print(f'[AstroDiscord] Undocumented error has occurred: {error}')
 	client_latency(current_unix_time_ms() - start_time)
 
 
@@ -452,33 +492,39 @@ async def knowledge(interaction: discord.Interaction, query: str, country_code: 
 		censor = True
 	await interaction.response.defer()
 	embed_composer = EmbedComposer()
-	metadata = await url_tools.get_metadata_from_url(query)
-	if metadata['id'] == None and metadata['type'] == None:
-		json = await api.search_knowledge(query, country_code)
-	else:
-		json = await api.lookup_knowledge(metadata['id'], metadata['service'], country_code)
-	if 'type' in json:
-		await embed_composer.compose(interaction.user, json, 'knowledge', False, censor)
-		await interaction.followup.send(embed = embed_composer.embed, view = embed_composer.button_view)
-		successful_request()
-		api_latency(json['meta']['processing_time']['global_io'])
-	elif json == {}:
-		await embed_composer.error(204)
+	try:
+		metadata = await url_tools.get_metadata_from_url(query)
+		if metadata['id'] == None and metadata['type'] == None:
+			json = await api.search_knowledge(query, country_code)
+		else:
+			json = await api.lookup_knowledge(metadata['id'], metadata['service'], country_code)
+		if 'type' in json:
+			await embed_composer.compose(interaction.user, json, 'knowledge', False, censor)
+			await interaction.followup.send(embed = embed_composer.embed, view = embed_composer.button_view)
+			successful_request()
+			api_latency(json['meta']['processing_time']['global_io'])
+		elif json == {}:
+			await embed_composer.error(204)
+			await interaction.followup.send(embed = embed_composer.embed)
+			failed_request()
+		else:
+			await embed_composer.error(json['status'])
+			await interaction.followup.send(embed = embed_composer.embed)
+			failed_request()
+		await embed_composer.compose(interaction.user, json, 'knowledge', True, censor)
+		await log(
+			[embed_composer.embed],
+			[json],
+			'knowledge',
+			f'query:`{query}` country_code:`{country_code}` censor:`{censor}`',
+			current_unix_time_ms() - start_time,
+			embed_composer.button_view
+		)
+	except Exception as error:
+		await embed_composer.error('other')
 		await interaction.followup.send(embed = embed_composer.embed)
 		failed_request()
-	else:
-		await embed_composer.error(json['status'])
-		await interaction.followup.send(embed = embed_composer.embed)
-		failed_request()
-	await embed_composer.compose(interaction.user, json, 'knowledge', True, censor)
-	await log(
-		[embed_composer.embed],
-		[json],
-		'knowledge',
-		f'query:`{query}` country_code:`{country_code}` censor:`{censor}`',
-		current_unix_time_ms() - start_time,
-		embed_composer.button_view
-	)
+		print(f'[AstroDiscord] Undocumented error has occurred: {error}')
 	client_latency(current_unix_time_ms() - start_time)
 
 
@@ -493,74 +539,81 @@ async def context_menu_lookup(interaction: discord.Interaction, message: discord
 	else:
 		censor = False
 	await interaction.response.defer()
-	media_data = []
-	embeds = []
-	buttons = []
-	urls = await url_tools.get_urls_from_string(message.content)
+	try:
+		media_data = []
+		embeds = []
+		buttons = []
+		urls = await url_tools.get_urls_from_string(message.content)
 
-	if urls == []:
-		embed_composer = EmbedComposer()
-		await embed_composer.error(400, {
-			'title': "No links provided.",
-			'description': f'This command only works with links of songs, albums, EP-s and music videos from Spotify, Apple Music, YouTube/YouTube Music, and Deezer.',
-			'meaning': 'Bad request'
-		})
-		await interaction.followup.send(embed = embed_composer.embed)
-		failed_request()
-		client_latency(current_unix_time_ms() - start_time)
-		return
-		
-	for url in urls:
-		metadata = await url_tools.get_metadata_from_url(url)
-		media_data.append(metadata)
-		
-	if media_data != []:
-		tasks = []
-		for data in media_data:
-			if data['id'] != None and data['type'] != None:
-				tasks.append(
-					create_task(
-						api.lookup(
-							data['type'],
-							data['id'],
-							data['service'],
-							data['country_code']
-						)
-					)
-				)
-		if len(tasks) != 0:
-			results = await gather(*tasks)
-			
-			for result in results:
-				embed_composer = EmbedComposer()
-				if 'type' in result:
-					await embed_composer.compose(message.author, result, 'link', False, censor)
-
-					successful_request()
-					api_latency(result['meta']['processing_time']['global_io'])
-					if len(results) == 1:
-						await interaction.followup.send(embed = embed_composer.embed, view = embed_composer.button_view)
-					else:
-						embeds.append(embed_composer.embed)
-						buttons.append(embed_composer.button_view)
-
-				await embed_composer.compose(message.author, result, 'link', True)
-				url_with_id = next((url for url in urls if result.get('meta', {}).get('request', {}).get('id') in url), None)
-				await log([embed_composer.embed], [result], 'Search music link(s)', f'url:`{url_with_id}`', current_unix_time_ms() - start_time, embed_composer.button_view)
-
-			if embeds != []:
-				pagination = PaginatorView(embeds = embeds, button_views = buttons)
-				pagination.message = await interaction.followup.send(embed = pagination.initial_embed, view = pagination)
-
-		else:
+		if urls == []:
 			embed_composer = EmbedComposer()
 			await embed_composer.error(400, {
-				'title': "Invalid link(s) provided.",
-				'description': f'This command only works with songs, albums, EP-s and music videos from Spotify, Apple Music, YouTube/YouTube Music, and Deezer.',
+				'title': "No links provided.",
+				'description': f'This command only works with links of songs, albums, EP-s and music videos from Spotify, Apple Music, YouTube/YouTube Music, and Deezer.',
 				'meaning': 'Bad request'
 			})
 			await interaction.followup.send(embed = embed_composer.embed)
 			failed_request()
+			client_latency(current_unix_time_ms() - start_time)
+			return
+			
+		for url in urls:
+			metadata = await url_tools.get_metadata_from_url(url)
+			media_data.append(metadata)
+			
+		if media_data != []:
+			tasks = []
+			for data in media_data:
+				if data['id'] != None and data['type'] != None:
+					tasks.append(
+						create_task(
+							api.lookup(
+								data['type'],
+								data['id'],
+								data['service'],
+								data['country_code']
+							)
+						)
+					)
+			if len(tasks) != 0:
+				results = await gather(*tasks)
+				
+				for result in results:
+					embed_composer = EmbedComposer()
+					if 'type' in result:
+						await embed_composer.compose(message.author, result, 'link', False, censor)
+
+						successful_request()
+						api_latency(result['meta']['processing_time']['global_io'])
+						if len(results) == 1:
+							await interaction.followup.send(embed = embed_composer.embed, view = embed_composer.button_view)
+						else:
+							embeds.append(embed_composer.embed)
+							buttons.append(embed_composer.button_view)
+
+					await embed_composer.compose(message.author, result, 'link', True)
+					url_with_id = next((url for url in urls if result.get('meta', {}).get('request', {}).get('id') in url), None)
+					await log([embed_composer.embed], [result], 'Search music link(s)', f'url:`{url_with_id}`', current_unix_time_ms() - start_time, embed_composer.button_view)
+
+				if embeds != []:
+					pagination = PaginatorView(embeds = embeds, button_views = buttons)
+					pagination.message = await interaction.followup.send(embed = pagination.initial_embed, view = pagination)
+
+			else:
+				embed_composer = EmbedComposer()
+				await embed_composer.error(400, {
+					'title': "Invalid link(s) provided.",
+					'description': f'This command only works with songs, albums, EP-s and music videos from Spotify, Apple Music, YouTube/YouTube Music, and Deezer.',
+					'meaning': 'Bad request'
+				})
+				await interaction.followup.send(embed = embed_composer.embed)
+				failed_request()
+	except Exception as error:
+		embed_composer = EmbedComposer()
+		await embed_composer.error('other')
+		await interaction.followup.send(embed = embed_composer.embed)
+		failed_request()
+		print(f'[AstroDiscord] Undocumented error has occurred: {error}')
 	client_latency(current_unix_time_ms() - start_time)
 
 
