@@ -253,56 +253,6 @@ async def searchalbum(interaction: discord.Interaction, artist: str, title: str,
 
 
 
-@tree.command(name = 'lookup', description = 'Search a song, music video, album or EP from a query or its link')
-@app_commands.describe(query = 'Search query or the link of the media you want to search')
-@app_commands.describe(country_code = 'The country code of the country in which you want to search, US by default')
-@app_commands.describe(censor = 'Whether you want to censor the title of the song or not, False by default and forced True for User Apps')
-@discord.app_commands.allowed_installs(guilds = True, users = True)
-@app_commands.allowed_contexts(guilds = True, dms = True, private_channels = True)
-async def lookup(interaction: discord.Interaction, query: str, country_code: str = 'us', censor: bool = False):
-	start_time = current_unix_time_ms()
-	json = {}
-	if app_commands.AppInstallationType.user == True:
-		censor = True
-	await interaction.response.defer()
-	embed_composer = EmbedComposer()
-	try:
-		metadata = await url_tools.get_metadata_from_url(query)
-		if metadata['id'] == None and metadata['type'] == None:
-			json = await api.search(query, country_code)
-		else:
-			json = await api.lookup(metadata['type'], metadata['id'], metadata['service'], country_code)
-		if 'type' in json:
-			await embed_composer.compose(interaction.user, json, 'lookup', False, censor)
-			await interaction.followup.send(embed = embed_composer.embed, view = embed_composer.button_view)
-			successful_request()
-			api_latency(json['meta']['processing_time']['global_io'])
-		elif json == {}:
-			await embed_composer.error(204)
-			await interaction.followup.send(embed = embed_composer.embed)
-			failed_request()
-		else:
-			await embed_composer.error(json['status'])
-			await interaction.followup.send(embed = embed_composer.embed)
-			failed_request()
-		await embed_composer.compose(interaction.user, json, 'lookup', True, censor)
-		await log(
-			[embed_composer.embed],
-			[json],
-			'lookup',
-			f'query:`{query}` country_code:`{country_code}` censor:`{censor}`',
-			current_unix_time_ms() - start_time,
-			embed_composer.button_view
-		)
-	except Exception as error:
-		await embed_composer.error('other')
-		await interaction.followup.send(embed = embed_composer.embed)
-		failed_request()
-		print(f'[AstroDiscord] Undocumented error in lookup has occurred: {error}')
-	client_latency(current_unix_time_ms() - start_time)
-
-
-
 @tree.command(name = 'search', description = 'Search a song, music video, album or EP from a query or its link')
 @app_commands.describe(query = 'Search query or the link of the media you want to search')
 @app_commands.describe(country_code = 'The country code of the country in which you want to search, US by default')
