@@ -108,7 +108,7 @@ class URLTools:
 					identifier = url_parameters['v']
 					media_type = 'song'
 				elif url_path.find('playlist') >= 0: # YouTube (Music) collection
-					if url_parameters['list'][:4] == 'OLAK5': # Checks if the playlist is an album, because all albums/EPs have OLAK5 at the start of the ID
+					if url_parameters['list'][:5] == 'OLAK5': # Checks if the playlist is an album, because all albums/EPs have OLAK5 at the start of the ID
 						identifier = url_parameters['list']
 						media_type = 'collection'
 					else: # If not, just return None and deal with it later
