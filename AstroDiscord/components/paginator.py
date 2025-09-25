@@ -14,9 +14,9 @@ class PaginatorView(discord.ui.View):
         # Add page indicator field to each embed
         for idx, embed in enumerate(self._embeds):
             embed.add_field(
-                name="Paginated view",
-                value=f"{idx + 1} of {self._len}, use controls below",
-                inline=False
+                name = '',
+                value = f'-# Page {idx + 1} of {self._len}',
+                inline = False
             )
 
         # Add paginator buttons to this view
@@ -44,8 +44,8 @@ class PaginatorView(discord.ui.View):
             if field.name == 'Paginated view':
                 embed.set_field_at(
                     embed.fields.index(field),
-                    name = 'Paginated view',
-                    value = 'This paginated view has expired! If you wish to get the links of the other media, re-run the command!',
+                    name = '',
+                    value = '-# This request has expired! To lookup the other links from that message, re-run the command.',
                     inline = False
                 )
                 break
