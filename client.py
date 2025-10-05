@@ -121,7 +121,8 @@ async def on_message(message):
 			urls = await url_tools.get_urls_from_string(message.content)
 			for url in urls:
 				metadata = await url_tools.get_metadata_from_url(url)
-				media_data.append(metadata)
+				if metadata != None:
+					media_data.append(metadata)
 			if media_data != []:
 				tasks = []
 				for data in media_data:
@@ -147,8 +148,15 @@ async def on_message(message):
 					else:
 						failed_request()
 					await embed_composer.compose(message.author, result, 'link', True)
-					url_with_id = next((url for url in urls if result.get('meta', {}).get('request', {}).get('id') in url), None)
-					await log([embed_composer.embed], [result], 'Auto Link Lookup', f'url:`{url_with_id}`', current_unix_time_ms() - start_time, embed_composer.button_view)
+					ri = results.index(result)
+					await log(
+						[embed_composer.embed],
+						[result],
+						'Auto Link Lookup',
+						f'type:`{media_data[ri]['type']}` id:`{media_data[ri]['id']}` service:`{media_data[ri]['service']}` country_code:`{media_data[ri]['country_code']}`',
+						current_unix_time_ms() - start_time, 
+						embed_composer.button_view
+					)
 			else: 
 				return
 		except Exception as error:
@@ -529,7 +537,8 @@ async def context_menu_lookup(interaction: discord.Interaction, message: discord
 			
 		for url in urls:
 			metadata = await url_tools.get_metadata_from_url(url)
-			media_data.append(metadata)
+			if metadata != None:
+				media_data.append(metadata)
 			
 		if media_data != []:
 			tasks = []
@@ -560,14 +569,27 @@ async def context_menu_lookup(interaction: discord.Interaction, message: discord
 						else:
 							embeds.append(embed_composer.embed)
 							buttons.append(embed_composer.button_view)
+					else:
+						failed_request()
 
 					await embed_composer.compose(message.author, result, 'link', True)
-					url_with_id = next((url for url in urls if result.get('meta', {}).get('request', {}).get('id') in url), None)
-					await log([embed_composer.embed], [result], 'Search music link(s)', f'url:`{url_with_id}`', current_unix_time_ms() - start_time, embed_composer.button_view)
+					ri = results.index(result)
+					await log(
+						[embed_composer.embed],
+						[result],
+						'Search music link(s)',
+						f'type:`{media_data[ri]['type']}` id:`{media_data[ri]['id']}` service:`{media_data[ri]['service']}` country_code:`{media_data[ri]['country_code']}`',
+						current_unix_time_ms() - start_time, 
+						embed_composer.button_view
+					)
 
 				if embeds != []:
 					pagination = PaginatorView(embeds = embeds, button_views = buttons)
 					pagination.message = await interaction.followup.send(embed = pagination.initial_embed, view = pagination)
+				else:
+					await embed_composer.error(204)
+					await interaction.followup.send(embed = embed_composer.embed)
+					failed_request()
 
 			else:
 				embed_composer = EmbedComposer()
@@ -578,6 +600,16 @@ async def context_menu_lookup(interaction: discord.Interaction, message: discord
 				})
 				await interaction.followup.send(embed = embed_composer.embed)
 				failed_request()
+			
+		else:
+			embed_composer = EmbedComposer()
+			await embed_composer.error(400, {
+				'title': "Invalid link(s) provided.",
+				'description': f'This command only works with songs, albums, EP-s and music videos from Spotify, Apple Music, YouTube/YouTube Music, and Deezer.',
+				'meaning': 'Bad request'
+			})
+			await interaction.followup.send(embed = embed_composer.embed)
+			failed_request()
 	except Exception as error:
 		embed_composer = EmbedComposer()
 		await embed_composer.error('other')
