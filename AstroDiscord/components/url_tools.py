@@ -1,6 +1,7 @@
 from urllib.parse import urlparse
 from urllib import request
 from asyncio import run
+from AstroDiscord.components.api_caller import AstroAPI
 
 
 
@@ -103,10 +104,17 @@ class URLTools:
 		elif url_domain in self.youtube_domains: # YouTube (Music)
 			media_service = 'youtube_music'
 			media_country_code = None
+			api = AstroAPI()
 			if url_domain.find('youtube.com') >= 0: # Non-shortened URL
 				if url_path.find('watch') >= 0: # YouTube (Music) song
-					identifier = url_parameters['v']
-					media_type = 'song'
+					data_candidate = await api.lookup('song', url_parameters['v'], media_service, media_country_code) # Do an ID lookup and see if there'll be any data
+					if 'type' in data_candidate: # If there is, extract data from the URL
+						identifier = url_parameters['v']
+						media_type = 'song'
+					else: # If not, return None because it's not music
+						identifier = None
+						media_type = None
+					
 				elif url_path.find('playlist') >= 0: # YouTube (Music) collection
 					if url_parameters['list'][:5] == 'OLAK5': # Checks if the playlist is an album, because all albums/EPs have OLAK5 at the start of the ID
 						identifier = url_parameters['list']
@@ -118,8 +126,13 @@ class URLTools:
 					identifier = None
 					media_type = None
 			elif url_domain.find('youtu.be') >= 0: # Shortened URL, immediately assume it's a song
-				identifier = url_path[1:]
-				media_type = 'song'
+				data_candidate = await api.lookup('song', url_path[1:], media_service, media_country_code)
+				if 'type' in data_candidate:
+					identifier = url_path[1:]
+					media_type = 'song'
+				else:
+					identifier = None
+					media_type = None
 			else:
 				identifier = None
 				media_type = None
@@ -141,12 +154,15 @@ class URLTools:
 				identifier = None
 				media_type = None
 
-		return {
-			'id': identifier,
-			'service': media_service,
-			'type': media_type,
-			'country_code': media_country_code
-		}
+		if identifier != None:
+			return {
+				'id': identifier,
+				'service': media_service,
+				'type': media_type,
+				'country_code': media_country_code
+			}
+		else:
+			return
 	
 	def deconstruct_url(self, url: str):
 		url_data = urlparse(url)
