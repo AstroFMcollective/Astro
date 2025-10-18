@@ -25,7 +25,8 @@ class URLTools:
 		]
 		self.deferred_domains = [
 			'deezer.page.link',
-			'link.deezer.com'
+			'link.deezer.com',
+			'spotify.link'
 		]
 
 	async def get_urls_from_string(self, string: str):
