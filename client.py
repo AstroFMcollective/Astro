@@ -284,7 +284,7 @@ async def search(interaction: discord.Interaction, query: str, country_code: str
 	embed_composer = EmbedComposer()
 	try:
 		metadata = await url_tools.get_metadata_from_url(query)
-		if metadata['id'] == None and metadata['type'] == None:
+		if metadata == None or metadata['id'] == None and metadata['type'] == None:
 			json = await api.search(query, country_code)
 		else:
 			json = await api.lookup(metadata['type'], metadata['id'], metadata['service'], country_code)
@@ -408,21 +408,39 @@ async def coverart(interaction: discord.Interaction, link: str, country_code: st
 	embed_composer = EmbedComposer()
 	try:
 		metadata = await url_tools.get_metadata_from_url(link)
-		if metadata['id'] != None and metadata['type'] != None:
-			json = await api.lookup(metadata['type'], metadata['id'], metadata['service'], metadata['country_code'])
-			if 'type' in json:
-				await embed_composer.compose(interaction.user, json, 'coverart', False, censor)
-				await interaction.followup.send(embed = embed_composer.embed, view = embed_composer.button_view)
-				successful_request()
-				api_latency(json['meta']['processing_time']['global_io'])
-			elif json == {}:
-				await embed_composer.error(204)
-				await interaction.followup.send(embed = embed_composer.embed)
-				failed_request()
+		if metadata != None:
+			if metadata == None or metadata['id'] != None and metadata['type'] != None:
+				json = await api.lookup(metadata['type'], metadata['id'], metadata['service'], metadata['country_code'])
+				if 'type' in json:
+					await embed_composer.compose(interaction.user, json, 'coverart', False, censor)
+					await interaction.followup.send(embed = embed_composer.embed, view = embed_composer.button_view)
+					successful_request()
+					api_latency(json['meta']['processing_time']['global_io'])
+				elif json == {}:
+					await embed_composer.error(204)
+					await interaction.followup.send(embed = embed_composer.embed)
+					failed_request()
+				else:
+					await embed_composer.error(json['status'])
+					await interaction.followup.send(embed = embed_composer.embed)
+					failed_request()
 			else:
-				await embed_composer.error(json['status'])
+				await embed_composer.error(400, {
+					'title': "Invalid link provided.",
+					'description': f'This command only works with songs, albums, EP-s and music videos from Spotify, Apple Music, YouTube (Music), and Deezer.',
+					'meaning': 'Bad request'
+				})
 				await interaction.followup.send(embed = embed_composer.embed)
 				failed_request()
+			await embed_composer.compose(interaction.user, json, 'coverart', True, censor)
+			await log(
+				[embed_composer.embed],
+				[json],
+				'coverart',
+				f'link:`{link}` country_code:`{country_code}` censor:`{censor}`',
+				current_unix_time_ms() - start_time,
+				embed_composer.button_view
+			)
 		else:
 			await embed_composer.error(400, {
 				'title': "Invalid link provided.",
@@ -431,15 +449,6 @@ async def coverart(interaction: discord.Interaction, link: str, country_code: st
 			})
 			await interaction.followup.send(embed = embed_composer.embed)
 			failed_request()
-		await embed_composer.compose(interaction.user, json, 'coverart', True, censor)
-		await log(
-			[embed_composer.embed],
-			[json],
-			'coverart',
-			f'link:`{link}` country_code:`{country_code}` censor:`{censor}`',
-			current_unix_time_ms() - start_time,
-			embed_composer.button_view
-		)
 	except Exception as error:
 		await embed_composer.error('other')
 		await interaction.followup.send(embed = embed_composer.embed)
@@ -468,7 +477,7 @@ async def knowledge(interaction: discord.Interaction, query: str, country_code: 
 	embed_composer = EmbedComposer()
 	try:
 		metadata = await url_tools.get_metadata_from_url(query)
-		if metadata['id'] == None and metadata['type'] == None:
+		if metadata == None or metadata['id'] == None and metadata['type'] == None:
 			json = await api.search_knowledge(query, country_code)
 		else:
 			json = await api.lookup_knowledge(metadata['id'], metadata['service'], country_code)
