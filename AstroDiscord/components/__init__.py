@@ -7,3 +7,4 @@ from AstroDiscord.components.log import log, log_catastrophe
 from AstroDiscord.components.time import *
 from AstroDiscord.components.ini import presence, stats
 from AstroDiscord.components.paginator import PaginatorView
+from AstroDiscord.components.commands.request_counting import reset, successful_request, failed_request, api_latency, client_latency
