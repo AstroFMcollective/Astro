@@ -102,7 +102,7 @@ class EmbedComposer:
 		if 'type' in json_response:
 			if json_response['type'] in song_obj_types: # If the media object is a song
 				title = escape_markdown(json_response['title']) if censor == False else escape_markdown(json_response['censored_title']) # Get title
-				title = f'{title} `E`' if json_response['is_explicit'] == True else title # Add an explicit marker if the song is explicit
+				title = f'{title}   `EXPLICIT`' if json_response['is_explicit'] == True else title # Add an explicit marker if the song is explicit
 				artists = ', '.join([f'**{escape_markdown(artist['name'])}**' for artist in json_response['artists']]) # Get artists
 				if 'collection' in json_response: # Get collection
 					if json_response['collection'] != None:
@@ -115,7 +115,8 @@ class EmbedComposer:
 				else:
 					collection = None
 				genre = json_response['genre'] # Get genre
-				desc_elements = [artists, collection, genre]
+				confidence = f'`[{round(json_response['meta']['filter_confidence_percentage']['global_io'], 3)}%]`' if 'global_io' in json_response['meta']['filter_confidence_percentage'] else None
+				desc_elements = [artists, collection, genre, confidence]
 				while None in desc_elements: # Remove anything without a value
 					desc_elements.remove(None)
 				cover_url = None
@@ -161,10 +162,11 @@ class EmbedComposer:
 			
 			if json_response['type'] in music_video_types: # If the media object is a music video
 				title = escape_markdown(json_response['title']) if censor == False else escape_markdown(json_response['censored_title']) # Get title
-				title = f'{title} `E`' if json_response['is_explicit'] == True else title # Add an explicit marker if the song is explicit
+				title = f'{title}   `EXPLICIT`' if json_response['is_explicit'] == True else title # Add an explicit marker if the song is explicit
 				artists = ', '.join([f'**{escape_markdown(artist['name'])}**' for artist in json_response['artists']]) # Get artists
 				genre = json_response['genre'] # Get genre
-				desc_elements = [artists, 'Music Video', genre]
+				confidence = f'`[{round(json_response['meta']['filter_confidence_percentage']['global_io'], 3)}%]`' if 'global_io' in json_response['meta']['filter_confidence_percentage'] else None
+				desc_elements = [artists, 'Music Video', genre, confidence]
 				while None in desc_elements: # Remove anything without a value
 					desc_elements.remove(None)
 				cover_url = None
@@ -213,7 +215,8 @@ class EmbedComposer:
 				artists = ', '.join([f'**{escape_markdown(artist['name'])}**' for artist in json_response['artists']]) # Get artists
 				year = json_response['release_year'] # Get release year
 				genre = json_response['genre'] # Get genre
-				desc_elements = [artists, year, genre] 
+				confidence = f'`[{round(json_response['meta']['filter_confidence_percentage']['global_io'], 3)}%]`' if 'global_io' in json_response['meta']['filter_confidence_percentage'] else None
+				desc_elements = [artists, year, genre, confidence] 
 				while None in desc_elements: # Remove anything without a value
 					desc_elements.remove(None)
 				cover_url = None
@@ -274,7 +277,8 @@ class EmbedComposer:
 				genre = json_response['genre'] # Get genre
 				description = json_response['description'] if censor == False else json_response['censored_description'] # Get description
 				description = description[:description.index('\n\n\n\n')] # Cut out anything that is not the first paragraph of the description
-				desc_elements = [artists, collection, date, genre]
+				confidence = f'`[{round(json_response['meta']['filter_confidence_percentage']['global_io'], 3)}%]`' if 'global_io' in json_response['meta']['filter_confidence_percentage'] else None
+				desc_elements = [artists, collection, date, genre, confidence]
 				while None in desc_elements: # Remove anything without a value
 					desc_elements.remove(None)
 				for service in service_metadata_priority: # Get cover art
