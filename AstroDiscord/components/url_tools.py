@@ -94,6 +94,10 @@ class URLTools:
 				else: # Apple Music collections
 					identifier = url_path[url_path.find('/')+1:]
 					media_type = 'collection'
+			elif url_path.find('song') >= 0:
+				url_path = url_path.replace('song/', '')
+				identifier = url_path[url_path.find('/')+1:]
+				media_type = 'song'
 			elif url_path.find('music-video') >= 0: # Apple Music music videos
 				url_path = url_path.replace('music_video/', '')
 				identifier = url_path[url_path.find('/')+1:]
