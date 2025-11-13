@@ -81,6 +81,23 @@ class AstroAPI:
                     return json_response
                 else:
                     return {}
+    
+    async def get_self(self, media_type: str, id: str, id_service: str, country_code: str = 'us'):
+        async with aiohttp.ClientSession() as session:
+            if country_code == None:
+                country_code = 'us'
+            api_url = f'{self.api_endpoint}/music/{id_service}/lookup_{media_type}'
+            api_params = {
+                'id': id,
+                'country_code': country_code
+            }
+            async with session.get(url = api_url, params = api_params) as response:
+                if response.status != 204:
+                    json_response = dict(await response.json())
+                    json_response['status'] = response.status
+                    return json_response
+                else:
+                    return {}
             
     async def lookup_knowledge(self, id: str, id_service: str, country_code: str = 'us'):
         async with aiohttp.ClientSession() as session:
