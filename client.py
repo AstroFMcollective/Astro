@@ -125,8 +125,13 @@ async def searchsong(interaction: discord.Interaction, artist: str, title: str, 
 	try:
 		json = await api.search_song(artist, title, from_album, is_explicit, country_code)
 		if 'type' in json:
-			await embed_composer.compose(interaction.user, json, 'searchsong', False, censor)
-			await interaction.followup.send(embed = embed_composer.embed, view = embed_composer.button_view)
+			await embed_composer.compose(interaction.user, json, 'searchsong', False, censor, True)
+			response = await interaction.followup.send(embed = embed_composer.embed, view = embed_composer.button_view)
+
+			ai_report = await api.snitch(json, country_code)
+			await embed_composer.compose(interaction.user, ai_report, 'searchsong', False, censor)
+			await response.edit(embed = embed_composer.embed, view = embed_composer.button_view)
+			
 			successful_request()
 			api_latency(json['meta']['processing_time']['global_io'])
 		elif json == {}:
@@ -137,7 +142,7 @@ async def searchsong(interaction: discord.Interaction, artist: str, title: str, 
 			await embed_composer.error(json['status'])
 			await interaction.followup.send(embed = embed_composer.embed)
 			failed_request()
-		await embed_composer.compose(interaction.user, json, 'searchsong', True, censor)
+		await embed_composer.compose(interaction.user, ai_report, 'searchsong', True, censor)
 		await log(
 			[embed_composer.embed],
 			[json],
@@ -176,8 +181,13 @@ async def searchalbum(interaction: discord.Interaction, artist: str, title: str,
 	try:
 		json = await api.search_album(artist, title, year, country_code)
 		if 'type' in json:
-			await embed_composer.compose(interaction.user, json, 'searchalbum', False, censor)
-			await interaction.followup.send(embed = embed_composer.embed, view = embed_composer.button_view)
+			await embed_composer.compose(interaction.user, json, 'searchalbum', False, censor, True)
+			response = await interaction.followup.send(embed = embed_composer.embed, view = embed_composer.button_view)
+
+			ai_report = await api.snitch(json, country_code)
+			await embed_composer.compose(interaction.user, ai_report, 'searchalbum', False, censor)
+			await response.edit(embed = embed_composer.embed, view = embed_composer.button_view)
+
 			successful_request()
 			api_latency(json['meta']['processing_time']['global_io'])
 		elif json == {}:
@@ -188,7 +198,7 @@ async def searchalbum(interaction: discord.Interaction, artist: str, title: str,
 			await embed_composer.error(json['status'])
 			await interaction.followup.send(embed = embed_composer.embed)
 			failed_request()
-		await embed_composer.compose(interaction.user, json, 'searchalbum', True, censor)
+		await embed_composer.compose(interaction.user, ai_report, 'searchalbum', True, censor)
 		await log(
 			[embed_composer.embed],
 			[json],
@@ -230,8 +240,13 @@ async def search(interaction: discord.Interaction, query: str, country_code: str
 		else:
 			json = await api.lookup(metadata['type'], metadata['id'], metadata['service'], country_code)
 		if 'type' in json:
-			await embed_composer.compose(interaction.user, json, 'search', False, censor)
-			await interaction.followup.send(embed = embed_composer.embed, view = embed_composer.button_view)
+			await embed_composer.compose(interaction.user, json, 'search', False, censor, True)
+			response = await interaction.followup.send(embed = embed_composer.embed, view = embed_composer.button_view)
+
+			ai_report = await api.snitch(json, country_code)
+			await embed_composer.compose(interaction.user, ai_report, 'search', False, censor)
+			await response.edit(embed = embed_composer.embed, view = embed_composer.button_view)
+
 			successful_request()
 			api_latency(json['meta']['processing_time']['global_io'])
 		elif json == {}:
@@ -242,7 +257,7 @@ async def search(interaction: discord.Interaction, query: str, country_code: str
 			await embed_composer.error(json['status'])
 			await interaction.followup.send(embed = embed_composer.embed)
 			failed_request()
-		await embed_composer.compose(interaction.user, json, 'search', True, censor)
+		await embed_composer.compose(interaction.user, ai_report, 'search', True, censor)
 		await log(
 			[embed_composer.embed],
 			[json],
@@ -423,8 +438,13 @@ async def knowledge(interaction: discord.Interaction, query: str, country_code: 
 		else:
 			json = await api.lookup_knowledge(metadata['id'], metadata['service'], country_code)
 		if 'type' in json:
-			await embed_composer.compose(interaction.user, json, 'knowledge', False, censor)
-			await interaction.followup.send(embed = embed_composer.embed, view = embed_composer.button_view)
+			await embed_composer.compose(interaction.user, json, 'knowledge', False, censor, True)
+			response = await interaction.followup.send(embed = embed_composer.embed, view = embed_composer.button_view)
+
+			ai_report = await api.snitch(json, country_code)
+			await embed_composer.compose(interaction.user, ai_report, 'knowledge', False, censor)
+			await response.edit(embed = embed_composer.embed, view = embed_composer.button_view)
+
 			successful_request()
 			api_latency(json['meta']['processing_time']['global_io'])
 		elif json == {}:
