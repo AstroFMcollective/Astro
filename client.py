@@ -49,14 +49,72 @@ async def on_ready():
 		discord_presence.start()
 	if not dashboard.is_running():
 		dashboard.start()
+	if not reset_today_stats.is_running():
+		reset_today_stats.start()
 	print('[AstroDiscord] Ready!')
 	
 
 
 @client.event
 async def on_message(message):
+	start_time = current_unix_time_ms()
+
+	async def auto_link_lookup(data):
+		embed_composer = EmbedComposer()
+		self_object = await api.get_self(
+			data['type'],
+			data['id'],
+			data['service'],
+			data['country_code']
+		)
+
+		if 'type' in self_object:
+			# First stage - Get baseline data of the music object
+			await embed_composer.compose(message.author, self_object, 'link', False, False, True)
+			response = await message.reply(embed = embed_composer.embed, view = embed_composer.button_view, mention_author = False)
+
+			# Second stage - Get Global Interface data of the music object
+			global_object = await api.lookup(
+				data['type'],
+				data['id'],
+				data['service'],
+				data['country_code']
+			)
+
+			if 'type' in global_object:
+				await embed_composer.compose(message.author, global_object, 'link', False, False, True)
+				response = await response.edit(embed = embed_composer.embed, view = embed_composer.button_view)
+
+				# Third stage - Check music object for generative AI
+				ai_check = await api.snitch(
+					global_object,
+					data['country_code']
+				)
+
+				if 'type' in ai_check:
+					await embed_composer.compose(message.author, ai_check, 'link', False, False)
+					response = await response.edit(embed = embed_composer.embed, view = embed_composer.button_view)
+					successful_request()
+					api_latency(self_object['meta']['processing_time'][data['service']] + global_object['meta']['processing_time']['global_io'] + ai_check['meta']['processing_time']['global_io'])
+					await log(
+						[embed_composer.embed],
+						[ai_check],
+						'Auto Link Lookup',
+						f'type:`{data['type']}` id:`{data['id']}` service:`{data['service']}` country_code:`{data['country_code']}`',
+						current_unix_time_ms() - start_time, 
+						embed_composer.button_view
+					)
+				else:
+					failed_request()
+			else:
+				failed_request()
+				await message
+		else:
+			failed_request()
+
+
+
 	if message.author != client.user:
-		start_time = current_unix_time_ms()
 		try:
 			media_data = []
 			urls = await url_tools.get_urls_from_string(message.content)
@@ -70,34 +128,10 @@ async def on_message(message):
 					if data['id'] != None and data['type'] != None:
 						tasks.append(
 							create_task(
-								api.lookup(
-									data['type'],
-									data['id'],
-									data['service'],
-									data['country_code']
-								)
+								auto_link_lookup(data)
 							)
 						)
-				results = await gather(*tasks)
-				for result in results:
-					embed_composer = EmbedComposer()
-					if 'type' in result:
-						await embed_composer.compose(message.author, result, 'link', False)
-						await message.reply(embed = embed_composer.embed, view = embed_composer.button_view, mention_author = False)
-						successful_request()
-						api_latency(result['meta']['processing_time']['global_io'])
-					else:
-						failed_request()
-					await embed_composer.compose(message.author, result, 'link', True)
-					ri = results.index(result)
-					await log(
-						[embed_composer.embed],
-						[result],
-						'Auto Link Lookup',
-						f'type:`{media_data[ri]['type']}` id:`{media_data[ri]['id']}` service:`{media_data[ri]['service']}` country_code:`{media_data[ri]['country_code']}`',
-						current_unix_time_ms() - start_time, 
-						embed_composer.button_view
-					)
+				await gather(*tasks)
 			else: 
 				return
 		except Exception as error:
@@ -133,7 +167,7 @@ async def searchsong(interaction: discord.Interaction, artist: str, title: str, 
 			await response.edit(embed = embed_composer.embed, view = embed_composer.button_view)
 			
 			successful_request()
-			api_latency(json['meta']['processing_time']['global_io'])
+			api_latency(json['meta']['processing_time']['global_io'] + ai_report['meta']['processing_time']['global_io'])
 		elif json == {}:
 			await embed_composer.error(204)
 			await interaction.followup.send(embed = embed_composer.embed)
@@ -189,7 +223,7 @@ async def searchalbum(interaction: discord.Interaction, artist: str, title: str,
 			await response.edit(embed = embed_composer.embed, view = embed_composer.button_view)
 
 			successful_request()
-			api_latency(json['meta']['processing_time']['global_io'])
+			api_latency(json['meta']['processing_time']['global_io'] + ai_report['meta']['processing_time']['global_io'])
 		elif json == {}:
 			await embed_composer.error(204)
 			await interaction.followup.send(embed = embed_composer.embed)
@@ -248,7 +282,7 @@ async def search(interaction: discord.Interaction, query: str, country_code: str
 			await response.edit(embed = embed_composer.embed, view = embed_composer.button_view)
 
 			successful_request()
-			api_latency(json['meta']['processing_time']['global_io'])
+			api_latency(json['meta']['processing_time']['global_io'] + ai_report['meta']['processing_time']['global_io'])
 		elif json == {}:
 			await embed_composer.error(204)
 			await interaction.followup.send(embed = embed_composer.embed)
@@ -315,10 +349,15 @@ async def snoop(interaction: discord.Interaction, user: discord.Member = None, e
 		else:
 			json = await api.lookup('song', identifier, 'spotify', country_code)	
 			if 'type' in json:
-				await embed_composer.compose(user, json, 'snoop', False, censor)
-				await interaction.followup.send(embed = embed_composer.embed, view = embed_composer.button_view)
+				await embed_composer.compose(user, json, 'snoop', False, censor, True)
+				response = await interaction.followup.send(embed = embed_composer.embed, view = embed_composer.button_view)
+
+				ai_report = await api.snitch(json, country_code)
+				await embed_composer.compose(interaction.user, ai_report, 'snoop', False, censor)
+				await response.edit(embed = embed_composer.embed, view = embed_composer.button_view)
+
 				successful_request()
-				api_latency(json['meta']['processing_time']['global_io'])
+				api_latency(json['meta']['processing_time']['global_io'] + ai_report['meta']['processing_time']['global_io'])
 			elif json == {}:
 				await embed_composer.error(204)
 				await interaction.followup.send(embed = embed_composer.embed)
@@ -368,10 +407,15 @@ async def coverart(interaction: discord.Interaction, link: str, country_code: st
 			if metadata == None or metadata['id'] != None and metadata['type'] != None:
 				json = await api.lookup(metadata['type'], metadata['id'], metadata['service'], metadata['country_code'])
 				if 'type' in json:
-					await embed_composer.compose(interaction.user, json, 'coverart', False, censor)
-					await interaction.followup.send(embed = embed_composer.embed, view = embed_composer.button_view)
+					await embed_composer.compose(interaction.user, json, 'coverart', False, censor, True)
+					response = await interaction.followup.send(embed = embed_composer.embed, view = embed_composer.button_view)
+
+					ai_report = await api.snitch(json, country_code)
+					await embed_composer.compose(interaction.user, ai_report, 'coverart', False, censor)
+					await response.edit(embed = embed_composer.embed, view = embed_composer.button_view)
+
 					successful_request()
-					api_latency(json['meta']['processing_time']['global_io'])
+					api_latency(json['meta']['processing_time']['global_io'] + ai_report['meta']['processing_time']['global_io'])
 				elif json == {}:
 					await embed_composer.error(204)
 					await interaction.followup.send(embed = embed_composer.embed)
@@ -602,6 +646,10 @@ async def discord_presence():
 			name = presence[randint(0, len(presence)-1)],
 		)
 	)
+
+@tasks.loop(seconds = 86400)
+async def reset_today_stats():
+	reset()
 
 
 
