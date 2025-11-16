@@ -99,7 +99,7 @@ class AstroAPI:
                 else:
                     return {}
                 
-    async def snitch(self, media_object: str, country_code: str = 'us'):
+    async def snitch(self, media_object: dict, country_code: str = 'us'):
         async with aiohttp.ClientSession() as session:
             if country_code == None:
                 country_code = 'us'
