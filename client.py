@@ -105,10 +105,21 @@ async def on_message(message):
 						embed_composer.button_view
 					)
 				else:
-					failed_request()
+					await embed_composer.compose(message.author, ai_check, 'link', False, False)
+					response = await response.edit(embed = embed_composer.embed, view = embed_composer.button_view)
+					successful_request()
+					api_latency(self_object['meta']['processing_time'][data['service']] + global_object['meta']['processing_time']['global_io'])
+					await log(
+						[embed_composer.embed],
+						[global_object],
+						'Auto Link Lookup',
+						f'type:`{data['type']}` id:`{data['id']}` service:`{data['service']}` country_code:`{data['country_code']}`',
+						current_unix_time_ms() - start_time, 
+						embed_composer.button_view
+					)
 			else:
 				failed_request()
-				await message
+				await message.delete()
 		else:
 			failed_request()
 
@@ -526,15 +537,64 @@ async def knowledge(interaction: discord.Interaction, query: str, country_code: 
 @app_commands.allowed_contexts(guilds = True, dms = True, private_channels = True)
 async def context_menu_lookup(interaction: discord.Interaction, message: discord.Message):
 	start_time = current_unix_time_ms()
+	media_data = []
+	embeds = []
+	buttons = []
+
+	async def context_menu_link_lookup(data):
+		embed_composer = EmbedComposer()
+		global_object = await api.lookup(
+			data['type'],
+			data['id'],
+			data['service'],
+			data['country_code']
+		)
+
+		if 'type' in global_object:
+			ai_check = await api.snitch(
+				global_object,
+				data['country_code']
+			)
+
+			if 'type' in ai_check:
+				await embed_composer.compose(message.author, ai_check, 'link', False, False)
+				embeds.append(embed_composer.embed)
+				buttons.append(embed_composer.button_view)
+
+				successful_request()
+				api_latency(global_object['meta']['processing_time']['global_io'] + ai_check['meta']['processing_time']['global_io'])
+				await log(
+					[embed_composer.embed],
+					[ai_check],
+					'Auto Link Lookup',
+					f'type:`{data['type']}` id:`{data['id']}` service:`{data['service']}` country_code:`{data['country_code']}`',
+					current_unix_time_ms() - start_time, 
+					embed_composer.button_view
+				)
+			else:
+				await embed_composer.compose(message.author, ai_check, 'link', False, False)
+				embeds.append(embed_composer.embed)
+				buttons.append(embed_composer.button_view)
+
+				successful_request()
+				api_latency(global_object['meta']['processing_time']['global_io'])
+				await log(
+					[embed_composer.embed],
+					[global_object],
+					'Search music link(s)',
+					f'type:`{data['type']}` id:`{data['id']}` service:`{data['service']}` country_code:`{data['country_code']}`',
+					current_unix_time_ms() - start_time, 
+					embed_composer.button_view
+				)
+		else:
+			failed_request()
+
 	if app_commands.AppInstallationType.user == True:
 		censor = True
 	else:
 		censor = False
 	await interaction.response.defer()
 	try:
-		media_data = []
-		embeds = []
-		buttons = []
 		urls = await url_tools.get_urls_from_string(message.content)
 
 		if urls == []:
@@ -560,46 +620,18 @@ async def context_menu_lookup(interaction: discord.Interaction, message: discord
 				if data['id'] != None and data['type'] != None:
 					tasks.append(
 						create_task(
-							api.lookup(
-								data['type'],
-								data['id'],
-								data['service'],
-								data['country_code']
-							)
+							context_menu_link_lookup(data)
 						)
 					)
 			if len(tasks) != 0:
 				results = await gather(*tasks)
-				
-				for result in results:
-					embed_composer = EmbedComposer()
-					if 'type' in result:
-						await embed_composer.compose(message.author, result, 'link', False, censor)
-
-						successful_request()
-						api_latency(result['meta']['processing_time']['global_io'])
-						if len(results) == 1:
-							await interaction.followup.send(embed = embed_composer.embed, view = embed_composer.button_view)
-						else:
-							embeds.append(embed_composer.embed)
-							buttons.append(embed_composer.button_view)
-					else:
-						failed_request()
-
-					await embed_composer.compose(message.author, result, 'link', True)
-					ri = results.index(result)
-					await log(
-						[embed_composer.embed],
-						[result],
-						'Search music link(s)',
-						f'type:`{media_data[ri]['type']}` id:`{media_data[ri]['id']}` service:`{media_data[ri]['service']}` country_code:`{media_data[ri]['country_code']}`',
-						current_unix_time_ms() - start_time, 
-						embed_composer.button_view
-					)
 
 				if embeds != []:
-					pagination = PaginatorView(embeds = embeds, button_views = buttons)
-					pagination.message = await interaction.followup.send(embed = pagination.initial_embed, view = pagination)
+					if len(results) == 1:
+						await interaction.followup.send(embed = embeds[0], view = buttons[0])
+					else:
+						pagination = PaginatorView(embeds = embeds, button_views = buttons)
+						pagination.message = await interaction.followup.send(embed = pagination.initial_embed, view = pagination)
 				else:
 					await embed_composer.error(204)
 					await interaction.followup.send(embed = embed_composer.embed)
