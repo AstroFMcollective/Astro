@@ -99,10 +99,8 @@ class AstroAPI:
                 else:
                     return {}
                 
-    async def snitch(self, media_object: dict, country_code: str = 'us'):
+    async def snitch(self, media_object: dict):
         async with aiohttp.ClientSession() as session:
-            if country_code == None:
-                country_code = 'us'
             api_url = f'{self.api_endpoint}/snitch/media'
             async with session.post(url = api_url, json = media_object) as response:
                 if response.status != 204:

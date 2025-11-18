@@ -90,8 +90,7 @@ async def on_message(message):
 
 				# Third stage - Check music object for generative AI
 				ai_check = await api.snitch(
-					global_object,
-					data['country_code']
+					global_object
 				)
 
 				if 'type' in ai_check:
@@ -176,7 +175,7 @@ async def searchsong(interaction: discord.Interaction, artist: str, title: str, 
 			await embed_composer.compose(interaction.user, json, 'searchsong', False, censor, True)
 			response = await interaction.followup.send(embed = embed_composer.embed, view = embed_composer.button_view)
 
-			ai_report = await api.snitch(json, country_code)
+			ai_report = await api.snitch(json)
 			await embed_composer.compose(interaction.user, ai_report, 'searchsong', False, censor)
 			await response.edit(embed = embed_composer.embed, view = embed_composer.button_view)
 			
@@ -232,7 +231,7 @@ async def searchalbum(interaction: discord.Interaction, artist: str, title: str,
 			await embed_composer.compose(interaction.user, json, 'searchalbum', False, censor, True)
 			response = await interaction.followup.send(embed = embed_composer.embed, view = embed_composer.button_view)
 
-			ai_report = await api.snitch(json, country_code)
+			ai_report = await api.snitch(json)
 			await embed_composer.compose(interaction.user, ai_report, 'searchalbum', False, censor)
 			await response.edit(embed = embed_composer.embed, view = embed_composer.button_view)
 
@@ -291,7 +290,7 @@ async def search(interaction: discord.Interaction, query: str, country_code: str
 			await embed_composer.compose(interaction.user, json, 'search', False, censor, True)
 			response = await interaction.followup.send(embed = embed_composer.embed, view = embed_composer.button_view)
 
-			ai_report = await api.snitch(json, country_code)
+			ai_report = await api.snitch(json)
 			await embed_composer.compose(interaction.user, ai_report, 'search', False, censor)
 			await response.edit(embed = embed_composer.embed, view = embed_composer.button_view)
 
@@ -366,7 +365,7 @@ async def snoop(interaction: discord.Interaction, user: discord.Member = None, e
 				await embed_composer.compose(user, json, 'snoop', False, censor, True)
 				response = await interaction.followup.send(embed = embed_composer.embed, view = embed_composer.button_view)
 
-				ai_report = await api.snitch(json, country_code)
+				ai_report = await api.snitch(json)
 				await embed_composer.compose(interaction.user, ai_report, 'snoop', False, censor)
 				await response.edit(embed = embed_composer.embed, view = embed_composer.button_view)
 
@@ -424,7 +423,7 @@ async def coverart(interaction: discord.Interaction, link: str, country_code: st
 					await embed_composer.compose(interaction.user, json, 'coverart', False, censor, True)
 					response = await interaction.followup.send(embed = embed_composer.embed, view = embed_composer.button_view)
 
-					ai_report = await api.snitch(json, country_code)
+					ai_report = await api.snitch(json)
 					await embed_composer.compose(interaction.user, ai_report, 'coverart', False, censor)
 					await response.edit(embed = embed_composer.embed, view = embed_composer.button_view)
 
@@ -499,7 +498,7 @@ async def knowledge(interaction: discord.Interaction, query: str, country_code: 
 			await embed_composer.compose(interaction.user, json, 'knowledge', False, censor, True)
 			response = await interaction.followup.send(embed = embed_composer.embed, view = embed_composer.button_view)
 
-			ai_report = await api.snitch(json, country_code)
+			ai_report = await api.snitch(json)
 			await embed_composer.compose(interaction.user, ai_report, 'knowledge', False, censor)
 			await response.edit(embed = embed_composer.embed, view = embed_composer.button_view)
 
@@ -555,8 +554,7 @@ async def context_menu_lookup(interaction: discord.Interaction, message: discord
 
 		if 'type' in global_object:
 			ai_check = await api.snitch(
-				global_object,
-				data['country_code']
+				global_object
 			)
 
 			if 'type' in ai_check:
