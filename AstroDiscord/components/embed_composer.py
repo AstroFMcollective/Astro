@@ -14,6 +14,10 @@ class EmbedComposer:
 		self.button_view = None
 		self.embed = None
 		self.last_json = None
+		self.generic_loading = Embed(
+			description = "Loading...",
+			colour = 0xf5c000
+		)
 	
 	async def error(self, error: int, custom: dict = None):
 		error_titles = {
@@ -57,7 +61,9 @@ class EmbedComposer:
             icon_url = text['images']['pfpurl']
 		)
 
-	
+
+
+
 	async def compose(self, user: User | Member, json_response: dict, command_type: str, anonymous: bool = False, censor: bool = False, loading: bool = False):
 		"""
 			Compose a Discord embed from a given JSON file.

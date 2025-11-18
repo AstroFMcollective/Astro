@@ -61,6 +61,9 @@ async def on_message(message):
 
 	async def auto_link_lookup(data):
 		embed_composer = EmbedComposer()
+
+		response = await message.reply(embed = embed_composer.generic_loading, mention_author = False)
+
 		self_object = await api.get_self(
 			data['type'],
 			data['id'],
@@ -71,7 +74,7 @@ async def on_message(message):
 		if 'type' in self_object:
 			# First stage - Get baseline data of the music object
 			await embed_composer.compose(message.author, self_object, 'link', False, False, True)
-			response = await message.reply(embed = embed_composer.embed, view = embed_composer.button_view, mention_author = False)
+			response = await response.edit(embed = embed_composer.embed, view = embed_composer.button_view)
 
 			# Second stage - Get Global Interface data of the music object
 			global_object = await api.lookup(
