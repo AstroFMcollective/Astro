@@ -124,8 +124,11 @@ async def on_message(message):
 			else:
 				failed_request()
 				await message.delete()
+				await log_catastrophe('Auto Link Lookup', f'type:`{data['type']}` id:`{data['id']}` service:`{data['service']}` country_code:`{data['country_code']}`', 'HTTP error when talking to Astro API (Global stage)')
+
 		else:
 			failed_request()
+			await log_catastrophe('Auto Link Lookup', f'type:`{data['type']}` id:`{data['id']}` service:`{data['service']}` country_code:`{data['country_code']}`', 'HTTP error when talking to Astro API (Baseline stage)')
 
 
 
