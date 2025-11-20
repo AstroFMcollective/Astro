@@ -312,8 +312,11 @@ class EmbedComposer:
 				collection = None
 			date = json_response['release_date'] # Get release date
 			genre = json_response['genre'] # Get genre
-			description = json_response['description'] if censor == False else json_response['censored_description'] # Get description
-			description = description[:description.index('\n\n\n\n')] if description.find('\n\n\n\n') >= 0 else description # Cut out anything that is not the first paragraph of the description
+			if json_response['description'] != None:
+				description = json_response['description'] if censor == False else json_response['censored_description'] # Get description
+				description = description[:description.index('\n\n\n\n')] if description.find('\n\n\n\n') >= 0 else description # Cut out anything that is not the first paragraph of the description
+			else:
+				description = None
 			confidence = f'`[{round(json_response['meta']['filter_confidence_percentage']['global_io'], 3)}%]`' if 'global_io' in json_response['meta']['filter_confidence_percentage'] else None
 			desc_elements = [artists, collection, date, genre]
 			while None in desc_elements: # Remove anything without a value
@@ -346,7 +349,8 @@ class EmbedComposer:
 				self.embed.set_image( # Cover art
 					url = cover_url
 				)
-			self.embed.add_field( # Add description
+			if description != None:
+				self.embed.add_field( # Add description
 					name = '',
 					value = description,
 					inline = False
