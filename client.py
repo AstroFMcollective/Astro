@@ -98,6 +98,7 @@ async def on_message(message):
 					response = await response.edit(embed = embed_composer.embed, view = embed_composer.button_view)
 					successful_request()
 					api_latency(self_object['meta']['processing_time'][data['service']] + global_object['meta']['processing_time']['global_io'] + ai_check['meta']['processing_time']['global_io'])
+					await embed_composer.compose(message.author, ai_check, 'link', True, False)
 					await log(
 						[embed_composer.embed],
 						[ai_check],
@@ -107,10 +108,11 @@ async def on_message(message):
 						embed_composer.button_view
 					)
 				else:
-					await embed_composer.compose(message.author, ai_check, 'link', False, False)
+					await embed_composer.compose(message.author, global_object, 'link', False, False)
 					response = await response.edit(embed = embed_composer.embed, view = embed_composer.button_view)
 					successful_request()
 					api_latency(self_object['meta']['processing_time'][data['service']] + global_object['meta']['processing_time']['global_io'])
+					await embed_composer.compose(message.author, global_object, 'link', True, False)
 					await log(
 						[embed_composer.embed],
 						[global_object],
