@@ -180,8 +180,12 @@ async def searchsong(interaction: discord.Interaction, artist: str, title: str, 
 			await embed_composer.compose(interaction.user, json, 'searchsong', False, censor, True)
 			response = await interaction.followup.send(embed = embed_composer.embed, view = embed_composer.button_view)
 
-			ai_report = await api.snitch(json)
-			await embed_composer.compose(interaction.user, ai_report, 'searchsong', False, censor)
+			try:
+				ai_report = await api.snitch(json)
+				await embed_composer.compose(interaction.user, ai_report, 'searchsong', False, censor)
+			except:
+				await embed_composer.compose(interaction.user, json, 'searchsong', False, censor)
+
 			await response.edit(embed = embed_composer.embed, view = embed_composer.button_view)
 			
 			successful_request()
@@ -236,8 +240,12 @@ async def searchalbum(interaction: discord.Interaction, artist: str, title: str,
 			await embed_composer.compose(interaction.user, json, 'searchalbum', False, censor, True)
 			response = await interaction.followup.send(embed = embed_composer.embed, view = embed_composer.button_view)
 
-			ai_report = await api.snitch(json)
-			await embed_composer.compose(interaction.user, ai_report, 'searchalbum', False, censor)
+			try:
+				ai_report = await api.snitch(json)
+				await embed_composer.compose(interaction.user, ai_report, 'searchalbum', False, censor)
+			except:
+				await embed_composer.compose(interaction.user, json, 'searchalbum', False, censor)
+
 			await response.edit(embed = embed_composer.embed, view = embed_composer.button_view)
 
 			successful_request()
@@ -295,8 +303,12 @@ async def search(interaction: discord.Interaction, query: str, country_code: str
 			await embed_composer.compose(interaction.user, json, 'search', False, censor, True)
 			response = await interaction.followup.send(embed = embed_composer.embed, view = embed_composer.button_view)
 
-			ai_report = await api.snitch(json)
-			await embed_composer.compose(interaction.user, ai_report, 'search', False, censor)
+			try:
+				ai_report = await api.snitch(json)
+				await embed_composer.compose(interaction.user, ai_report, 'search', False, censor)
+			except:
+				await embed_composer.compose(interaction.user, json, 'search', False, censor)
+				
 			await response.edit(embed = embed_composer.embed, view = embed_composer.button_view)
 
 			successful_request()
@@ -370,9 +382,13 @@ async def snoop(interaction: discord.Interaction, user: discord.Member = None, e
 				await embed_composer.compose(user, json, 'snoop', False, censor, True)
 				response = await interaction.followup.send(embed = embed_composer.embed, view = embed_composer.button_view)
 
-				ai_report = await api.snitch(json)
-				await embed_composer.compose(interaction.user, ai_report, 'snoop', False, censor)
-				await response.edit(embed = embed_composer.embed, view = embed_composer.button_view)
+				try:
+					ai_report = await api.snitch(json)
+					await embed_composer.compose(interaction.user, ai_report, 'snoop', False, censor)
+				except:
+					await embed_composer.compose(interaction.user, json, 'snoop', False, censor)
+
+				await response.edit(embed = embed_composer.embed, view = embed_composer.button_view)		
 
 				successful_request()
 				api_latency(json['meta']['processing_time']['global_io'] + ai_report['meta']['processing_time']['global_io'])
@@ -428,8 +444,12 @@ async def coverart(interaction: discord.Interaction, link: str, country_code: st
 					await embed_composer.compose(interaction.user, json, 'coverart', False, censor, True)
 					response = await interaction.followup.send(embed = embed_composer.embed, view = embed_composer.button_view)
 
-					ai_report = await api.snitch(json)
-					await embed_composer.compose(interaction.user, ai_report, 'coverart', False, censor)
+					try:
+						ai_report = await api.snitch(json)
+						await embed_composer.compose(interaction.user, ai_report, 'coverart', False, censor)
+					except:
+						await embed_composer.compose(interaction.user, json, 'coverart', False, censor)
+					
 					await response.edit(embed = embed_composer.embed, view = embed_composer.button_view)
 
 					successful_request()
@@ -503,8 +523,12 @@ async def knowledge(interaction: discord.Interaction, query: str, country_code: 
 			await embed_composer.compose(interaction.user, json, 'knowledge', False, censor, True)
 			response = await interaction.followup.send(embed = embed_composer.embed, view = embed_composer.button_view)
 
-			ai_report = await api.snitch(json)
-			await embed_composer.compose(interaction.user, ai_report, 'knowledge', False, censor)
+			try:
+				ai_report = await api.snitch(json)
+				await embed_composer.compose(interaction.user, ai_report, 'knowledge', False, censor)
+			except:	
+				await embed_composer.compose(interaction.user, json, 'knowledge', False, censor)
+
 			await response.edit(embed = embed_composer.embed, view = embed_composer.button_view)
 
 			successful_request()
@@ -558,27 +582,43 @@ async def context_menu_lookup(interaction: discord.Interaction, message: discord
 		)
 
 		if 'type' in global_object:
-			ai_check = await api.snitch(
-				global_object
-			)
-
-			if 'type' in ai_check:
-				await embed_composer.compose(message.author, ai_check, 'link', False, False)
-				embeds.append(embed_composer.embed)
-				buttons.append(embed_composer.button_view)
-
-				successful_request()
-				api_latency(global_object['meta']['processing_time']['global_io'] + ai_check['meta']['processing_time']['global_io'])
-				await log(
-					[embed_composer.embed],
-					[ai_check],
-					'Auto Link Lookup',
-					f'type:`{data['type']}` id:`{data['id']}` service:`{data['service']}` country_code:`{data['country_code']}`',
-					current_unix_time_ms() - start_time, 
-					embed_composer.button_view
+			try:
+				ai_check = await api.snitch(
+					global_object
 				)
-			else:
-				await embed_composer.compose(message.author, ai_check, 'link', False, False)
+
+				if 'type' in ai_check:
+					await embed_composer.compose(message.author, ai_check, 'link', False, False)
+					embeds.append(embed_composer.embed)
+					buttons.append(embed_composer.button_view)
+
+					successful_request()
+					api_latency(global_object['meta']['processing_time']['global_io'] + ai_check['meta']['processing_time']['global_io'])
+					await log(
+						[embed_composer.embed],
+						[ai_check],
+						'Auto Link Lookup',
+						f'type:`{data['type']}` id:`{data['id']}` service:`{data['service']}` country_code:`{data['country_code']}`',
+						current_unix_time_ms() - start_time, 
+						embed_composer.button_view
+					)
+				else:
+					await embed_composer.compose(message.author, global_object, 'link', False, False)
+					embeds.append(embed_composer.embed)
+					buttons.append(embed_composer.button_view)
+
+					successful_request()
+					api_latency(global_object['meta']['processing_time']['global_io'])
+					await log(
+						[embed_composer.embed],
+						[global_object],
+						'Search music link(s)',
+						f'type:`{data['type']}` id:`{data['id']}` service:`{data['service']}` country_code:`{data['country_code']}`',
+						current_unix_time_ms() - start_time, 
+						embed_composer.button_view
+					)
+			except:
+				await embed_composer.compose(message.author, global_object, 'link', False, False)
 				embeds.append(embed_composer.embed)
 				buttons.append(embed_composer.button_view)
 

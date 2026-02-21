@@ -3,7 +3,8 @@ import aiohttp
 
 class AstroAPI:
     def __init__(self):
-        self.api_endpoint = tokens['api_endpoints']['astroapi']
+        self.api_endpoint = tokens['api_endpoints']['localhost']
+        # self.api_endpoint = tokens['api_endpoints']['astroapi']
 
     async def search_song(self, artist: str, title: str, collection_title: str = None, is_explicit: bool = None, country_code: str = 'us'):
         async with aiohttp.ClientSession() as session:
@@ -54,6 +55,25 @@ class AstroAPI:
             api_url = f'{self.api_endpoint}/music/global_io/search_query'
             api_params = {
                 'query': query,
+                'country_code': country_code
+            }
+            async with session.get(url = api_url, params = api_params) as response:
+                if response.status != 204:
+                    json_response = await response.json()
+                    json_response['status'] = response.status
+                    return json_response
+                else:
+                    return {}
+                
+    async def search_lyric(self, lyric: str, country_code: str = 'us'):
+        async with aiohttp.ClientSession() as session:
+            if country_code == None:
+                country_code = 'us'
+            api_url = f'{self.api_endpoint}/music/spotify/search_query'
+            api_params = {
+                'query': lyric,
+                'filter_for_best_match': False,
+                'media_types': 'song',
                 'country_code': country_code
             }
             async with session.get(url = api_url, params = api_params) as response:

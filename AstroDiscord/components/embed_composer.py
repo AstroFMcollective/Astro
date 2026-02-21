@@ -84,8 +84,7 @@ class EmbedComposer:
 			'loading8': '<a:loading8:1438606364535689376>',
 			'loading9': '<a:loading9:1438606365798043708>',
 			'loading10': '<a:loading10:1438606367584686212>',
-			'loading11': '<a:loading11:1438606378120777808>',
-
+			'loading11': '<a:loading11:1438606378120777808>'
 		}
 
 		# Object types
@@ -415,13 +414,13 @@ class EmbedComposer:
 								analysed_media_type = 'album'
 						elif json_response['analysed_media']['media_type'] in music_video_types:
 							analysed_media_type = 'music video'
-					analysis_string += f"- There is a large probability this {analysed_media_type}'s {media_type} has been AI-generated `[{round(analysis['ai_generated_confidence'], 3)}%]`\n"
+					analysis_string += f"- There is a probability this {analysed_media_type}'s {media_type} has been AI-generated `[{round(analysis['ai_generated_confidence'], 3)}%]`\n"
 			if analysis_string != '':
 				# Only add the field if one with the same name doesn't already exist
 				if not any(field.name == 'Generative AI report' for field in self.embed.fields):
 					self.embed.add_field(
 						name = 'Generative AI report',
-						value = f'{analysis_string}-# Powered by Astro Snitch. Analysis may not be 100% accurate.',
+						value = f'{analysis_string}-# Powered by Astro Snitch. Analysis may not be 100% accurate. Rely on your own judgment and verify with additional context.',
 						inline = False
 					)
 			for field in self.embed.fields:
