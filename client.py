@@ -52,6 +52,11 @@ class AstroClient(ext_commands.AutoShardedBot):
 
     async def on_message(self, message):
         start_time = current_unix_time_ms()
+        
+        if message.guild is not None:
+            permissions = message.channel.permissions_for(message.guild.me)
+            if not permissions.read_message_history:
+                return # Abort if we don't have permission to read message history
 
         async def auto_link_lookup(data):
             embed_composer = EmbedComposer()
