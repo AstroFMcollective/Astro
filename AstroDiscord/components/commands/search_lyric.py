@@ -23,19 +23,24 @@ class LyricSearchPagination(discord.ui.View):
         
         # The list of prompts to cycle through
         self.prompts = [
-            "Is this the correct song?",
-            "How about this one?",
-            "What about this?",
-            "Are you sure it's not this one?"
+            'Is this the correct song?',
+            'How about this one?',
+            'What about this?',
+            "Are you sure it's not this one?",
+            'How about now?',
+            'Maybe this one?',
+            'Surely it must be this one, right?',
+            'No? Is it maybe this one?',
+            "This is tough. Is this maybe what you're looking for?"
         ]
 
     async def update_message(self, interaction: discord.Interaction):
         if self.index >= len(self.songs):
             # Ran out of songs to display
-            await self.composer.error(204, {
-                "title": "End of the line!", 
-                "description": "We ran out of songs to show you. Try adjusting your lyric query.", 
-                "meaning": "No more results"
+            await self.composer.error('other', {
+                'title': 'End of the line!', 
+                'description': 'We ran out of songs to show you. Try adjusting your lyric query.', 
+                'meaning': 'No more results'
             })
             await interaction.response.edit_message(embed=self.composer.embed, view=None)
             return
@@ -123,7 +128,7 @@ class LyricSearchPagination(discord.ui.View):
             await interaction.followup.edit_message(message_id=interaction.message.id, embed=self.composer.embed, view=None)
 
 
-    @discord.ui.button(label="No, keep looking", style=discord.ButtonStyle.danger)
+    @discord.ui.button(label='No, keep looking', style=discord.ButtonStyle.danger)
     async def no_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         # Only allow the user who initiated the command to interact
         if interaction.user != self.user:
@@ -138,14 +143,14 @@ class LyricSearchCog(commands.Cog):
         self.bot = bot
         self.api = AstroAPI()
 
-    @app_commands.command(name="searchlyric", description="Search for a song by its lyrics")
-    @app_commands.describe(lyrics="The lyrics of the song you are trying to find")
-    @app_commands.describe(censor="Whether you want to censor the title of the song or not")
+    @app_commands.command(name='searchlyric', description='Search for a song by its lyrics')
+    @app_commands.describe(lyrics='The lyrics of the song you are trying to find')
+    @app_commands.describe(censor='Whether you want to censor the title of the song or not')
     @discord.app_commands.allowed_installs(guilds=True, users=True)
     @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
     async def search_lyric(self, interaction: discord.Interaction, lyrics: str, censor: bool = False):
         start_time = current_unix_time_ms()
-        if interaction.data.get("integration_owners", {}).get("1") is not None:
+        if interaction.data.get('integration_owners', {}).get('1') is not None:
             censor = True
         await interaction.response.defer()
 
