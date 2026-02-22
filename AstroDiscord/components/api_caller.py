@@ -72,7 +72,7 @@ class AstroAPI:
             api_url = f'{self.api_endpoint}/music/spotify/search_query'
             api_params = {
                 'query': lyric,
-                'filter_for_best_match': False,
+                'filter_for_best_match': 'false',
                 'media_types': 'song',
                 'country_code': country_code
             }
