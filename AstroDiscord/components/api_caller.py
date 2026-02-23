@@ -3,8 +3,8 @@ import aiohttp
 
 class AstroAPI:
     def __init__(self):
-        self.api_endpoint = tokens['api_endpoints']['localhost']
-        # self.api_endpoint = tokens['api_endpoints']['astroapi']
+        # self.api_endpoint = tokens['api_endpoints']['localhost']
+        self.api_endpoint = tokens['api_endpoints']['astroapi']
 
     async def search_song(self, artist: str, title: str, collection_title: str = None, is_explicit: bool = None, country_code: str = 'us'):
         async with aiohttp.ClientSession() as session:
