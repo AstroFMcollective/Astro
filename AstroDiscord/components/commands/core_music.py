@@ -351,63 +351,63 @@ class CoreMusicCog(commands.Cog):
         request_counting.client_latency(current_unix_time_ms() - start_time)
 
 
-    @app_commands.command(name='knowledge', description='Get some basic information about a song')
-    @discord.app_commands.allowed_installs(guilds=True, users=True)
-    @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
-    async def knowledge(self, interaction: discord.Interaction, query: str, country_code: str = 'us', censor: bool = False):
-        start_time = current_unix_time_ms()
-        if interaction.data.get("integration_owners", {}).get("1") is not None:
-            censor = True
-        await interaction.response.defer()
-        embed_composer = EmbedComposer()
+    # @app_commands.command(name='knowledge', description='Get some basic information about a song')
+    # @discord.app_commands.allowed_installs(guilds=True, users=True)
+    # @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
+    # async def knowledge(self, interaction: discord.Interaction, query: str, country_code: str = 'us', censor: bool = False):
+    #     start_time = current_unix_time_ms()
+    #     if interaction.data.get("integration_owners", {}).get("1") is not None:
+    #         censor = True
+    #     await interaction.response.defer()
+    #     embed_composer = EmbedComposer()
         
-        try:
-            metadata = await url_tools.get_metadata_from_url(query)
-            if metadata == None or (metadata['id'] == None and metadata['type'] == None):
-                json_resp = await self.api.search_knowledge(query, country_code)
-            else:
-                json_resp = await self.api.lookup_knowledge(metadata['id'], metadata['service'], country_code)
+    #     try:
+    #         metadata = await url_tools.get_metadata_from_url(query)
+    #         if metadata == None or (metadata['id'] == None and metadata['type'] == None):
+    #             json_resp = await self.api.search_knowledge(query, country_code)
+    #         else:
+    #             json_resp = await self.api.lookup_knowledge(metadata['id'], metadata['service'], country_code)
                 
-            if 'type' in json_resp:
-                await embed_composer.compose(interaction.user, json_resp, 'knowledge', False, censor, True)
-                response = await interaction.followup.send(embed=embed_composer.embed, view=embed_composer.button_view)
+    #         if 'type' in json_resp:
+    #             await embed_composer.compose(interaction.user, json_resp, 'knowledge', False, censor, True)
+    #             response = await interaction.followup.send(embed=embed_composer.embed, view=embed_composer.button_view)
 
-                try:
-                    ai_report = await self.api.snitch(json_resp)
-                    await embed_composer.compose(interaction.user, ai_report, 'knowledge', False, censor)
-                except:	
-                    await embed_composer.compose(interaction.user, json_resp, 'knowledge', False, censor)
+    #             try:
+    #                 ai_report = await self.api.snitch(json_resp)
+    #                 await embed_composer.compose(interaction.user, ai_report, 'knowledge', False, censor)
+    #             except:	
+    #                 await embed_composer.compose(interaction.user, json_resp, 'knowledge', False, censor)
 
-                await response.edit(embed=embed_composer.embed, view=embed_composer.button_view)
-                request_counting.successful_request()
-                request_counting.api_latency(json_resp['meta']['processing_time']['global_io'])
+    #             await response.edit(embed=embed_composer.embed, view=embed_composer.button_view)
+    #             request_counting.successful_request()
+    #             request_counting.api_latency(json_resp['meta']['processing_time']['global_io'])
                 
-                # Anonymize before logging
-                try: # Re-try accessing ai_report just in case
-                    if ai_report and 'type' in ai_report:
-                        await embed_composer.compose(interaction.user, ai_report, 'knowledge', anonymous=True, censor=censor)
-                    else:
-                        await embed_composer.compose(interaction.user, json_resp, 'knowledge', anonymous=True, censor=censor)
-                except NameError:
-                    await embed_composer.compose(interaction.user, json_resp, 'knowledge', anonymous=True, censor=censor)
+    #             # Anonymize before logging
+    #             try: # Re-try accessing ai_report just in case
+    #                 if ai_report and 'type' in ai_report:
+    #                     await embed_composer.compose(interaction.user, ai_report, 'knowledge', anonymous=True, censor=censor)
+    #                 else:
+    #                     await embed_composer.compose(interaction.user, json_resp, 'knowledge', anonymous=True, censor=censor)
+    #             except NameError:
+    #                 await embed_composer.compose(interaction.user, json_resp, 'knowledge', anonymous=True, censor=censor)
 
-            elif json_resp == {}:
-                await embed_composer.error(204)
-                await interaction.followup.send(embed=embed_composer.embed)
-                request_counting.failed_request()
-            else:
-                await embed_composer.error(json_resp['status'])
-                await interaction.followup.send(embed=embed_composer.embed)
-                request_counting.failed_request()
+    #         elif json_resp == {}:
+    #             await embed_composer.error(204)
+    #             await interaction.followup.send(embed=embed_composer.embed)
+    #             request_counting.failed_request()
+    #         else:
+    #             await embed_composer.error(json_resp['status'])
+    #             await interaction.followup.send(embed=embed_composer.embed)
+    #             request_counting.failed_request()
                 
-            await log([embed_composer.embed], [json_resp], 'knowledge', f'query:`{query}` country_code:`{country_code}` censor:`{censor}`', current_unix_time_ms() - start_time, embed_composer.button_view)
-        except Exception as error:
-            await embed_composer.error('other')
-            await interaction.followup.send(embed=embed_composer.embed)
-            request_counting.failed_request()
-            await log_catastrophe('knowledge', f'query:`{query}` country_code:`{country_code}` censor:`{censor}`', error)
+    #         await log([embed_composer.embed], [json_resp], 'knowledge', f'query:`{query}` country_code:`{country_code}` censor:`{censor}`', current_unix_time_ms() - start_time, embed_composer.button_view)
+    #     except Exception as error:
+    #         await embed_composer.error('other')
+    #         await interaction.followup.send(embed=embed_composer.embed)
+    #         request_counting.failed_request()
+    #         await log_catastrophe('knowledge', f'query:`{query}` country_code:`{country_code}` censor:`{censor}`', error)
             
-        request_counting.client_latency(current_unix_time_ms() - start_time)
+    #     request_counting.client_latency(current_unix_time_ms() - start_time)
 
     @discord.app_commands.allowed_installs(guilds=True, users=True)
     @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
