@@ -244,7 +244,7 @@ class EmbedComposer:
 			title = escape_markdown(json_response['title']) if censor == False else escape_markdown(json_response['censored_title']) # Get title
 			title = f'{title}   {confidence}'
 			artists = ', '.join([f'**{escape_markdown(artist['name'])}**' for artist in json_response['artists']]) # Get artists
-			year = json_response['release_year'] # Get release year
+			year = str(json_response['release_year']) # Get release year
 			genre = json_response['genre'] # Get genre
 			desc_elements = [artists, year, genre] 
 			while None in desc_elements: # Remove anything without a value
