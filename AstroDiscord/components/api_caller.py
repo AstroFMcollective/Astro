@@ -5,16 +5,18 @@ class AstroAPI:
     def __init__(self):
         # self.api_endpoint = tokens['api_endpoints']['localhost']
         self.api_endpoint = tokens['api_endpoints']['astroapi']
+        self.legacy_endpoint = tokens['api_endpoints']['astroapi_legacy']
 
     async def search_song(self, artist: str, title: str, collection_title: str = None, is_explicit: bool = None, country_code: str = 'us'):
         async with aiohttp.ClientSession() as session:
             if country_code == None:
                 country_code = 'us'
-            api_url = f'{self.api_endpoint}/music/global_io/search_song'
+            api_url = f'{self.api_endpoint}/servicecatalog/global_io/search/song'
             api_params = {
-                'artist': artist,
+                'artists': artist,
                 'title': title,
-                'country_code': country_code
+                'market': country_code,
+                'hydrate': 'false'
             }
             if collection_title != None:
                 api_params['collection_title'] = collection_title
@@ -32,11 +34,12 @@ class AstroAPI:
         async with aiohttp.ClientSession() as session:
             if country_code == None:
                 country_code = 'us'
-            api_url = f'{self.api_endpoint}/music/global_io/search_collection'
+            api_url = f'{self.api_endpoint}/servicecatalog/global_io/search/collection'
             api_params = {
-                'artist': artist,
+                'artists': artist,
                 'title': title,
-                'country_code': country_code
+                'market': country_code,
+                'hydrate': 'false'
             }
             if year != None:
                 api_params['year'] = year
@@ -52,10 +55,11 @@ class AstroAPI:
         async with aiohttp.ClientSession() as session:
             if country_code == None:
                 country_code = 'us'
-            api_url = f'{self.api_endpoint}/music/global_io/search_query'
+            api_url = f'{self.api_endpoint}/servicecatalog/global_io/search/query'
             api_params = {
                 'query': query,
-                'country_code': country_code
+                'market': country_code,
+                'hydrate': 'false'
             }
             async with session.get(url = api_url, params = api_params) as response:
                 if response.status != 204:
@@ -69,12 +73,13 @@ class AstroAPI:
         async with aiohttp.ClientSession() as session:
             if country_code == None:
                 country_code = 'us'
-            api_url = f'{self.api_endpoint}/music/spotify/search_query'
+            api_url = f'{self.api_endpoint}/servicecatalog/spotify/search/query'
             api_params = {
                 'query': lyric,
-                'filter_for_best_match': 'false',
+                'best_match': 'false',
                 'media_types': 'song',
-                'country_code': country_code
+                'market': country_code,
+                'hydrate': 'false'
             }
             async with session.get(url = api_url, params = api_params) as response:
                 if response.status != 204:
@@ -88,11 +93,10 @@ class AstroAPI:
         async with aiohttp.ClientSession() as session:
             if country_code == None:
                 country_code = 'us'
-            api_url = f'{self.api_endpoint}/music/global_io/lookup_{media_type}'
+            api_url = f'{self.api_endpoint}/servicecatalog/global_io/lookup/{media_type}/{id_service}/{id}'
             api_params = {
-                'id': id,
-                'id_service': id_service,
-                'country_code': country_code
+                'market': country_code,
+                'hydrate': 'false'
             }
             async with session.get(url = api_url, params = api_params) as response:
                 if response.status != 204:
@@ -106,10 +110,10 @@ class AstroAPI:
         async with aiohttp.ClientSession() as session:
             if country_code == None:
                 country_code = 'us'
-            api_url = f'{self.api_endpoint}/music/{id_service}/lookup_{media_type}'
+            api_url = f'{self.api_endpoint}/servicecatalog/{id_service}/lookup/{media_type}/{id}'
             api_params = {
-                'id': id,
-                'country_code': country_code
+                'market': country_code,
+                'hydrate': 'false'
             }
             async with session.get(url = api_url, params = api_params) as response:
                 if response.status != 204:
@@ -119,9 +123,9 @@ class AstroAPI:
                 else:
                     return {}
                 
-    async def snitch(self, media_object: dict):
+    async def snitch_song(self, media_object: dict):
         async with aiohttp.ClientSession() as session:
-            api_url = f'{self.api_endpoint}/snitch/media'
+            api_url = f'{self.api_endpoint}/snitch/check/song'
             async with session.post(url = api_url, json = media_object) as response:
                 if response.status != 204:
                     json_response = dict(await response.json())
@@ -129,35 +133,22 @@ class AstroAPI:
                     return json_response
                 else:
                     return {}
-            
-    async def lookup_knowledge(self, id: str, id_service: str, country_code: str = 'us'):
+
+    async def snitch_collection(self, media_object: dict):
         async with aiohttp.ClientSession() as session:
-            if country_code == None:
-                country_code = 'us'
-            api_url = f'{self.api_endpoint}/knowledge/global_io/lookup_song'
-            api_params = {
-                'id': id,
-                'id_service': id_service,
-                'country_code': country_code
-            }
-            async with session.get(url = api_url, params = api_params) as response:
+            api_url = f'{self.api_endpoint}/snitch/check/collection'
+            async with session.post(url = api_url, json = media_object) as response:
                 if response.status != 204:
                     json_response = dict(await response.json())
                     json_response['status'] = response.status
                     return json_response
                 else:
                     return {}
-            
-    async def search_knowledge(self, query: str, country_code: str = 'us'):
+
+    async def snitch_music_video(self, media_object: dict):
         async with aiohttp.ClientSession() as session:
-            if country_code == None:
-                country_code = 'us'
-            api_url = f'{self.api_endpoint}/knowledge/global_io/search_query'
-            api_params = {
-                'query': query,
-                'country_code': country_code
-            }
-            async with session.get(url = api_url, params = api_params) as response:
+            api_url = f'{self.api_endpoint}/snitch/check/music-video'
+            async with session.post(url = api_url, json = media_object) as response:
                 if response.status != 204:
                     json_response = dict(await response.json())
                     json_response['status'] = response.status

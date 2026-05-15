@@ -49,7 +49,7 @@ class LyricSearchPagination(discord.ui.View):
         
         # Inject metadata to prevent KeyError in EmbedComposer for partial objects
         current_song['meta'] = {
-            'processing_time': {'global_io': self.initial_api_time},
+            'processing_time_ms': {'global_io': self.initial_api_time},
             'filter_confidence_percentage': {}
         }
         
@@ -75,7 +75,7 @@ class LyricSearchPagination(discord.ui.View):
 
         # --- LOADING MODE ---
         # Edit the embed to look like it's loading, push the Spotify button, and acknowledge the interaction immediately
-        current_song['meta'] = {'processing_time': {'global_io': 0}, 'filter_confidence_percentage': {}}
+        current_song['meta'] = {'processing_time_ms': {'global_io': 0}, 'filter_confidence_percentage': {}}
         await self.composer.compose(self.user, current_song, 'searchsong', censor=self.censor, loading=True)
         await interaction.response.edit_message(embed=self.composer.embed, view=self.composer.button_view)
 
@@ -109,9 +109,9 @@ class LyricSearchPagination(discord.ui.View):
 
             # Log successful requests and latency
             request_counting.successful_request()
-            latency = global_result['meta']['processing_time']['global_io']
+            latency = global_result['meta']['processing_time_ms']['global_io']
             if ai_report and 'type' in ai_report: 
-                latency += ai_report['meta']['processing_time']['global_io']
+                latency += ai_report['meta']['processing_time_ms']['global_io']
             request_counting.api_latency(latency)
             
             # Recompose anonymously to retain user privacy before logging
@@ -176,7 +176,7 @@ class LyricSearchCog(commands.Cog):
         first_song = songs[0]
         # Inject mock metadata to prevent KeyError in EmbedComposer
         first_song['meta'] = {
-            'processing_time': {'global_io': api_latency},
+            'processing_time_ms': {'global_io': api_latency},
             'filter_confidence_percentage': {}
         }
 

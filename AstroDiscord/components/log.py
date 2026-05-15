@@ -17,9 +17,9 @@ async def log(log_embeds: list[discord.Embed], media: list[dict], command: str, 
 		for obj in media:
 			if 'type' in obj:
 				if obj['type'] == 'analysis':
-					api_latency += obj['meta']['processing_time']['global_io'] + obj['analysed_media']['meta']['processing_time']['global_io']
+					api_latency += obj['meta']['processing_time_ms']['global_io'] + obj['analysed_media']['meta']['processing_time_ms']['global_io']
 				else:
-					api_latency += obj['meta']['processing_time']['global_io']
+					api_latency += obj['meta']['processing_time_ms']['global_io']
 
 		report_type = 'empty_response'
 

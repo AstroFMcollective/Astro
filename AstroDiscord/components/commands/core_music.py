@@ -58,9 +58,9 @@ class CoreMusicCog(commands.Cog):
                 await response.edit(embed=embed_composer.embed, view=embed_composer.button_view)
                 
                 request_counting.successful_request()
-                latency = json_resp['meta']['processing_time']['global_io']
+                latency = json_resp['meta']['processing_time_ms']['global_io']
                 if ai_report and 'type' in ai_report: 
-                    latency += ai_report['meta']['processing_time']['global_io']
+                    latency += ai_report['meta']['processing_time_ms']['global_io']
                 request_counting.api_latency(latency)
                 
                 # Anonymize before logging
@@ -96,13 +96,13 @@ class CoreMusicCog(commands.Cog):
     @discord.app_commands.allowed_installs(guilds=True, users=True)
     @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
     async def searchalbum(self, interaction: discord.Interaction, artist: str, title: str, year: int = None, country_code: str = 'us', censor: bool = False):
-        start_time = current_unix_time_ms()
-        if interaction.data.get("integration_owners", {}).get("1") is not None:
-            censor = True
-        await interaction.response.defer()
-        embed_composer = EmbedComposer()
+            start_time = current_unix_time_ms()
+            if interaction.data.get("integration_owners", {}).get("1") is not None:
+                censor = True
+            await interaction.response.defer()
+            embed_composer = EmbedComposer()
 
-        try:
+        # try:
             json_resp = await self.api.search_album(artist, title, year, country_code)
             ai_report = None
             if 'type' in json_resp:
@@ -118,9 +118,9 @@ class CoreMusicCog(commands.Cog):
                 await response.edit(embed=embed_composer.embed, view=embed_composer.button_view)
 
                 request_counting.successful_request()
-                latency = json_resp['meta']['processing_time']['global_io']
+                latency = json_resp['meta']['processing_time_ms']['global_io']
                 if ai_report and 'type' in ai_report: 
-                    latency += ai_report['meta']['processing_time']['global_io']
+                    latency += ai_report['meta']['processing_time_ms']['global_io']
                 request_counting.api_latency(latency)
                 
                 # Anonymize before logging
@@ -139,13 +139,13 @@ class CoreMusicCog(commands.Cog):
                 request_counting.failed_request()
 
             await log([embed_composer.embed], [json_resp], 'searchalbum', f'artist:`{artist}` title:`{title}` year:`{year}` country_code:`{country_code}` censor:`{censor}`', current_unix_time_ms() - start_time, embed_composer.button_view)
-        except Exception as error:
-            await embed_composer.error('other')
-            await interaction.followup.send(embed=embed_composer.embed)
-            request_counting.failed_request()
-            await log_catastrophe('searchalbum', f'artist:`{artist}` title:`{title}` year:`{year}` country_code:`{country_code}` censor:`{censor}`', error)
+        # except Exception as error:
+        #     await embed_composer.error('other')
+        #     await interaction.followup.send(embed=embed_composer.embed)
+        #     request_counting.failed_request()
+        #     await log_catastrophe('searchalbum', f'artist:`{artist}` title:`{title}` year:`{year}` country_code:`{country_code}` censor:`{censor}`', error)
         
-        request_counting.client_latency(current_unix_time_ms() - start_time)
+        # request_counting.client_latency(current_unix_time_ms() - start_time)
 
 
     @app_commands.command(name='search', description='Search a song, music video, album or EP from a query or its link')
@@ -179,9 +179,9 @@ class CoreMusicCog(commands.Cog):
                     
                 await response.edit(embed=embed_composer.embed, view=embed_composer.button_view)
                 request_counting.successful_request()
-                latency = json_resp['meta']['processing_time']['global_io']
+                latency = json_resp['meta']['processing_time_ms']['global_io']
                 if ai_report and 'type' in ai_report: 
-                    latency += ai_report['meta']['processing_time']['global_io']
+                    latency += ai_report['meta']['processing_time_ms']['global_io']
                 request_counting.api_latency(latency)
                 
                 # Anonymize before logging
@@ -256,9 +256,9 @@ class CoreMusicCog(commands.Cog):
 
                     await response.edit(embed=embed_composer.embed, view=embed_composer.button_view)		
                     request_counting.successful_request()
-                    latency = json_resp['meta']['processing_time']['global_io']
+                    latency = json_resp['meta']['processing_time_ms']['global_io']
                     if ai_report and 'type' in ai_report: 
-                        latency += ai_report['meta']['processing_time']['global_io']
+                        latency += ai_report['meta']['processing_time_ms']['global_io']
                     request_counting.api_latency(latency)
                     
                     # Anonymize before logging
@@ -313,9 +313,9 @@ class CoreMusicCog(commands.Cog):
                     
                     await response.edit(embed=embed_composer.embed, view=embed_composer.button_view)
                     request_counting.successful_request()
-                    latency = json_resp['meta']['processing_time']['global_io']
+                    latency = json_resp['meta']['processing_time_ms']['global_io']
                     if ai_report and 'type' in ai_report: 
-                        latency += ai_report['meta']['processing_time']['global_io']
+                        latency += ai_report['meta']['processing_time_ms']['global_io']
                     request_counting.api_latency(latency)
                     
                     # Anonymize before logging
@@ -378,9 +378,9 @@ class CoreMusicCog(commands.Cog):
                 except:	
                     await embed_composer.compose(interaction.user, json_resp, 'knowledge', False, censor)
 
-                await response.edit(embed=embed_composer.embed, view=embed_composer.button_view)
-                request_counting.successful_request()
-                request_counting.api_latency(json_resp['meta']['processing_time']['global_io'])
+    #             await response.edit(embed=embed_composer.embed, view=embed_composer.button_view)
+    #             request_counting.successful_request()
+    #             request_counting.api_latency(json_resp['meta']['processing_time']['global_io'])
                 
                 # Anonymize before logging
                 try: # Re-try accessing ai_report just in case
@@ -434,7 +434,7 @@ class CoreMusicCog(commands.Cog):
                         await embed_composer.compose(message.author, ai_check, 'link', False, False)
                         
                         request_counting.successful_request()
-                        request_counting.api_latency(global_object['meta']['processing_time']['global_io'] + ai_check['meta']['processing_time']['global_io'])
+                        request_counting.api_latency(global_object['meta']['processing_time_ms']['global_io'] + ai_check['meta']['processing_time_ms']['global_io'])
                         
                         # Use the log composer to create the anonymous log
                         await log_composer.compose(message.author, ai_check, 'link', anonymous=True, censor=False)
@@ -446,7 +446,7 @@ class CoreMusicCog(commands.Cog):
                     await embed_composer.compose(message.author, global_object, 'link', False, False)
                     
                     request_counting.successful_request()
-                    request_counting.api_latency(global_object['meta']['processing_time']['global_io'])
+                    request_counting.api_latency(global_object['meta']['processing_time_ms']['global_io'])
                     
                     # Use the log composer to create the anonymous log
                     await log_composer.compose(message.author, global_object, 'link', anonymous=True, censor=False)

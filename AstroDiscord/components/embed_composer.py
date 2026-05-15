@@ -121,8 +121,11 @@ class EmbedComposer:
 		action = actions[command_type]
 
 		async def song(json_response: dict, loading: bool = False):
-			confidence = f'`[{round(json_response['meta']['filter_confidence_percentage']['global_io'], 3)}%]`' if 'global_io' in json_response['meta']['filter_confidence_percentage'] else ''
-			title = escape_markdown(json_response['title']) if censor == False else escape_markdown(json_response['censored_title']) # Get title
+			if 'filter_confidence_percentage' in json_response['meta']:
+				confidence = f'`[{round(json_response['meta']['filter_confidence_percentage'] * 100, 3)}%]`' if json_response['meta']['filter_confidence_percentage'] != None else ''
+			else:
+				confidence = ''
+			title = escape_markdown(json_response['title']) # Get title
 			title = f'{title}   `EXPLICIT` {confidence}' if json_response['is_explicit'] == True else f'{title}   {confidence}' # Add an explicit marker if the song is explicit
 			artists = ', '.join([f'**{escape_markdown(artist['name'])}**' for artist in json_response['artists']]) # Get artists
 			if 'collection' in json_response: # Get collection
@@ -135,14 +138,14 @@ class EmbedComposer:
 					collection = None
 			else:
 				collection = None
-			genre = json_response['genre'] # Get genre
+			genre = json_response['genre'] if 'genre' in json_response else None # Get genre
 			desc_elements = [artists, collection, genre]
 			while None in desc_elements: # Remove anything without a value
 				desc_elements.remove(None)
 			cover_url = None
 			for service in service_metadata_priority: # Get cover art URL
 				if service in json_response['cover']['hq_urls']:
-					cover_url = json_response['cover']['hq_urls'][service]
+					cover_url = json_response['cover']['hq_urls'][service] if json_response['cover']['hq_urls'][service] != None else json_response['collection']['cover']['hq_urls'][service]
 					break
 			color = await self.image_hex(cover_url) # Get color from average color in cover
 			self.embed = Embed( # Basic embed data
@@ -173,7 +176,7 @@ class EmbedComposer:
 					if field.value == 'Loading...':
 						self.embed.remove_field(self.embed.fields.index(field))
 				self.embed.set_footer( # Thanks and API latency report
-					text = f'{text['embed']['tymsg']} • Done in {json_response['meta']['processing_time']['global_io']} ms',
+					text = f'{text['embed']['tymsg']} • Done in {json_response['meta']['processing_time_ms']['global_io']} ms',
 					icon_url = text['images']['pfpurl']
 				)
 			else:
@@ -185,12 +188,14 @@ class EmbedComposer:
 			await self.service_buttons(json_response['urls']) # Get service button components
 
 		async def music_video(json_response: dict, loading: bool = False):
-			confidence = f'`[{round(json_response['meta']['filter_confidence_percentage']['global_io'], 3)}%]`' if 'global_io' in json_response['meta']['filter_confidence_percentage'] else ''
-			title = escape_markdown(json_response['title']) if censor == False else escape_markdown(json_response['censored_title']) # Get title
+			if 'filter_confidence_percentage' in json_response['meta']:
+				confidence = f'`[{round(json_response['meta']['filter_confidence_percentage'] * 100, 3)}%]`' if json_response['meta']['filter_confidence_percentage'] != None else ''
+			else:
+				confidence = ''
+			title = escape_markdown(json_response['title']) # Get title
 			title = f'{title}   `EXPLICIT` {confidence}' if json_response['is_explicit'] == True else f'{title}   {confidence}' # Add an explicit marker if the song is explicit
 			artists = ', '.join([f'**{escape_markdown(artist['name'])}**' for artist in json_response['artists']]) # Get artists
-			genre = json_response['genre'] # Get genre
-			confidence = f'`[{round(json_response['meta']['filter_confidence_percentage']['global_io'], 3)}%]`' if 'global_io' in json_response['meta']['filter_confidence_percentage'] else None
+			genre = json_response['genre'] if 'genre' in json_response else None 
 			desc_elements = [artists, 'Music Video', genre]
 			while None in desc_elements: # Remove anything without a value
 				desc_elements.remove(None)
@@ -228,7 +233,7 @@ class EmbedComposer:
 					if field.value == 'Loading...':
 						self.embed.remove_field(self.embed.fields.index(field))
 				self.embed.set_footer( # Thanks and API latency report
-					text = f'{text['embed']['tymsg']} • Done in {json_response['meta']['processing_time']['global_io']} ms',
+					text = f'{text['embed']['tymsg']} • Done in {json_response['meta']['processing_time_ms']['global_io']} ms',
 					icon_url = text['images']['pfpurl']
 				)
 			else:
@@ -240,11 +245,14 @@ class EmbedComposer:
 			await self.service_buttons(json_response['urls'])
 		
 		async def collection(json_response: dict, loading: bool = False):
-			confidence = f'`[{round(json_response['meta']['filter_confidence_percentage']['global_io'], 3)}%]`' if 'global_io' in json_response['meta']['filter_confidence_percentage'] else None
-			title = escape_markdown(json_response['title']) if censor == False else escape_markdown(json_response['censored_title']) # Get title
+			if 'filter_confidence_percentage' in json_response['meta']:
+				confidence = f'`[{round(json_response['meta']['filter_confidence_percentage'] * 100, 3)}%]`' if json_response['meta']['filter_confidence_percentage'] != None else ''
+			else:
+				confidence = ''
+			title = escape_markdown(json_response['title']) # Get title
 			title = f'{title}   {confidence}'
 			artists = ', '.join([f'**{escape_markdown(artist['name'])}**' for artist in json_response['artists']]) # Get artists
-			year = json_response['release_year'] # Get release year
+			year = str(json_response['release_year']) # Get release year
 			genre = json_response['genre'] # Get genre
 			desc_elements = [artists, year, genre] 
 			while None in desc_elements: # Remove anything without a value
@@ -283,83 +291,7 @@ class EmbedComposer:
 					if field.value == 'Loading...':
 						self.embed.remove_field(self.embed.fields.index(field))
 				self.embed.set_footer( # Thanks and API latency report
-					text = f'{text['embed']['tymsg']} • Done in {json_response['meta']['processing_time']['global_io']} ms',
-					icon_url = text['images']['pfpurl']
-				)
-			else:
-				self.embed.add_field(
-					name = '',
-					value = 'Loading...',
-					inline = False
-				)
-			await self.service_buttons(json_response['urls'])
-
-		async def knowledge(json_response: dict, loading: bool = False):
-			confidence = f'`[{round(json_response['meta']['filter_confidence_percentage']['global_io'], 3)}%]`' if 'global_io' in json_response['meta']['filter_confidence_percentage'] else None
-			title = escape_markdown(json_response['title']) if censor == False else escape_markdown(json_response['censored_title']) # Get title
-			title = f'{title}   {confidence}'
-			artists = ', '.join([f'**{escape_markdown(artist['name'])}**' for artist in json_response['artists']]) # Get artists
-			if 'collection' in json_response: # Get collection
-				if json_response['collection'] != None:
-					if json_response['media_type'] != 'single':
-						collection = f'*{escape_markdown(json_response['collection']['title'])}*' if censor == False else f'*{escape_markdown(json_response['collection']['censored_title'])}*'
-					else:
-						collection = None
-				else:
-					collection = None
-			else:
-				collection = None
-			date = json_response['release_date'] # Get release date
-			genre = json_response['genre'] # Get genre
-			if json_response['description'] != None:
-				description = json_response['description'] if censor == False else json_response['censored_description'] # Get description
-				description = description[:description.index('\n\n\n\n')] if description.find('\n\n\n\n') >= 0 else description # Cut out anything that is not the first paragraph of the description
-			else:
-				description = None
-			confidence = f'`[{round(json_response['meta']['filter_confidence_percentage']['global_io'], 3)}%]`' if 'global_io' in json_response['meta']['filter_confidence_percentage'] else None
-			desc_elements = [artists, collection, date, genre]
-			while None in desc_elements: # Remove anything without a value
-				desc_elements.remove(None)
-			for service in service_metadata_priority: # Get cover art
-				if service in json_response['cover']['hq_urls']:
-					cover_url = json_response['cover']['hq_urls'][service]
-					break
-			color = await self.image_hex(cover_url) # Get color from average color in cover
-			self.embed = Embed( # Basic embed data
-				title = title,
-				description = '  •  '.join(desc_elements),
-				color = color
-			)
-			if anonymous == False: # Set author and action of the command (ex. 'sushi searched for:')
-				self.embed.set_author(
-					name = f'{username} {action}:',
-					icon_url = user_pfp
-				)
-			else:
-				self.embed.set_author( # Anonymous author and action for logging (ex. 'A user searched for:')
-					name = f'A user {action}:',
-					icon_url = text['images']['default_pfp']
-				) 
-			if command_type != 'coverart':
-				self.embed.set_thumbnail( # Cover art but small
-					url = cover_url
-				)
-			else:
-				self.embed.set_image( # Cover art
-					url = cover_url
-				)
-			if description != None:
-				self.embed.add_field( # Add description
-					name = '',
-					value = description,
-					inline = False
-				)
-			if loading == False:
-				for field in self.embed.fields:
-					if field.value == 'Loading...':
-						self.embed.remove_field(self.embed.fields.index(field))
-				self.embed.set_footer( # Thanks and API latency report
-					text = f'{text['embed']['tymsg']} • Done in {json_response['meta']['processing_time']['global_io']} ms',
+					text = f'{text['embed']['tymsg']} • Done in {json_response['meta']['processing_time_ms']['global_io']} ms',
 					icon_url = text['images']['pfpurl']
 				)
 			else:
@@ -371,63 +303,74 @@ class EmbedComposer:
 			await self.service_buttons(json_response['urls'])
 
 		async def analysis(json_response: dict):
+			# 1. Compose the base embed based on the media type
 			if json_response['analysed_media']['type'] in song_obj_types:
 				await song(json_response['analysed_media'])
-			
 			elif json_response['analysed_media']['type'] in music_video_types:
 				await music_video(json_response['analysed_media'])
-			
 			elif json_response['analysed_media']['type'] in collection_obj_types:
 				await collection(json_response['analysed_media'])
-			
-			elif json_response['analysed_media']['type'] in knowledge_types:
-				await knowledge(json_response['analysed_media'])
-
 
 			analysis_string = ''
 
-			for analysis in json_response['analysis']:
-				media_type = ''
-				analysed_media_type = ''
-				if analysis['ai_generated_confidence'] >= 50.0:
-					if analysis['media_type'] == 'audio':
-						media_type = 'audio'
-					elif analysis['media_type'] == 'image':
-						media_type = 'cover art'
+			# 2. Determine the text label for the analysed media type
+			analysed_media_type = ''
+			am_type = json_response['analysed_media']['type']
+			
+			if am_type in song_obj_types:
+				analysed_media_type = 'song'
+			elif am_type in collection_obj_types:
+				analysed_media_type = 'EP' if am_type in ['ep', 'eop'] else 'album'
+			elif am_type in music_video_types:
+				analysed_media_type = 'music video'
+			elif am_type in knowledge_types:
+				km_type = json_response['analysed_media'].get('media_type', '')
+				if km_type in song_obj_types:
+					analysed_media_type = 'song'
+				elif km_type in collection_obj_types:
+					analysed_media_type = 'EP' if km_type in ['ep', 'eop'] else 'album'
+				elif km_type in music_video_types:
+					analysed_media_type = 'music video'
 
-					if json_response['analysed_media']['type'] in song_obj_types:
-						analysed_media_type = 'song'
-					elif json_response['analysed_media']['type'] in collection_obj_types:
-						if json_response['analysed_media']['type'] == 'eop':
-							analysed_media_type = 'EP'
-						else:
-							analysed_media_type = 'album'
-					elif json_response['analysed_media']['type'] in music_video_types:
-						analysed_media_type = 'music video'
-					elif json_response['analysed_media']['type'] in knowledge_types:
-						if json_response['analysed_media']['media_type'] in song_obj_types:
-							analysed_media_type = 'song'
-						elif json_response['analysed_media']['media_type'] in collection_obj_types:
-							if json_response['analysed_media']['media_type'] == 'eop':
-								analysed_media_type = 'EP'
-							else:
-								analysed_media_type = 'album'
-						elif json_response['analysed_media']['media_type'] in music_video_types:
-							analysed_media_type = 'music video'
-					analysis_string += f"- There is a probability this {analysed_media_type}'s {media_type} has been AI-generated `[{round(analysis['ai_generated_confidence'], 3)}%]`\n"
+			# 3. Process Audio Reports
+			for report in json_response.get('audio_reports', []):
+				ai_analysis = report.get('ai_analysis', {})
+				# Convert the 0-1 scale from the JSON to a 0-100 percentage
+				confidence = ai_analysis.get('ai_confidence_score', 0) * 100
+				
+				if ai_analysis.get('is_ai_generated', False) or confidence >= 50.0:
+					analysis_string += f"- There is a probability this {analysed_media_type}'s audio has been AI-generated `[{round(confidence, 3)}%]`\n"
+
+			# 4. Process Image Reports
+			for report in json_response.get('image_reports', []):
+				ai_analysis = report.get('ai_analysis', {})
+				# Convert the 0-1 scale from the JSON to a 0-100 percentage
+				confidence = ai_analysis.get('ai_confidence_score', 0) * 100
+				
+				if ai_analysis.get('is_ai_generated', False) or confidence >= 50.0:
+					analysis_string += f"- There is a probability this {analysed_media_type}'s cover art has been AI-generated `[{round(confidence, 3)}%]`\n"
+
+			# 5. Append the AI Report field if applicable
 			if analysis_string != '':
 				# Only add the field if one with the same name doesn't already exist
 				if not any(field.name == 'Generative AI report' for field in self.embed.fields):
 					self.embed.add_field(
 						name = 'Generative AI report',
-						value = f'{analysis_string}-# Powered by Astro Snitch. Analysis may not be 100% accurate. Rely on your own judgment and verify with additional context.',
+						value = f"{analysis_string}-# Powered by Astro Snitch. Analysis may not be 100% accurate. Rely on your own judgment and verify with additional context.",
 						inline = False
 					)
+			
+			# 6. Cleanup loading states
 			for field in self.embed.fields:
 				if field.value == 'Loading...':
 					self.embed.remove_field(self.embed.fields.index(field))
-			self.embed.set_footer( # Thanks and API latency report
-				text = f'{text['embed']['tymsg']} • Done in {json_response['analysed_media']['meta']['processing_time']['global_io']} + {json_response['meta']['processing_time']['global_io']} ms',
+			
+			# 7. Update Footer using the new metadata keys
+			analysed_time = json_response['analysed_media']['meta']['processing_time_ms']['global_io']
+			snitch_time_ms = json_response.get('meta', {}).get('processing_time_ms_ms', 0)
+			
+			self.embed.set_footer(
+				text = f"{text['embed']['tymsg']} • Done in {analysed_time} + {round(snitch_time_ms, 2)} ms",
 				icon_url = text['images']['pfpurl']
 			)
 		
@@ -441,9 +384,6 @@ class EmbedComposer:
 			
 			elif json_response['type'] in collection_obj_types: # If the media object is a collection
 				await collection(json_response, loading = loading)
-			
-			elif json_response['type'] in knowledge_types: # If the media object is a knowledge object
-				await knowledge(json_response, loading = loading)
 
 			elif json_response['type'] in snitch_types: # If the media object is an Astro Snitch analysis object
 				await analysis(json_response)
@@ -453,7 +393,7 @@ class EmbedComposer:
 				if field.value == 'Loading...':
 					self.embed.remove_field(self.embed.fields.index(field))
 			self.embed.set_footer( # Thanks and API latency report
-				text = f'{text['embed']['tymsg']} • Done in {self.last_json['meta']['processing_time']['global_io']} ms',
+				text = f'{text['embed']['tymsg']} • Done in {self.last_json['meta']['processing_time_ms']['global_io']} ms',
 				icon_url = text['images']['pfpurl']
 			)
 
