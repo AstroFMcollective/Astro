@@ -83,14 +83,30 @@ class EmbedComposer:
         user_pfp = user.display_avatar
         action = actions.get(command_type, 'searched for')
 
-        def get_confidence(meta):
-            if meta and 'filter_confidence_percentage' in meta and meta['filter_confidence_percentage'] is not None:
+        def get_confidence(data):
+            meta = data.get('meta') if isinstance(data.get('meta'), dict) else {}
+            
+            raw_val = None
+            if 'filter_confidence_percentage' in meta and meta['filter_confidence_percentage'] is not None:
                 raw_val = meta['filter_confidence_percentage']
-                
-                # If it's a dict (New Schema), extract the 'songs' confidence value or default to 0
+            elif 'filter_confidence_percentage' in data and data['filter_confidence_percentage'] is not None:
+                raw_val = data['filter_confidence_percentage']
+
+            if raw_val is not None:
+                # If it's a dict (New Schema), extract the correct category confidence value
                 if isinstance(raw_val, dict):
-                    # Try to get 'songs', fallback to extracting the maximum value present if 'songs' isn't there
-                    confidence_num = raw_val.get('songs') or max(list(raw_val.values()) or [0])
+                    obj_type = data.get('type')
+                    if obj_type in ['track', 'single']:
+                        confidence_num = raw_val.get('songs')
+                    elif obj_type in ['album', 'ep', 'eop']:
+                        confidence_num = raw_val.get('collections')
+                    elif obj_type == 'music_video':
+                        confidence_num = raw_val.get('music_videos')
+                    else:
+                        confidence_num = None
+                        
+                    if confidence_num is None or confidence_num == 0:
+                        confidence_num = max(list(raw_val.values()) or [0])
                 else:
                     confidence_num = raw_val
 
@@ -136,14 +152,30 @@ class EmbedComposer:
             await self.service_buttons(json_response.get('urls', {}))
 
         async def build_media_embed(data, media_category):
-            confidence = get_confidence(data.get('meta'))
-            title = escape_markdown(data.get('title', 'Unknown'))
+            confidence = get_confidence(data)
+            
+            def truncate_str(text, max_len=100):
+                if not text:
+                    return ''
+                if len(text) > max_len:
+                    return text[:max_len] + '...'
+                return text
+
+            raw_title = data.get('title', 'Unknown') or 'Unknown'
+            title_max_len = 100 if media_category == 'collection' else 200
+            title = escape_markdown(truncate_str(raw_title, title_max_len))
+
             if data.get('is_explicit'):
                 title = f"{title}   `EXPLICIT` {confidence}".strip()
             else:
                 title = f"{title}   {confidence}".strip()
 
-            artists = ', '.join([f"**{escape_markdown(a['name'])}**" for a in data.get('artists', [])])
+            artists_list = []
+            for a in data.get('artists', []):
+                name = a.get('name', 'Unknown') or 'Unknown'
+                artists_list.append(f"**{escape_markdown(truncate_str(name, 100))}**")
+            artists = ', '.join(artists_list)
+
             genre = data.get('genre')
             desc_elements = [artists]
 
@@ -152,7 +184,7 @@ class EmbedComposer:
                 if collection_data and data.get('type') != 'single':
                     col_title = collection_data.get('censored_title') if censor and collection_data.get('censored_title') else collection_data.get('title')
                     if col_title:
-                        desc_elements.append(f"*{escape_markdown(col_title)}*")
+                        desc_elements.append(f"*{escape_markdown(truncate_str(col_title, 100))}*")
                 desc_elements.append(genre)
                 
                 cover_url = None

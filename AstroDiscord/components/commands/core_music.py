@@ -212,6 +212,12 @@ class CoreMusicCog(commands.Cog):
                                 best_match_item['meta'] = {}
                                 
                             best_match_item['meta']['processing_time_ms'] = raw_search['meta'].get('processing_time_ms', 0)
+                            
+                            # Copy the confidence scores to satisfy the search embed lookup
+                            if 'filter_confidence_percentage' in raw_search['meta']:
+                                best_match_item['filter_confidence_percentage'] = raw_search['meta']['filter_confidence_percentage']
+                                best_match_item['meta']['filter_confidence_percentage'] = raw_search['meta']['filter_confidence_percentage']
+                                
                             json_resp = best_match_item
                         else:
                             json_resp = {}
