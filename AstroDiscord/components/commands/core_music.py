@@ -6,10 +6,11 @@ from asyncio import create_task, gather
 from AstroDiscord.components.api_caller import AstroAPI
 from AstroDiscord.components.embed_composer import EmbedComposer
 from AstroDiscord.components.url_tools import url_tools
-from AstroDiscord.components.time import current_unix_time_ms
+from AstroDiscord.components.time import current_unix_time_ms, current_unix_time
 from AstroDiscord.components.log import log, log_catastrophe
 import AstroDiscord.components.commands.request_counting as request_counting
 from AstroDiscord.components.paginator import PaginatorView
+from AstroDiscord.components.ini import config, text
 
 class CoreMusicCog(commands.Cog):
     def __init__(self, bot):
@@ -46,25 +47,26 @@ class CoreMusicCog(commands.Cog):
             json_resp = await self.api.search_song(artist, title, from_album, is_explicit, country_code)
             ai_report = None
             if 'type' in json_resp:
-                await embed_composer.compose(interaction.user, json_resp, 'searchsong', False, censor, True)
+                await embed_composer.compose(interaction.user, json_resp, 'searchsong', False, censor)
                 response = await interaction.followup.send(embed=embed_composer.embed, view=embed_composer.button_view)
 
                 try:
                     ai_report = await self.api.snitch(json_resp)
-                    await embed_composer.compose(interaction.user, ai_report, 'searchsong', False, censor)
-                except:
-                    await embed_composer.compose(interaction.user, json_resp, 'searchsong', False, censor)
+                except Exception:
+                    ai_report = None
 
-                await response.edit(embed=embed_composer.embed, view=embed_composer.button_view)
+                if ai_report:
+                    await embed_composer.compose(interaction.user, ai_report, 'searchsong', False, censor)
+                    await response.edit(embed=embed_composer.embed, view=embed_composer.button_view)
                 
                 request_counting.successful_request()
-                latency = json_resp['meta']['processing_time']['global_io']
-                if ai_report and 'type' in ai_report: 
-                    latency += ai_report['meta']['processing_time']['global_io']
+                latency = json_resp.get('meta', {}).get('processing_time_ms', 0)
+                if ai_report:
+                    latency += ai_report.get('meta', {}).get('processing_time_ms', 0)
                 request_counting.api_latency(latency)
                 
                 # Anonymize before logging
-                if ai_report and 'type' in ai_report:
+                if ai_report:
                     await embed_composer.compose(interaction.user, ai_report, 'searchsong', anonymous=True, censor=censor)
                 else:
                     await embed_composer.compose(interaction.user, json_resp, 'searchsong', anonymous=True, censor=censor)
@@ -106,25 +108,26 @@ class CoreMusicCog(commands.Cog):
             json_resp = await self.api.search_album(artist, title, year, country_code)
             ai_report = None
             if 'type' in json_resp:
-                await embed_composer.compose(interaction.user, json_resp, 'searchalbum', False, censor, True)
+                await embed_composer.compose(interaction.user, json_resp, 'searchalbum', False, censor)
                 response = await interaction.followup.send(embed=embed_composer.embed, view=embed_composer.button_view)
 
                 try:
                     ai_report = await self.api.snitch(json_resp)
-                    await embed_composer.compose(interaction.user, ai_report, 'searchalbum', False, censor)
-                except:
-                    await embed_composer.compose(interaction.user, json_resp, 'searchalbum', False, censor)
+                except Exception:
+                    ai_report = None
 
-                await response.edit(embed=embed_composer.embed, view=embed_composer.button_view)
+                if ai_report:
+                    await embed_composer.compose(interaction.user, ai_report, 'searchalbum', False, censor)
+                    await response.edit(embed=embed_composer.embed, view=embed_composer.button_view)
 
                 request_counting.successful_request()
-                latency = json_resp['meta']['processing_time']['global_io']
-                if ai_report and 'type' in ai_report: 
-                    latency += ai_report['meta']['processing_time']['global_io']
+                latency = json_resp.get('meta', {}).get('processing_time_ms', 0)
+                if ai_report:
+                    latency += ai_report.get('meta', {}).get('processing_time_ms', 0)
                 request_counting.api_latency(latency)
                 
                 # Anonymize before logging
-                if ai_report and 'type' in ai_report:
+                if ai_report:
                     await embed_composer.compose(interaction.user, ai_report, 'searchalbum', anonymous=True, censor=censor)
                 else:
                     await embed_composer.compose(interaction.user, json_resp, 'searchalbum', anonymous=True, censor=censor)
@@ -161,34 +164,106 @@ class CoreMusicCog(commands.Cog):
         
         try:
             metadata = await url_tools.get_metadata_from_url(query)
-            if metadata == None or (metadata['id'] == None and metadata['type'] == None):
-                json_resp = await self.api.search(query, country_code)
+            if not metadata or (not metadata.get('id') and not metadata.get('type')):
+                raw_search = await self.api.search(query, country_code)
+                
+                # --- NEW REVISED PRIORITIZATION MATRIX ---
+                if isinstance(raw_search, dict) and 'meta' in raw_search and 'filter_confidence_percentage' in raw_search['meta']:
+                    confidences = raw_search['meta']['filter_confidence_percentage']
+                    
+                    s_conf = float(confidences.get('songs') or 0)
+                    c_conf = float(confidences.get('collections') or 0)
+                    m_conf = float(confidences.get('music_videos') or 0)
+                    
+                    # Sort matrix tuple: (Confidence Score, Priority Weight, Category Name)
+                    sorting_matrix = [
+                        (s_conf, 3, 'songs'),
+                        (m_conf, 2, 'music_videos'),
+                        (c_conf, 1, 'collections')
+                    ]
+                    
+                    # Sort descending: Highest confidence score wins. If scores match, highest priority weight wins.
+                    sorting_matrix.sort(key=lambda x: (x[0], x[1]), reverse=True)
+                    
+                    winner_category = sorting_matrix[0][2]
+                    max_score = sorting_matrix[0][0]
+                    
+                    if max_score == 0 and s_conf == 0 and c_conf == 0 and m_conf == 0:
+                        json_resp = {} 
+                    else:
+                        category_data = raw_search.get(winner_category)
+                        best_match_item = None
+                        
+                        if isinstance(category_data, dict):
+                            if 'title' in category_data or 'type' in category_data:
+                                best_match_item = category_data
+                            else:
+                                best_match_item = category_data.get('0') or category_data.get(0)
+                        elif isinstance(category_data, list) and len(category_data) > 0:
+                            best_match_item = category_data[0]
+                            
+                        if isinstance(best_match_item, dict):
+                            if 'type' not in best_match_item:
+                                if winner_category == 'songs': best_match_item['type'] = 'track'
+                                elif winner_category == 'collections': best_match_item['type'] = 'album'
+                                else: best_match_item['type'] = 'music_video'
+                                
+                            if 'meta' not in best_match_item or not isinstance(best_match_item['meta'], dict):
+                                best_match_item['meta'] = {}
+                                
+                            best_match_item['meta']['processing_time_ms'] = raw_search['meta'].get('processing_time_ms', 0)
+                            
+                            # Copy the confidence scores to satisfy the search embed lookup
+                            if 'filter_confidence_percentage' in raw_search['meta']:
+                                best_match_item['filter_confidence_percentage'] = raw_search['meta']['filter_confidence_percentage']
+                                best_match_item['meta']['filter_confidence_percentage'] = raw_search['meta']['filter_confidence_percentage']
+                                
+                            json_resp = best_match_item
+                        else:
+                            json_resp = {}
+                else:
+                    json_resp = raw_search if isinstance(raw_search, dict) else {}
             else:
                 json_resp = await self.api.lookup(metadata['type'], metadata['id'], metadata['service'], country_code)
                 
+            # --- STANDARD EMBED CREATION & SNITCH LOGIC ---
             ai_report = None
-            if 'type' in json_resp:
-                await embed_composer.compose(interaction.user, json_resp, 'search', False, censor, True)
+            if json_resp and 'type' in json_resp:
+                await embed_composer.compose(interaction.user, json_resp, 'search', False, censor)
                 response = await interaction.followup.send(embed=embed_composer.embed, view=embed_composer.button_view)
 
                 try:
-                    ai_report = await self.api.snitch(json_resp)
+                    # --- payload serialization sanitation ---
+                    # create a clean deep copy to remove embedded processing times before posting out
+                    sanitized_payload = json_resp.copy()
+                    if 'meta' in sanitized_payload:
+                        sanitized_payload.pop('meta')
+                        
+                    ai_report = await self.api.snitch(sanitized_payload)
+                except Exception:
+                    ai_report = None
+
+                # API COMPLIANT CHECK: Detect by keys or payload presence instead of 'type'
+                is_valid_ai_report = ai_report and (any(k in ai_report for k in ('audio_reports', 'image_reports', 'video_reports')) or 'meta' in ai_report)
+
+                if is_valid_ai_report:
                     await embed_composer.compose(interaction.user, ai_report, 'search', False, censor)
-                except:
-                    await embed_composer.compose(interaction.user, json_resp, 'search', False, censor)
+                    await response.edit(embed=embed_composer.embed, view=embed_composer.button_view)
                     
-                await response.edit(embed=embed_composer.embed, view=embed_composer.button_view)
-                request_counting.successful_request()
-                latency = json_resp['meta']['processing_time']['global_io']
-                if ai_report and 'type' in ai_report: 
-                    latency += ai_report['meta']['processing_time']['global_io']
-                request_counting.api_latency(latency)
-                
-                # Anonymize before logging
-                if ai_report and 'type' in ai_report:
+                    request_counting.successful_request()
+                    p_time_base = json_resp.get('meta', {}).get('processing_time_ms', 0)
+                    p_time_ai = ai_report.get('meta', {}).get('processing_time_ms', 0)
+                    request_counting.api_latency(p_time_base + p_time_ai)
+                    
                     await embed_composer.compose(interaction.user, ai_report, 'search', anonymous=True, censor=censor)
+                    await log([embed_composer.embed], [json_resp], 'search', f'query:`{query}` country_code:`{country_code}` censor:`{censor}`', current_unix_time_ms() - start_time, embed_composer.button_view)
                 else:
+                    request_counting.successful_request()
+                    p_time_base = json_resp.get('meta', {}).get('processing_time_ms', 0)
+                    request_counting.api_latency(p_time_base)
+                    
                     await embed_composer.compose(interaction.user, json_resp, 'search', anonymous=True, censor=censor)
+                    await log([embed_composer.embed], [json_resp], 'search', f'query:`{query}` country_code:`{country_code}` censor:`{censor}`', current_unix_time_ms() - start_time, embed_composer.button_view)
                     
             elif json_resp == {}:
                 await embed_composer.error(204)
@@ -199,7 +274,6 @@ class CoreMusicCog(commands.Cog):
                 await interaction.followup.send(embed=embed_composer.embed)
                 request_counting.failed_request()
 
-            await log([embed_composer.embed], [json_resp], 'search', f'query:`{query}` country_code:`{country_code}` censor:`{censor}`', current_unix_time_ms() - start_time, embed_composer.button_view)
         except Exception as error:
             await embed_composer.error('other')
             await interaction.followup.send(embed=embed_composer.embed)
@@ -245,24 +319,25 @@ class CoreMusicCog(commands.Cog):
                 json_resp = await self.api.lookup('song', identifier, 'spotify', country_code)	
                 ai_report = None
                 if 'type' in json_resp:
-                    await embed_composer.compose(user, json_resp, 'snoop', False, censor, True)
+                    await embed_composer.compose(user, json_resp, 'snoop', False, censor)
                     response = await interaction.followup.send(embed=embed_composer.embed, view=embed_composer.button_view)
 
                     try:
                         ai_report = await self.api.snitch(json_resp)
-                        await embed_composer.compose(interaction.user, ai_report, 'snoop', False, censor)
-                    except:
-                        await embed_composer.compose(interaction.user, json_resp, 'snoop', False, censor)
+                    except Exception:
+                        ai_report = None
 
-                    await response.edit(embed=embed_composer.embed, view=embed_composer.button_view)		
+                    if ai_report:
+                        await embed_composer.compose(interaction.user, ai_report, 'snoop', False, censor)
+                        await response.edit(embed=embed_composer.embed, view=embed_composer.button_view)		
                     request_counting.successful_request()
-                    latency = json_resp['meta']['processing_time']['global_io']
-                    if ai_report and 'type' in ai_report: 
-                        latency += ai_report['meta']['processing_time']['global_io']
+                    latency = json_resp.get('meta', {}).get('processing_time_ms', 0)
+                    if ai_report:
+                        latency += ai_report.get('meta', {}).get('processing_time_ms', 0)
                     request_counting.api_latency(latency)
                     
                     # Anonymize before logging
-                    if ai_report and 'type' in ai_report:
+                    if ai_report:
                         await embed_composer.compose(interaction.user, ai_report, 'snoop', anonymous=True, censor=censor)
                     else:
                         await embed_composer.compose(interaction.user, json_resp, 'snoop', anonymous=True, censor=censor)
@@ -302,24 +377,25 @@ class CoreMusicCog(commands.Cog):
                 json_resp = await self.api.lookup(metadata['type'], metadata['id'], metadata['service'], metadata['country_code'] or country_code)
                 ai_report = None
                 if 'type' in json_resp:
-                    await embed_composer.compose(interaction.user, json_resp, 'coverart', False, censor, True)
+                    await embed_composer.compose(interaction.user, json_resp, 'coverart', False, censor)
                     response = await interaction.followup.send(embed=embed_composer.embed, view=embed_composer.button_view)
 
                     try:
                         ai_report = await self.api.snitch(json_resp)
+                    except Exception:
+                        ai_report = None
+
+                    if ai_report:
                         await embed_composer.compose(interaction.user, ai_report, 'coverart', False, censor)
-                    except:
-                        await embed_composer.compose(interaction.user, json_resp, 'coverart', False, censor)
-                    
-                    await response.edit(embed=embed_composer.embed, view=embed_composer.button_view)
+                        await response.edit(embed=embed_composer.embed, view=embed_composer.button_view)
                     request_counting.successful_request()
-                    latency = json_resp['meta']['processing_time']['global_io']
-                    if ai_report and 'type' in ai_report: 
-                        latency += ai_report['meta']['processing_time']['global_io']
+                    latency = json_resp.get('meta', {}).get('processing_time_ms', 0)
+                    if ai_report:
+                        latency += ai_report.get('meta', {}).get('processing_time_ms', 0)
                     request_counting.api_latency(latency)
                     
                     # Anonymize before logging
-                    if ai_report and 'type' in ai_report:
+                    if ai_report:
                         await embed_composer.compose(interaction.user, ai_report, 'coverart', anonymous=True, censor=censor)
                     else:
                         await embed_composer.compose(interaction.user, json_resp, 'coverart', anonymous=True, censor=censor)
@@ -350,65 +426,6 @@ class CoreMusicCog(commands.Cog):
             
         request_counting.client_latency(current_unix_time_ms() - start_time)
 
-
-    # @app_commands.command(name='knowledge', description='Get some basic information about a song')
-    # @discord.app_commands.allowed_installs(guilds=True, users=True)
-    # @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
-    # async def knowledge(self, interaction: discord.Interaction, query: str, country_code: str = 'us', censor: bool = False):
-    #     start_time = current_unix_time_ms()
-    #     if interaction.data.get("integration_owners", {}).get("1") is not None:
-    #         censor = True
-    #     await interaction.response.defer()
-    #     embed_composer = EmbedComposer()
-        
-    #     try:
-    #         metadata = await url_tools.get_metadata_from_url(query)
-    #         if metadata == None or (metadata['id'] == None and metadata['type'] == None):
-    #             json_resp = await self.api.search_knowledge(query, country_code)
-    #         else:
-    #             json_resp = await self.api.lookup_knowledge(metadata['id'], metadata['service'], country_code)
-                
-    #         if 'type' in json_resp:
-    #             await embed_composer.compose(interaction.user, json_resp, 'knowledge', False, censor, True)
-    #             response = await interaction.followup.send(embed=embed_composer.embed, view=embed_composer.button_view)
-
-    #             try:
-    #                 ai_report = await self.api.snitch(json_resp)
-    #                 await embed_composer.compose(interaction.user, ai_report, 'knowledge', False, censor)
-    #             except:	
-    #                 await embed_composer.compose(interaction.user, json_resp, 'knowledge', False, censor)
-
-    #             await response.edit(embed=embed_composer.embed, view=embed_composer.button_view)
-    #             request_counting.successful_request()
-    #             request_counting.api_latency(json_resp['meta']['processing_time']['global_io'])
-                
-    #             # Anonymize before logging
-    #             try: # Re-try accessing ai_report just in case
-    #                 if ai_report and 'type' in ai_report:
-    #                     await embed_composer.compose(interaction.user, ai_report, 'knowledge', anonymous=True, censor=censor)
-    #                 else:
-    #                     await embed_composer.compose(interaction.user, json_resp, 'knowledge', anonymous=True, censor=censor)
-    #             except NameError:
-    #                 await embed_composer.compose(interaction.user, json_resp, 'knowledge', anonymous=True, censor=censor)
-
-    #         elif json_resp == {}:
-    #             await embed_composer.error(204)
-    #             await interaction.followup.send(embed=embed_composer.embed)
-    #             request_counting.failed_request()
-    #         else:
-    #             await embed_composer.error(json_resp['status'])
-    #             await interaction.followup.send(embed=embed_composer.embed)
-    #             request_counting.failed_request()
-                
-    #         await log([embed_composer.embed], [json_resp], 'knowledge', f'query:`{query}` country_code:`{country_code}` censor:`{censor}`', current_unix_time_ms() - start_time, embed_composer.button_view)
-    #     except Exception as error:
-    #         await embed_composer.error('other')
-    #         await interaction.followup.send(embed=embed_composer.embed)
-    #         request_counting.failed_request()
-    #         await log_catastrophe('knowledge', f'query:`{query}` country_code:`{country_code}` censor:`{censor}`', error)
-            
-    #     request_counting.client_latency(current_unix_time_ms() - start_time)
-
     @discord.app_commands.allowed_installs(guilds=True, users=True)
     @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
     async def context_menu_lookup(self, interaction: discord.Interaction, message: discord.Message):
@@ -429,12 +446,12 @@ class CoreMusicCog(commands.Cog):
             if 'type' in global_object:
                 try:
                     ai_check = await self.api.snitch(global_object)
-                    if 'type' in ai_check:
+                    if ai_check:
                         # Append the regular (non-anonymous) embed to the message list
                         await embed_composer.compose(message.author, ai_check, 'link', False, False)
                         
                         request_counting.successful_request()
-                        request_counting.api_latency(global_object['meta']['processing_time']['global_io'] + ai_check['meta']['processing_time']['global_io'])
+                        request_counting.api_latency(global_object['meta']['processing_time_ms'] + ai_check['meta']['processing_time_ms'])
                         
                         # Use the log composer to create the anonymous log
                         await log_composer.compose(message.author, ai_check, 'link', anonymous=True, censor=False)
@@ -446,7 +463,7 @@ class CoreMusicCog(commands.Cog):
                     await embed_composer.compose(message.author, global_object, 'link', False, False)
                     
                     request_counting.successful_request()
-                    request_counting.api_latency(global_object['meta']['processing_time']['global_io'])
+                    request_counting.api_latency(global_object['meta']['processing_time_ms'])
                     
                     # Use the log composer to create the anonymous log
                     await log_composer.compose(message.author, global_object, 'link', anonymous=True, censor=False)
@@ -497,6 +514,69 @@ class CoreMusicCog(commands.Cog):
             await interaction.followup.send(embed=embed_composer.embed)
             request_counting.failed_request()
             await log_catastrophe('Search music link(s)', f"urls:`{await url_tools.get_urls_from_string(message.content)}`", error)
+            
+        request_counting.client_latency(current_unix_time_ms() - start_time)
+
+    @app_commands.command(name='about', description='Get information about Astro and its services')
+    @discord.app_commands.allowed_installs(guilds=True, users=True)
+    @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
+    async def about(self, interaction: discord.Interaction):
+        await interaction.response.defer()
+        start_time = current_unix_time_ms()
+        
+        try:
+            bot_version = config['client']['version']
+            api_data = await self.api.get_about()
+            
+            embed = discord.Embed(
+                title="About Astro",
+                description="Astro is an open-source, multi-platform music discovery and sharing assistant, designed to connect your music experience seamlessly across services like Spotify, Apple Music, YouTube Music, and Deezer.",
+                colour=0xf5c000
+            )
+            embed.add_field(
+                name="Feature suggestions, questions or bug reports?",
+                value=f"Feel free to leave them in our server (link in About me).",
+                inline=False
+            )
+            embed.add_field(
+                name="Bot Info",
+                value=f"• **Version**: `{bot_version}`\n• **Uptime**: <t:{self.bot.app_start_time}:R> (<t:{self.bot.app_start_time}:f>)",
+                inline=True
+            )
+            if api_data:
+                api_version = api_data.get('version', 'Unknown')
+                api_uptime = api_data.get('uptime')
+                
+                if api_uptime:
+                    api_uptime_value = f"<t:{api_uptime}:R> (<t:{api_uptime}:f>)"
+                else:
+                    api_uptime_value = f"`{api_data.get('uptime_string', 'Unknown')}`"
+                
+                embed.add_field(
+                    name="API Info",
+                    value=f"• **Version**: `{api_version}`\n• **Uptime**: {api_uptime_value}",
+                    inline=True
+                )
+            else:
+                embed.add_field(
+                    name="API Info",
+                    value="• **Status**: `Offline/Error`",
+                    inline=True
+                )
+                
+            embed.set_footer(
+                text="Thank you for using Astro!",
+                icon_url=text['images']['pfpurl']
+            )
+            
+            await interaction.followup.send(embed=embed)
+            request_counting.successful_request()
+        except Exception as error:
+            embed_composer = EmbedComposer()
+            await embed_composer.error('other')
+            await interaction.followup.send(embed=embed_composer.embed)
+            request_counting.failed_request()
+            await log_catastrophe('about', 'about', error)
             
         request_counting.client_latency(current_unix_time_ms() - start_time)
 

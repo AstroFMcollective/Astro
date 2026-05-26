@@ -34,9 +34,13 @@ def failed_request():
         
     print('[AstroDiscord] Failed request counted')
 
-def api_latency(global_io_latency: int):
+def api_latency(global_io_latency):
     """Logs API latency and safely calculates the new average."""
-    total_time = int(stats['runtime']['api_time_spent']) + global_io_latency
+    # Convert string -> float -> int to safely strip any decimals written previously
+    current_time_spent = int(float(stats['runtime']['api_time_spent']))
+    added_latency = int(float(global_io_latency))
+    
+    total_time = current_time_spent + added_latency
     success_count = int(stats['runtime']['successful_requests'])
     
     # Safely calculate average to prevent ZeroDivisionError
@@ -50,9 +54,13 @@ def api_latency(global_io_latency: int):
         
     print('[AstroDiscord] API latency logged')
 
-def client_latency(latency: int):
+def client_latency(latency):
     """Logs client latency and safely calculates the new average."""
-    total_time = int(stats['runtime']['client_time_spent']) + latency
+    # Convert string -> float -> int to safely strip any decimals
+    current_time_spent = int(float(stats['runtime']['client_time_spent']))
+    added_latency = int(float(latency))
+    
+    total_time = current_time_spent + added_latency
     total_requests = int(stats['runtime']['successful_requests']) + int(stats['runtime']['failed_requests'])
     
     # Safely calculate average to prevent ZeroDivisionError
