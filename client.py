@@ -66,65 +66,99 @@ class AstroClient(ext_commands.AutoShardedBot):
                 data['type'], data['id'], data['service'], data['country_code']
             )
 
-            if 'type' in self_object:
-                # First stage - Get baseline data
-                await embed_composer.compose(message.author, self_object, 'link', False, False, True)
-                response = await response.edit(embed=embed_composer.embed, view=embed_composer.button_view)
-
-                # Second stage - Global Interface data
+            # Safely check if the object exists before looking for 'type'
+            if self_object and 'type' in self_object:
+                # Global Interface data
                 global_object = await self.api.lookup(
                     data['type'], data['id'], data['service'], data['country_code']
                 )
 
-                if 'type' in global_object:
-                    await embed_composer.compose(message.author, global_object, 'link', False, False, True)
+                if global_object and 'type' in global_object:
+                    # Show the initial response immediately (Global IO response)
+                    await embed_composer.compose(message.author, global_object, 'link', False, False)
                     response = await response.edit(embed=embed_composer.embed, view=embed_composer.button_view)
 
-                    # Third stage - AI check
-                    ai_check = await self.api.snitch(global_object)
+                    # Query optional AI check in the background
+                    try:
+                        ai_check = await self.api.snitch(global_object)
+                    except Exception:
+                        ai_check = None
 
-                    if 'type' in ai_check:
+                    if ai_check:
+                        # Edit response again to show generative AI info and latency
                         await embed_composer.compose(message.author, ai_check, 'link', False, False)
                         response = await response.edit(embed=embed_composer.embed, view=embed_composer.button_view)
+                        
                         successful_request()
-                        api_latency(self_object['meta']['processing_time_ms'][data['service']] + global_object['meta']['processing_time_ms']['global_io'] + ai_check['meta']['processing_time_ms']['global_io'])
+                        
+                        # Calculate API latency using the new single-float schema safely
+                        # The "or {}" protects against the API returning "meta": null
+                        p_time_self = (self_object.get('meta') or {}).get('processing_time_ms', 0)
+                        p_time_global = (global_object.get('meta') or {}).get('processing_time_ms', 0)
+                        p_time_ai = (ai_check.get('meta') or {}).get('processing_time_ms', 0)
+                        
+                        api_latency(p_time_self + p_time_global + p_time_ai)
+                        
                         await embed_composer.compose(message.author, ai_check, 'link', True, False)
                         await log([embed_composer.embed], [ai_check], 'Auto Link Lookup', f"type:`{data['type']}` id:`{data['id']}` service:`{data['service']}` country_code:`{data['country_code']}`", current_unix_time_ms() - start_time, embed_composer.button_view)
                     else:
-                        await embed_composer.compose(message.author, global_object, 'link', False, False)
-                        response = await response.edit(embed=embed_composer.embed, view=embed_composer.button_view)
                         successful_request()
-                        api_latency(self_object['meta']['processing_time_ms'][data['service']] + global_object['meta']['processing_time_ms']['global_io'])
+                        
+                        p_time_self = (self_object.get('meta') or {}).get('processing_time_ms', 0)
+                        p_time_global = (global_object.get('meta') or {}).get('processing_time_ms', 0)
+                        
+                        api_latency(p_time_self + p_time_global)
+                        
                         await embed_composer.compose(message.author, global_object, 'link', True, False)
                         await log([embed_composer.embed], [global_object], 'Auto Link Lookup', f"type:`{data['type']}` id:`{data['id']}` service:`{data['service']}` country_code:`{data['country_code']}`", current_unix_time_ms() - start_time, embed_composer.button_view)
                 else:
                     failed_request()
-                    await message.delete()
+                    try:
+                        await response.delete()
+                    except Exception:
+                        pass
+                    try:
+                        await message.delete()
+                    except Exception:
+                        pass
                     await log_catastrophe('Auto Link Lookup', f"type:`{data['type']}` id:`{data['id']}` service:`{data['service']}` country_code:`{data['country_code']}`", 'HTTP error when talking to Astro API (Global stage)')
             else:
                 failed_request()
+                try:
+                    await response.delete()
+                except Exception:
+                    pass
                 await log_catastrophe('Auto Link Lookup', f"type:`{data['type']}` id:`{data['id']}` service:`{data['service']}` country_code:`{data['country_code']}`", 'HTTP error when talking to Astro API (Baseline stage)')
 
         if message.author != self.user:
-            try:
-                media_data = []
+            #try:
                 urls = await url_tools.get_urls_from_string(message.content)
+                
+                # Safely exit if no URLs are found (prevents the NoneType iteration crash)
+                if not urls:
+                    return 
+
+                media_data = []
                 for url in urls:
                     metadata = await url_tools.get_metadata_from_url(url)
-                    if metadata != None:
+                    if metadata is not None:
                         media_data.append(metadata)
-                if media_data != []:
+                        
+                if media_data:
                     tasks_list = []
                     for data in media_data:
-                        if data['id'] != None and data['type'] != None:
+                        if data.get('id') and data.get('type'):
                             tasks_list.append(create_task(auto_link_lookup(data)))
                     await gather(*tasks_list)
                 else: 
                     return
-            except Exception as error:
-                failed_request()
-                await log_catastrophe('Auto Link Lookup', f'urls:`{await url_tools.get_urls_from_string(message.content)}`', error)
-            client_latency(current_unix_time_ms() - start_time)
+            # except Exception as error:
+            #     failed_request()
+            #     # Use a safe fallback for the log if urls crashed out as None
+            #     safe_urls = await url_tools.get_urls_from_string(message.content) or []
+            #     await log_catastrophe('Auto Link Lookup', f'urls:`{safe_urls}`', error)
+                
+            # client_latency(current_unix_time_ms() - start_time)
 
 
 # --- Global Variables & Initialization ---

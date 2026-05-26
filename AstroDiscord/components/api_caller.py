@@ -57,7 +57,8 @@ class AstroAPI:
                 country_code = 'us'
             api_url = f'{self.api_endpoint}/servicecatalog/global_io/search/query'
             api_params = {
-                'query': query,
+                'q': query,
+                'best_match': 'true',
                 'market': country_code,
                 'hydrate': 'false'
             }
@@ -75,7 +76,7 @@ class AstroAPI:
                 country_code = 'us'
             api_url = f'{self.api_endpoint}/servicecatalog/spotify/search/query'
             api_params = {
-                'query': lyric,
+                'q': lyric,
                 'best_match': 'false',
                 'media_types': 'song',
                 'market': country_code,
@@ -155,3 +156,27 @@ class AstroAPI:
                     return json_response
                 else:
                     return {}
+
+    async def snitch(self, media_object: dict):
+        """Routes the generic snitch call to the correct specific endpoint based on media type."""
+        obj_type = media_object.get('type')
+        
+        if obj_type in ['track', 'single', 'knowledge']:
+            return await self.snitch_song(media_object)
+        elif obj_type in ['album', 'ep', 'eop']:
+            return await self.snitch_collection(media_object)
+        elif obj_type == 'music_video':
+            return await self.snitch_music_video(media_object)
+        else:
+            # If the type is completely unrecognized, fallback safely
+            raise ValueError(f"Unsupported media type for snitch: {obj_type}")
+
+    async def get_about(self):
+        async with aiohttp.ClientSession() as session:
+            try:
+                async with session.get(url=self.api_endpoint) as response:
+                    if response.status == 200:
+                        return await response.json()
+            except Exception:
+                pass
+            return None

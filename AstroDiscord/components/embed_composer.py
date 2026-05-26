@@ -8,441 +8,299 @@ import numpy as np
 from io import BytesIO
 
 
-
 class EmbedComposer:
-	def __init__(self):
-		self.button_view = None
-		self.embed = None
-		self.last_json = None
-		self.generic_loading = Embed(
-			description = "Loading...",
-			colour = 0xf5c000
-		)
-	
-	async def error(self, error: int, custom: dict = None):
-		error_titles = {
-			500: 'An error has occurred!',
-			204: "I couldn't find what you're looking for.",
-			'other': 'An undocumented error has occured!'
-		}
-		error_descriptions = {
-			500: 'Something has gone wrong on our end. Please try again! If this keeps happening, feel free to report it in our Discord server!',
-			204: 'Please check your request for typos and if everything is in its right order.',
-			'other': 'Something has gone horribly wrong. Please report this in our Discord server.'
-		}
-		error_meanings = {
-			500: 'Internal server error',
-			204: 'Empty response',
-			'other': 'Unforeseen consequences'
-		}
+    def __init__(self):
+        self.button_view = None
+        self.embed = None
+        self.last_json = None
+        self.generic_loading = Embed(
+            description="Loading...",
+            colour=0xf5c000
+        )
 
-		if custom != None:
-			title = custom['title']
-			description = custom['description']
-			meaning = custom['meaning']
-		elif error not in error_titles:
-			title = error_titles['other']
-			description = error_descriptions['other']
-			meaning = error_meanings['other']
-		else:
-			title = error_titles[error]
-			description = error_descriptions[error]
-			meaning = error_meanings[error]
-		self.embed = Embed(
-			title = title,
-            description = description,
-            colour = 0xf5c000
-		)
+    async def error(self, error: int, custom: dict = None):
+        error_titles = {
+            500: 'An error has occurred!',
+            204: "I couldn't find what you're looking for.",
+            'other': 'An undocumented error has occured!'
+        }
+        error_descriptions = {
+            500: 'Something has gone wrong on our end. Please try again! If this keeps happening, feel free to report it in our Discord server!',
+            204: 'Please check your request for typos and if everything is in its right order.',
+            'other': 'Something has gone horribly wrong. Please report this in our Discord server.'
+        }
+        error_meanings = {
+            500: 'Internal server error',
+            204: 'Empty response',
+            'other': 'Unforeseen consequences'
+        }
 
-		self.embed.set_author(name='Oh no!')
+        if custom is not None:
+            title = custom['title']
+            description = custom['description']
+            meaning = custom['meaning']
+        elif error not in error_titles:
+            title = error_titles['other']
+            description = error_descriptions['other']
+            meaning = error_meanings['other']
+        else:
+            title = error_titles[error]
+            description = error_descriptions[error]
+            meaning = error_meanings[error]
 
-		self.embed.set_footer(
-			text = f'Thanks for using Astro!  •  Error code {error} - {meaning}',
-            icon_url = text['images']['pfpurl']
-		)
+        self.embed = Embed(
+            title=title,
+            description=description,
+            colour=0xf5c000
+        )
+        self.embed.set_author(name='Oh no!')
+        self.embed.set_footer(
+            text=f"Thanks for using Astro!  •  Error code {error} - {meaning}",
+            icon_url=text['images']['pfpurl']
+        )
 
+    async def compose(self, user: User | Member, json_response: dict, command_type: str, anonymous: bool = False, censor: bool = False, loading: bool = False):
+        service_metadata_priority = ['spotify', 'apple_music', 'youtube_music', 'deezer', 'genius']
+        mv_thumbnail_priority = ['youtube_music', 'apple_music']
 
+        song_obj_types = ['track', 'single']
+        collection_obj_types = ['album', 'ep']
+        music_video_types = ['music_video']
+        knowledge_types = ['knowledge']
 
+        actions = {
+            'searchsong': 'searched for',
+            'searchalbum': 'searched for',
+            'search': 'searched for',
+            'lookup': 'searched for',
+            'snoop': 'is listening to',
+            'coverart': 'looked up cover art for',
+            'link': 'sent a link to',
+            'knowledge': 'searched for knowledge about'
+        }
 
-	async def compose(self, user: User | Member, json_response: dict, command_type: str, anonymous: bool = False, censor: bool = False, loading: bool = False):
-		"""
-			Compose a Discord embed from a given JSON file.
-		"""
-		# Order in which to read the metadata from multiple services
-		service_metadata_priority = ['spotify','apple_music','youtube_music','deezer','genius']
-		cover_art_priority = ['genius','spotify','deezer','youtube_music','apple_music']
-		mv_thumbnail_priority = ['youtube_music', 'apple_music']
+        username = user.display_name
+        user_pfp = user.display_avatar
+        action = actions.get(command_type, 'searched for')
 
-		loading_emojis = {
-			'loading1': '<a:loading1:1438606345153806468>',
-			'loading2': '<a:loading2:1438606347942756423>',
-			'loading3': '<a:loading3:1438606349431865515>',
-			'loading4': '<a:loading4:1438606352174940170>',
-			'loading5': '<a:loading5:1438606355681509396>',
-			'loading6': '<a:loading6:1438606359192141885>',
-			'loading7': '<a:loading7:1438606361448546324>',
-			'loading8': '<a:loading8:1438606364535689376>',
-			'loading9': '<a:loading9:1438606365798043708>',
-			'loading10': '<a:loading10:1438606367584686212>',
-			'loading11': '<a:loading11:1438606378120777808>'
-		}
+        def get_confidence(meta):
+            if meta and 'filter_confidence_percentage' in meta and meta['filter_confidence_percentage'] is not None:
+                raw_val = meta['filter_confidence_percentage']
+                
+                # If it's a dict (New Schema), extract the 'songs' confidence value or default to 0
+                if isinstance(raw_val, dict):
+                    # Try to get 'songs', fallback to extracting the maximum value present if 'songs' isn't there
+                    confidence_num = raw_val.get('songs') or max(list(raw_val.values()) or [0])
+                else:
+                    confidence_num = raw_val
 
-		# Object types
-		song_obj_types = ['track', 'single']
-		collection_obj_types = ['album', 'ep']
-		music_video_types = ['music_video']
-		knowledge_types = ['knowledge']
-		snitch_types = ['analysis']
+                # If the score is an integer greater than 1, it's already pre-multiplied (e.g., 72.78 instead of 0.7278)
+                if confidence_num > 1.0:
+                    return f"`[{round(float(confidence_num), 3)}%]`"
+                elif confidence_num > 0.0:
+                    return f"`[{round(float(confidence_num) * 100, 3)}%]`"
+            return ''
 
-		# How to refer to a give piece of media
-		refer_to = {
-			'track': 'song',
-			'single': 'song',
-			'album': 'album',
-			'ep': 'EP',
-			'music_video': 'music video',
-		}
+        async def apply_common_formatting(title, desc_elements, cover_url, processing_time_ms):
+            color = await self.image_hex(cover_url)
+            
+            # Remove empty/None description elements
+            desc_elements = [d for d in desc_elements if d]
+            self.embed = Embed(
+                title=title,
+                description='  •  '.join(desc_elements),
+                color=color
+            )
 
-		# Embed actions
-		actions = {
-			'searchsong': 'searched for',
-			'searchalbum': 'searched for',
-			'search': 'searched for',
-			'lookup': 'searched for',
-			'snoop': 'is listening to',
-			'coverart': 'looked up cover art for',
-			'link': 'sent a link to',
-			'knowledge': 'searched for knowledge about'
-		}
+            if not anonymous:
+                self.embed.set_author(name=f'{username} {action}:', icon_url=user_pfp)
+            else:
+                self.embed.set_author(name=f'A user {action}:', icon_url=text['images']['default_pfp'])
 
-		# User metadata
-		username = user.display_name
-		user_pfp = user.display_avatar
-		action = actions[command_type]
+            if command_type != 'coverart':
+                self.embed.set_thumbnail(url=cover_url)
+            else:
+                self.embed.set_image(url=cover_url)
 
-		async def song(json_response: dict, loading: bool = False):
-			if 'filter_confidence_percentage' in json_response['meta']:
-				confidence = f'`[{round(json_response['meta']['filter_confidence_percentage'] * 100, 3)}%]`' if json_response['meta']['filter_confidence_percentage'] != None else ''
-			else:
-				confidence = ''
-			title = escape_markdown(json_response['title']) # Get title
-			title = f'{title}   `EXPLICIT` {confidence}' if json_response['is_explicit'] == True else f'{title}   {confidence}' # Add an explicit marker if the song is explicit
-			artists = ', '.join([f'**{escape_markdown(artist['name'])}**' for artist in json_response['artists']]) # Get artists
-			if 'collection' in json_response: # Get collection
-				if json_response['collection'] != None:
-					if json_response['type'] != 'single':
-						collection = f'*{escape_markdown(json_response['collection']['title'])}*' if censor == False else f'*{escape_markdown(json_response['collection']['censored_title'])}*'
-					else:
-						collection = None
-				else:
-					collection = None
-			else:
-				collection = None
-			genre = json_response['genre'] if 'genre' in json_response else None # Get genre
-			desc_elements = [artists, collection, genre]
-			while None in desc_elements: # Remove anything without a value
-				desc_elements.remove(None)
-			cover_url = None
-			for service in service_metadata_priority: # Get cover art URL
-				if service in json_response['cover']['hq_urls']:
-					cover_url = json_response['cover']['hq_urls'][service] if json_response['cover']['hq_urls'][service] != None else json_response['collection']['cover']['hq_urls'][service]
-					break
-			color = await self.image_hex(cover_url) # Get color from average color in cover
-			self.embed = Embed( # Basic embed data
-				title = title,
-				description = '  •  '.join(desc_elements),
-				color = color
-			)
-			if anonymous == False: # Set author and action of the command (ex. 'sushi searched for:')
-				self.embed.set_author(
-					name = f'{username} {action}:',
-					icon_url = user_pfp
-				)
-			else:
-				self.embed.set_author( # Anonymous author and action for logging (ex. 'A user searched for:')
-					name = f'A user {action}:',
-					icon_url = text['images']['default_pfp']
-				) 
-			if command_type != 'coverart':
-				self.embed.set_thumbnail( # Cover art but small
-					url = cover_url
-				)
-			else:
-				self.embed.set_image( # Cover art
-					url = cover_url
-				)
-			if loading == False:
-				for field in self.embed.fields:
-					if field.value == 'Loading...':
-						self.embed.remove_field(self.embed.fields.index(field))
-				self.embed.set_footer( # Thanks and API latency report
-					text = f'{text['embed']['tymsg']} • Done in {json_response['meta']['processing_time_ms']['global_io']} ms',
-					icon_url = text['images']['pfpurl']
-				)
-			else:
-				self.embed.add_field(
-					name = '',
-					value = 'Loading...',
-					inline = False
-				)
-			await self.service_buttons(json_response['urls']) # Get service button components
+            if not loading:
+                for field in self.embed.fields.copy():
+                    if field.value == 'Loading...':
+                        self.embed.remove_field(self.embed.fields.index(field))
+                self.embed.set_footer(
+                    text=f"{text['embed']['tymsg']} • Done in {processing_time_ms} ms",
+                    icon_url=text['images']['pfpurl']
+                )
+            else:
+                self.embed.add_field(name='', value='Loading...', inline=False)
+                
+            await self.service_buttons(json_response.get('urls', {}))
 
-		async def music_video(json_response: dict, loading: bool = False):
-			if 'filter_confidence_percentage' in json_response['meta']:
-				confidence = f'`[{round(json_response['meta']['filter_confidence_percentage'] * 100, 3)}%]`' if json_response['meta']['filter_confidence_percentage'] != None else ''
-			else:
-				confidence = ''
-			title = escape_markdown(json_response['title']) # Get title
-			title = f'{title}   `EXPLICIT` {confidence}' if json_response['is_explicit'] == True else f'{title}   {confidence}' # Add an explicit marker if the song is explicit
-			artists = ', '.join([f'**{escape_markdown(artist['name'])}**' for artist in json_response['artists']]) # Get artists
-			genre = json_response['genre'] if 'genre' in json_response else None 
-			desc_elements = [artists, 'Music Video', genre]
-			while None in desc_elements: # Remove anything without a value
-				desc_elements.remove(None)
-			cover_url = None
-			for service in mv_thumbnail_priority: # Get cover art URL
-				if service in json_response['cover']['hq_urls']:
-					cover_url = json_response['cover']['hq_urls'][service]
-					break
-			color = await self.image_hex(cover_url) # Get color from average color in cover
-			self.embed = Embed( # Basic embed data
-				title = title,
-				description = '  •  '.join(desc_elements),
-				color = color
-			)
-			if anonymous == False: # Set author and action of the command (ex. 'sushi searched for:')
-				self.embed.set_author(
-					name = f'{username} {action}:',
-					icon_url = user_pfp
-				)
-			else:
-				self.embed.set_author( # Anonymous author and action for logging (ex. 'A user searched for:')
-					name = f'A user {action}:',
-					icon_url = text['images']['default_pfp']
-				) 
-			if command_type != 'coverart':
-				self.embed.set_thumbnail( # Cover art but small
-					url = cover_url
-				)
-			else:
-				self.embed.set_image( # Cover art
-					url = cover_url
-				)
-			if loading == False:
-				for field in self.embed.fields:
-					if field.value == 'Loading...':
-						self.embed.remove_field(self.embed.fields.index(field))
-				self.embed.set_footer( # Thanks and API latency report
-					text = f'{text['embed']['tymsg']} • Done in {json_response['meta']['processing_time_ms']['global_io']} ms',
-					icon_url = text['images']['pfpurl']
-				)
-			else:
-				self.embed.add_field(
-					name = '',
-					value = 'Loading...',
-					inline = False
-				)
-			await self.service_buttons(json_response['urls'])
-		
-		async def collection(json_response: dict, loading: bool = False):
-			if 'filter_confidence_percentage' in json_response['meta']:
-				confidence = f'`[{round(json_response['meta']['filter_confidence_percentage'] * 100, 3)}%]`' if json_response['meta']['filter_confidence_percentage'] != None else ''
-			else:
-				confidence = ''
-			title = escape_markdown(json_response['title']) # Get title
-			title = f'{title}   {confidence}'
-			artists = ', '.join([f'**{escape_markdown(artist['name'])}**' for artist in json_response['artists']]) # Get artists
-			year = str(json_response['release_year']) # Get release year
-			genre = json_response['genre'] # Get genre
-			desc_elements = [artists, year, genre] 
-			while None in desc_elements: # Remove anything without a value
-				desc_elements.remove(None)
-			cover_url = None
-			for service in service_metadata_priority: # Get cover art URL
-				if service in json_response['cover']['hq_urls']:
-					cover_url = json_response['cover']['hq_urls'][service]
-					break
-			color = await self.image_hex(cover_url) # Get color from average color in cover
-			self.embed = Embed( # Basic embed data
-				title = title,
-				description = '  •  '.join(desc_elements),
-				color = color
-			)
-			if anonymous == False: # Set author and action of the command (ex. 'sushi searched for:')
-				self.embed.set_author(
-					name = f'{username} {action}:',
-					icon_url = user_pfp
-				)
-			else:
-				self.embed.set_author( 
-					name = f'A user {action}:',
-					icon_url = text['images']['default_pfp']
-				) 
-			if command_type != 'coverart':
-				self.embed.set_thumbnail( # Cover art but small
-					url = cover_url
-				)
-			else:
-				self.embed.set_image( # Cover art
-					url = cover_url
-				)
-			if loading == False:
-				for field in self.embed.fields:
-					if field.value == 'Loading...':
-						self.embed.remove_field(self.embed.fields.index(field))
-				self.embed.set_footer( # Thanks and API latency report
-					text = f'{text['embed']['tymsg']} • Done in {json_response['meta']['processing_time_ms']['global_io']} ms',
-					icon_url = text['images']['pfpurl']
-				)
-			else:
-				self.embed.add_field(
-					name = '',
-					value = 'Loading...',
-					inline = False
-				)
-			await self.service_buttons(json_response['urls'])
+        async def build_media_embed(data, media_category):
+            confidence = get_confidence(data.get('meta'))
+            title = escape_markdown(data.get('title', 'Unknown'))
+            if data.get('is_explicit'):
+                title = f"{title}   `EXPLICIT` {confidence}".strip()
+            else:
+                title = f"{title}   {confidence}".strip()
 
-		async def analysis(json_response: dict):
-			# 1. Compose the base embed based on the media type
-			if json_response['analysed_media']['type'] in song_obj_types:
-				await song(json_response['analysed_media'])
-			elif json_response['analysed_media']['type'] in music_video_types:
-				await music_video(json_response['analysed_media'])
-			elif json_response['analysed_media']['type'] in collection_obj_types:
-				await collection(json_response['analysed_media'])
+            artists = ', '.join([f"**{escape_markdown(a['name'])}**" for a in data.get('artists', [])])
+            genre = data.get('genre')
+            desc_elements = [artists]
 
-			analysis_string = ''
+            if media_category == 'song':
+                collection_data = data.get('collection')
+                if collection_data and data.get('type') != 'single':
+                    col_title = collection_data.get('censored_title') if censor and collection_data.get('censored_title') else collection_data.get('title')
+                    if col_title:
+                        desc_elements.append(f"*{escape_markdown(col_title)}*")
+                desc_elements.append(genre)
+                
+                cover_url = None
+                for service in service_metadata_priority:
+                    if 'cover' in data and 'hq_urls' in data['cover'] and data['cover']['hq_urls'].get(service):
+                        cover_url = data['cover']['hq_urls'][service]
+                        break
+                    elif collection_data and 'cover' in collection_data and 'hq_urls' in collection_data['cover'] and collection_data['cover']['hq_urls'].get(service):
+                        cover_url = collection_data['cover']['hq_urls'][service]
+                        break
 
-			# 2. Determine the text label for the analysed media type
-			analysed_media_type = ''
-			am_type = json_response['analysed_media']['type']
-			
-			if am_type in song_obj_types:
-				analysed_media_type = 'song'
-			elif am_type in collection_obj_types:
-				analysed_media_type = 'EP' if am_type in ['ep', 'eop'] else 'album'
-			elif am_type in music_video_types:
-				analysed_media_type = 'music video'
-			elif am_type in knowledge_types:
-				km_type = json_response['analysed_media'].get('media_type', '')
-				if km_type in song_obj_types:
-					analysed_media_type = 'song'
-				elif km_type in collection_obj_types:
-					analysed_media_type = 'EP' if km_type in ['ep', 'eop'] else 'album'
-				elif km_type in music_video_types:
-					analysed_media_type = 'music video'
+            elif media_category == 'music_video':
+                desc_elements.extend(['Music Video', genre])
+                cover_url = None
+                for service in mv_thumbnail_priority:
+                    if 'cover' in data and 'hq_urls' in data['cover'] and data['cover']['hq_urls'].get(service):
+                        cover_url = data['cover']['hq_urls'][service]
+                        break
 
-			# 3. Process Audio Reports
-			for report in json_response.get('audio_reports', []):
-				ai_analysis = report.get('ai_analysis', {})
-				# Convert the 0-1 scale from the JSON to a 0-100 percentage
-				confidence = ai_analysis.get('ai_confidence_score', 0) * 100
-				
-				if ai_analysis.get('is_ai_generated', False) or confidence >= 50.0:
-					analysis_string += f"- There is a probability this {analysed_media_type}'s audio has been AI-generated `[{round(confidence, 3)}%]`\n"
+            elif media_category == 'collection':
+                release_year = str(data.get('release_year', ''))
+                desc_elements.extend([release_year, genre])
+                cover_url = None
+                for service in service_metadata_priority:
+                    if 'cover' in data and 'hq_urls' in data['cover'] and data['cover']['hq_urls'].get(service):
+                        cover_url = data['cover']['hq_urls'][service]
+                        break
 
-			# 4. Process Image Reports
-			for report in json_response.get('image_reports', []):
-				ai_analysis = report.get('ai_analysis', {})
-				# Convert the 0-1 scale from the JSON to a 0-100 percentage
-				confidence = ai_analysis.get('ai_confidence_score', 0) * 100
-				
-				if ai_analysis.get('is_ai_generated', False) or confidence >= 50.0:
-					analysis_string += f"- There is a probability this {analysed_media_type}'s cover art has been AI-generated `[{round(confidence, 3)}%]`\n"
+            # Now rounded to a clean integer
+            proc_time = int(round(float(data.get('meta', {}).get('processing_time_ms', 0))))
+            await apply_common_formatting(title, desc_elements, cover_url, proc_time)
 
-			# 5. Append the AI Report field if applicable
-			if analysis_string != '':
-				# Only add the field if one with the same name doesn't already exist
-				if not any(field.name == 'Generative AI report' for field in self.embed.fields):
-					self.embed.add_field(
-						name = 'Generative AI report',
-						value = f"{analysis_string}-# Powered by Astro Snitch. Analysis may not be 100% accurate. Rely on your own judgment and verify with additional context.",
-						inline = False
-					)
-			
-			# 6. Cleanup loading states
-			for field in self.embed.fields:
-				if field.value == 'Loading...':
-					self.embed.remove_field(self.embed.fields.index(field))
-			
-			# 7. Update Footer using the new metadata keys
-			analysed_time = json_response['analysed_media']['meta']['processing_time_ms']['global_io']
-			snitch_time_ms = json_response.get('meta', {}).get('processing_time_ms_ms', 0)
-			
-			self.embed.set_footer(
-				text = f"{text['embed']['tymsg']} • Done in {analysed_time} + {round(snitch_time_ms, 2)} ms",
-				icon_url = text['images']['pfpurl']
-			)
-		
-		# Embed composing
-		if 'type' in json_response:
-			if json_response['type'] in song_obj_types: # If the media object is a song
-				await song(json_response, loading = loading)
-			
-			elif json_response['type'] in music_video_types: # If the media object is a music video
-				await music_video(json_response, loading = loading)
-			
-			elif json_response['type'] in collection_obj_types: # If the media object is a collection
-				await collection(json_response, loading = loading)
+        async def analysis(json_data):
+            am = self.last_json or {}
+            am_type = am.get('type', 'media')
+            
+            media_label = 'media'
+            if am_type in song_obj_types or am_type in knowledge_types:
+                media_label = 'song'
+            elif am_type in music_video_types:
+                media_label = 'music video'
+            elif am_type in collection_obj_types:
+                media_label = 'EP' if am_type in ['ep', 'eop'] else 'album'
 
-			elif json_response['type'] in snitch_types: # If the media object is an Astro Snitch analysis object
-				await analysis(json_response)
-		
-		elif 'type' not in json_response and self.embed != None:
-			for field in self.embed.fields:
-				if field.value == 'Loading...':
-					self.embed.remove_field(self.embed.fields.index(field))
-			self.embed.set_footer( # Thanks and API latency report
-				text = f'{text['embed']['tymsg']} • Done in {self.last_json['meta']['processing_time_ms']['global_io']} ms',
-				icon_url = text['images']['pfpurl']
-			)
+            analysis_string = ''
 
-		self.last_json = json_response
-		
-		
+            for report in json_data.get('audio_reports') or []:
+                ai_analysis = report.get('ai_analysis', {})
+                confidence = ai_analysis.get('ai_confidence_score', 0) * 100
+                if ai_analysis.get('is_ai_generated', False) or confidence >= 50.0:
+                    analysis_string += f"- There is a probability this {media_label}'s audio has been AI-generated `[{round(confidence, 3)}%]`\n"
 
-	async def service_buttons(self, urls: dict):
-		"""
-			Create Discord component buttons for each service URL.
-		"""
-		url_services =  list(urls.keys())
-		self.button_view = View()
+            for report in json_data.get('image_reports') or []:
+                ai_analysis = report.get('ai_analysis', {})
+                confidence = ai_analysis.get('ai_confidence_score', 0) * 100
+                if ai_analysis.get('is_ai_generated', False) or confidence >= 50.0:
+                    analysis_string += f"- There is a probability this {media_label}'s cover has been AI-generated `[{round(confidence, 3)}%]`\n"
 
-		for service in url_services:
-			self.button_view.add_item(
-				Button(
-					style = ButtonStyle.link,
-					url = urls[service],
-					emoji = text['emoji'][service]
-				)
-			)
-	
-	async def image_hex(self, image_url: str, quality: int = 5):
-		"""
-			Get the average color of cover art and return its hex value.
-		"""
-		async with aiohttp.ClientSession() as session:
-			async with session.get(url = image_url) as response: # Open the image URL and check if it's legitimate
-				if response.status == 200:
-					image_bytes = await response.read() # Read the image file
-					image = Image.open(BytesIO(image_bytes)) # Open the image file
+            for report in json_data.get('video_reports') or []:
+                ai_analysis = report.get('ai_analysis', {})
+                confidence = ai_analysis.get('ai_confidence_score', 0) * 100
+                if ai_analysis.get('is_ai_generated', False) or confidence >= 50.0:
+                    analysis_string += f"- There is a probability this {media_label}'s video has been AI-generated `[{round(confidence, 3)}%]`\n"
 
-					# Get image specs
-					width, height = image.size
-					# Resize the image
-					new_width = width // quality
-					new_height = height // quality
-					image = image.resize((new_width, new_height))
+            if analysis_string:
+                if not any(field.name == 'Generative AI report' for field in self.embed.fields):
+                    self.embed.add_field(
+                        name='Generative AI report',
+                        value=f"{analysis_string}-# Powered by Astro Snitch. Analysis may not be 100% accurate. Rely on your own judgment and verify with additional context.",
+                        inline=False
+                    )
 
-					# Convert to RGB values
-					pixels = image.convert('RGB').getdata()
-					# Get average color
-					average_color = np.mean(pixels, axis = 0).astype(int)
+            for field in self.embed.fields.copy():
+                if field.value == 'Loading...':
+                    self.embed.remove_field(self.embed.fields.index(field))
 
-					# Create a hex string
-					hex_color = '#{:02x}{:02x}{:02x}'.format(*average_color)
-					# Return as base 16 integer
-					return int(hex_color[1:], base = 16)
-				else:
-					# If the image link is invalid, return Astro's signature yellow
-					return 0xf5c000
+            # Ensure the author block is correctly updated (anonymized or standard)
+            if self.embed:
+                if anonymous:
+                    self.embed.set_author(name=f'A user {action}:', icon_url=text['images']['default_pfp'])
+                else:
+                    self.embed.set_author(name=f'{username} {action}:', icon_url=user_pfp)
+
+            # Combine processing times as clean integers
+            analysed_time = int(round(float(am.get('meta', {}).get('processing_time_ms', 0))))
+            snitch_time = int(round(float(json_data.get('meta', {}).get('processing_time_ms', 0))))
+
+            self.embed.set_footer(
+                text=f"{text['embed']['tymsg']} • Done in {analysed_time} + {snitch_time} ms",
+                icon_url=text['images']['pfpurl']
+            )
+
+        # Logic selector
+        is_ai_report = any(k in json_response for k in ('audio_reports', 'image_reports', 'video_reports')) or json_response.get('type') == 'analysis'
+
+        if is_ai_report:
+            await analysis(json_response)
+            
+        elif 'type' in json_response:
+            obj_type = json_response['type']
+            if obj_type in song_obj_types:
+                await build_media_embed(json_response, 'song')
+            elif obj_type in music_video_types:
+                await build_media_embed(json_response, 'music_video')
+            elif obj_type in collection_obj_types:
+                await build_media_embed(json_response, 'collection')
+            
+            self.last_json = json_response
+            
+        elif self.embed is not None and self.last_json:
+            for field in self.embed.fields.copy():
+                if field.value == 'Loading...':
+                    self.embed.remove_field(self.embed.fields.index(field))
+            proc_time = int(round(float(self.last_json.get('meta', {}).get('processing_time_ms', 0))))
+            self.embed.set_footer(
+                text=f"{text['embed']['tymsg']} • Done in {proc_time} ms",
+                icon_url=text['images']['pfpurl']
+            )
+            
+    async def service_buttons(self, urls: dict):
+        self.button_view = View()
+        for service, url in urls.items():
+            if url:
+                self.button_view.add_item(
+                    Button(
+                        style=ButtonStyle.link,
+                        url=url,
+                        emoji=text['emoji'].get(service) 
+                    )
+                )
+
+    async def image_hex(self, image_url: str, quality: int = 5):
+        if not image_url:
+            return 0xf5c000
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.get(url=image_url) as response:
+                    if response.status == 200:
+                        image_bytes = await response.read()
+                        image = Image.open(BytesIO(image_bytes))
+                        width, height = image.size
+                        new_width = max(1, width // quality)
+                        new_height = max(1, height // quality)
+                        image = image.resize((new_width, new_height))
+                        pixels = image.convert('RGB').getdata()
+                        average_color = np.mean(pixels, axis=0).astype(int)
+                        hex_color = '#{:02x}{:02x}{:02x}'.format(*average_color)
+                        return int(hex_color[1:], base=16)
+        except Exception:
+            pass
+        return 0xf5c000

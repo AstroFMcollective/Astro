@@ -39,7 +39,7 @@ class LyricSearchPagination(discord.ui.View):
             # Ran out of songs to display
             await self.composer.error('other', {
                 'title': 'End of the line!', 
-                'description': 'We ran out of songs to show you. Try adjusting your lyric query.', 
+                'description': 'I ran out of songs to show you. Try picking a different lyric.', 
                 'meaning': 'No more results'
             })
             await interaction.response.edit_message(embed=self.composer.embed, view=None)
@@ -48,8 +48,9 @@ class LyricSearchPagination(discord.ui.View):
         current_song = self.songs[self.index]
         
         # Inject metadata to prevent KeyError in EmbedComposer for partial objects
+        # NEW API: processing_time_ms is now a clean float instead of a dictionary
         current_song['meta'] = {
-            'processing_time_ms': {'global_io': self.initial_api_time},
+            'processing_time_ms': float(self.initial_api_time),
             'filter_confidence_percentage': {}
         }
         
@@ -75,7 +76,7 @@ class LyricSearchPagination(discord.ui.View):
 
         # --- LOADING MODE ---
         # Edit the embed to look like it's loading, push the Spotify button, and acknowledge the interaction immediately
-        current_song['meta'] = {'processing_time_ms': {'global_io': 0}, 'filter_confidence_percentage': {}}
+        current_song['meta'] = {'processing_time_ms': 0.0, 'filter_confidence_percentage': {}}
         await self.composer.compose(self.user, current_song, 'searchsong', censor=self.censor, loading=True)
         await interaction.response.edit_message(embed=self.composer.embed, view=self.composer.button_view)
 
@@ -95,27 +96,37 @@ class LyricSearchPagination(discord.ui.View):
         # --- FINAL RESULTS & ASTRO SNITCH ---
         ai_report = None
         if 'type' in global_result:
-            # Compose global_result FIRST so the embed composer builds the multi-platform buttons!
-            await self.composer.compose(self.user, global_result, 'searchsong', censor=self.censor, loading=True)
-
-            try:
-                ai_report = await self.api.snitch(global_result)
-                await self.composer.compose(self.user, ai_report, 'searchsong', censor=self.censor, loading=False)
-            except:
-                await self.composer.compose(self.user, global_result, 'searchsong', censor=self.censor, loading=False)
-            
-            # Edit the message: Finalized embed and multi-service button view
+            # First Edit: Send immediate response (Global IO response) without Loading... messages
+            await self.composer.compose(self.user, global_result, 'searchsong', censor=self.censor, loading=False)
             await interaction.followup.edit_message(message_id=interaction.message.id, embed=self.composer.embed, view=self.composer.button_view)
 
-            # Log successful requests and latency
+            try:
+                # Payload serialization sanitation (removes internal mock metadata so the API accepts it)
+                sanitized_payload = global_result.copy()
+                if 'meta' in sanitized_payload:
+                    sanitized_payload.pop('meta')
+                    
+                ai_report = await self.api.snitch(sanitized_payload)
+            except Exception:
+                ai_report = None
+
+            # API COMPLIANT CHECK: Detect by keys or payload presence instead of 'type'
+            is_valid_ai_report = ai_report and (any(k in ai_report for k in ('audio_reports', 'image_reports', 'video_reports')) or 'meta' in ai_report)
+
+            if is_valid_ai_report:
+                await self.composer.compose(self.user, ai_report, 'searchsong', censor=self.censor, loading=False)
+                # Second Edit: Show generative AI information and latency
+                await interaction.followup.edit_message(message_id=interaction.message.id, embed=self.composer.embed, view=self.composer.button_view)
+
+            # Log successful requests and safely track single-float latencies
             request_counting.successful_request()
-            latency = global_result['meta']['processing_time_ms']['global_io']
-            if ai_report and 'type' in ai_report: 
-                latency += ai_report['meta']['processing_time_ms']['global_io']
-            request_counting.api_latency(latency)
+            p_time_base = global_result.get('meta', {}).get('processing_time_ms', 0)
+            p_time_ai = ai_report.get('meta', {}).get('processing_time_ms', 0) if is_valid_ai_report else 0
+            
+            request_counting.api_latency(p_time_base + p_time_ai)
             
             # Recompose anonymously to retain user privacy before logging
-            if ai_report and 'type' in ai_report:
+            if is_valid_ai_report:
                 await self.composer.compose(self.user, ai_report, 'searchsong', anonymous=True, censor=self.censor, loading=False)
             else:
                 await self.composer.compose(self.user, global_result, 'searchsong', anonymous=True, censor=self.censor, loading=False)
@@ -146,9 +157,10 @@ class LyricSearchCog(commands.Cog):
     @app_commands.command(name='searchlyric', description='Search for a song by its lyrics')
     @app_commands.describe(lyrics='The lyrics of the song you are trying to find')
     @app_commands.describe(censor='Whether you want to censor the title of the song or not')
+    @app_commands.describe(feeling_lucky='Automatically choose the first search result and lookup its metadata')
     @discord.app_commands.allowed_installs(guilds=True, users=True)
     @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
-    async def search_lyric(self, interaction: discord.Interaction, lyrics: str, censor: bool = False):
+    async def search_lyric(self, interaction: discord.Interaction, lyrics: str, censor: bool = False, feeling_lucky: bool = False):
         start_time = current_unix_time_ms()
         if interaction.data.get('integration_owners', {}).get('1') is not None:
             censor = True
@@ -170,13 +182,72 @@ class LyricSearchCog(commands.Cog):
         songs = response['songs']
         request_counting.api_latency(api_latency)
 
+        if feeling_lucky:
+            first_song = songs[0]
+            spotify_id = first_song['ids']['spotify']
+            global_result = await self.api.lookup('song', spotify_id, 'spotify', country_code='us')
+
+            if not global_result or ('status' in global_result and global_result['status'] != 200):
+                await composer.error(global_result.get('status', 204))
+                request_counting.failed_request()
+                await interaction.followup.send(embed=composer.embed)
+                return
+
+            ai_report = None
+            if 'type' in global_result:
+                # First Edit: Send immediate response (Global IO response) without Loading... messages
+                await composer.compose(interaction.user, global_result, 'searchsong', censor=censor, loading=False)
+                response_msg = await interaction.followup.send(embed=composer.embed, view=composer.button_view)
+
+                try:
+                    # Payload serialization sanitation (removes internal mock metadata so the API accepts it)
+                    sanitized_payload = global_result.copy()
+                    if 'meta' in sanitized_payload:
+                        sanitized_payload.pop('meta')
+                        
+                    ai_report = await self.api.snitch(sanitized_payload)
+                except Exception:
+                    ai_report = None
+
+                # API COMPLIANT CHECK: Detect by keys or payload presence instead of 'type'
+                is_valid_ai_report = ai_report and (any(k in ai_report for k in ('audio_reports', 'image_reports', 'video_reports')) or 'meta' in ai_report)
+
+                if is_valid_ai_report:
+                    await composer.compose(interaction.user, ai_report, 'searchsong', censor=censor, loading=False)
+                    # Second Edit: Show generative AI information and latency
+                    await interaction.followup.edit_message(message_id=response_msg.id, embed=composer.embed, view=composer.button_view)
+
+                # Log successful requests and safely track single-float latencies
+                request_counting.successful_request()
+                p_time_base = global_result.get('meta', {}).get('processing_time_ms', 0)
+                p_time_ai = ai_report.get('meta', {}).get('processing_time_ms', 0) if is_valid_ai_report else 0
+                
+                request_counting.api_latency(p_time_base + p_time_ai)
+                
+                # Recompose anonymously to retain user privacy before logging
+                if is_valid_ai_report:
+                    await composer.compose(interaction.user, ai_report, 'searchsong', anonymous=True, censor=censor, loading=False)
+                else:
+                    await composer.compose(interaction.user, global_result, 'searchsong', anonymous=True, censor=censor, loading=False)
+                
+                # Log the original query parameters
+                await log([composer.embed], [global_result], 'searchlyric', f'lyrics:`{lyrics}` censor:`{censor}` feeling_lucky:True', current_unix_time_ms() - start_time, composer.button_view)
+            else:
+                await composer.error(204)
+                request_counting.failed_request()
+                await interaction.followup.send(embed=composer.embed)
+            
+            request_counting.client_latency(current_unix_time_ms() - start_time)
+            return
+
         # Set up the view to iterate through songs
         view = LyricSearchPagination(interaction, interaction.user, songs, self.api, api_latency, censor, lyrics)
         
         first_song = songs[0]
         # Inject mock metadata to prevent KeyError in EmbedComposer
+        # NEW API: processing_time_ms is now a clean float
         first_song['meta'] = {
-            'processing_time_ms': {'global_io': api_latency},
+            'processing_time_ms': float(api_latency),
             'filter_confidence_percentage': {}
         }
 
