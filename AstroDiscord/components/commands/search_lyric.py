@@ -111,7 +111,7 @@ class LyricSearchPagination(discord.ui.View):
                 ai_report = None
 
             # API COMPLIANT CHECK: Detect by keys or payload presence instead of 'type'
-            is_valid_ai_report = ai_report and (any(k in ai_report for k in ('audio_reports', 'image_reports', 'video_reports')) or 'meta' in ai_report)
+            is_valid_ai_report = ai_report and (any(k in ai_report for k in ('audio_reports', 'image_reports', 'video_reports', 'source_reports')) or 'meta' in ai_report)
 
             if is_valid_ai_report:
                 await self.composer.compose(self.user, ai_report, 'searchsong', censor=self.censor, loading=False)
@@ -210,7 +210,7 @@ class LyricSearchCog(commands.Cog):
                     ai_report = None
 
                 # API COMPLIANT CHECK: Detect by keys or payload presence instead of 'type'
-                is_valid_ai_report = ai_report and (any(k in ai_report for k in ('audio_reports', 'image_reports', 'video_reports')) or 'meta' in ai_report)
+                is_valid_ai_report = ai_report and (any(k in ai_report for k in ('audio_reports', 'image_reports', 'video_reports', 'source_reports')) or 'meta' in ai_report)
 
                 if is_valid_ai_report:
                     await composer.compose(interaction.user, ai_report, 'searchsong', censor=censor, loading=False)

@@ -244,7 +244,7 @@ class CoreMusicCog(commands.Cog):
                     ai_report = None
 
                 # API COMPLIANT CHECK: Detect by keys or payload presence instead of 'type'
-                is_valid_ai_report = ai_report and (any(k in ai_report for k in ('audio_reports', 'image_reports', 'video_reports')) or 'meta' in ai_report)
+                is_valid_ai_report = ai_report and (any(k in ai_report for k in ('audio_reports', 'image_reports', 'video_reports', 'source_reports')) or 'meta' in ai_report)
 
                 if is_valid_ai_report:
                     await embed_composer.compose(interaction.user, ai_report, 'search', False, censor)
@@ -535,7 +535,7 @@ class CoreMusicCog(commands.Cog):
             )
             embed.add_field(
                 name="Feature suggestions, questions or bug reports?",
-                value=f"Feel free to leave them in our server (link in About me).",
+                value=f"Feel free to leave them in our server (link in bio).",
                 inline=False
             )
             embed.add_field(
