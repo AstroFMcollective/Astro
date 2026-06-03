@@ -249,6 +249,38 @@ class EmbedComposer:
                 if ai_analysis.get('is_ai_generated', False) or confidence >= 50.0:
                     analysis_string += f"- There is a probability this {media_label}'s video has been AI-generated `[{round(confidence, 3)}%]`\n"
 
+            for report in json_data.get('source_reports') or []:
+                ai_analysis = report.get('ai_analysis', {})
+                confidence = ai_analysis.get('ai_confidence_score', 0) * 100
+                if ai_analysis.get('is_ai_generated', False) or confidence >= 50.0:
+                    service = report.get('service', '')
+                    service_lower = service.lower().replace('-', '').replace('_', '')
+                    service_key = service.lower()
+                    if service_lower in ('apple', 'applemusic', 'apple_music'):
+                        service_key = 'apple_music'
+                    elif service_lower in ('youtube', 'youtubemusic', 'youtube_music'):
+                        service_key = 'youtube_music'
+
+                    service_display = {
+                        'spotify': 'Spotify',
+                        'apple_music': 'Apple Music',
+                        'youtube_music': 'YouTube Music',
+                        'deezer': 'Deezer',
+                        'tidal': 'TIDAL',
+                        'genius': 'Genius'
+                    }.get(service_key, service.replace('_', ' ').replace('-', ' ').title())
+
+                    # Try to retrieve from anchor first (contains text-renderable emojis), fallback to emoji
+                    emoji = ''
+                    anchor_val = text['anchor'].get(service_key, '')
+                    if anchor_val:
+                        emoji = anchor_val.split(' ')[0]
+                    else:
+                        emoji = text['emoji'].get(service_key, '')
+
+                    emoji_str = f"{emoji} " if emoji else ""
+                    analysis_string += f"- {emoji_str}**{service_display}** has labeled this {media_label} as AI-generated\n"
+
             if analysis_string:
                 if not any(field.name == 'Generative AI report' for field in self.embed.fields):
                     self.embed.add_field(
@@ -278,7 +310,7 @@ class EmbedComposer:
             )
 
         # Logic selector
-        is_ai_report = any(k in json_response for k in ('audio_reports', 'image_reports', 'video_reports')) or json_response.get('type') == 'analysis'
+        is_ai_report = any(k in json_response for k in ('audio_reports', 'image_reports', 'video_reports', 'source_reports')) or json_response.get('type') == 'analysis'
 
         if is_ai_report:
             await analysis(json_response)
