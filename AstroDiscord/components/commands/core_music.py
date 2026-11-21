@@ -563,6 +563,12 @@ class CoreMusicCog(commands.Cog):
                     value="• **Status**: `Offline/Error`",
                     inline=True
                 )
+
+            embed.add_field(
+                name="",
+                value="[Terms of Service](https://docs.google.com/document/d/1qfNdW0_Gvb3yK52tzd-FGa8TnW9S_cBQnE1-H4i561c/edit?tab=t.0#heading=h.wy2z4bjepw16) • [Privacy Policy](https://docs.google.com/document/d/1Mm8-Lg1MMYmvYN95XgMjhHoc3J4wbLaTckgIx7s_Igg/edit?tab=t.0#heading=h.t174t5nnt3lg)",
+                inline=False
+            )
                 
             embed.set_footer(
                 text="Thank you for using Astro!",
