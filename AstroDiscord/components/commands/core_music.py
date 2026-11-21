@@ -328,7 +328,7 @@ class CoreMusicCog(commands.Cog):
                         ai_report = None
 
                     if ai_report:
-                        await embed_composer.compose(interaction.user, ai_report, 'snoop', False, censor)
+                        await embed_composer.compose(user, ai_report, 'snoop', False, censor)
                         await response.edit(embed=embed_composer.embed, view=embed_composer.button_view)		
                     request_counting.successful_request()
                     latency = json_resp.get('meta', {}).get('processing_time_ms', 0)
