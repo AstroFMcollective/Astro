@@ -17,6 +17,62 @@ class AstroClient(ext_commands.AutoShardedBot):
         self.synced = False
         self.app_start_time = current_unix_time()
         self.api = AstroAPI()
+        self._presence_cache = {}
+        self._install_guild_presence_seeder()
+
+    def _install_guild_presence_seeder(self):
+        """Seed initial guild presences from GUILD_CREATE when Intents.members is disabled."""
+        connection = getattr(self, '_connection', None)
+        parsers = getattr(connection, 'parsers', None)
+        if not isinstance(parsers, dict):
+            return
+        original_parse_guild_create = parsers.get('GUILD_CREATE')
+        if not callable(original_parse_guild_create):
+            return
+
+        def parse_guild_create_with_presences(data, _orig=original_parse_guild_create):
+            _orig(data)
+            self._seed_guild_presences(data)
+
+        parsers['GUILD_CREATE'] = parse_guild_create_with_presences
+
+    def _seed_guild_presences(self, data):
+        if data.get('unavailable') is True or 'id' not in data:
+            return
+        guild_id = int(data['id'])
+        self._presence_cache.pop(guild_id, None)
+        for presence_data in data.get('presences', ()):
+            raw = discord.RawPresenceUpdateEvent(data=presence_data, state=self._connection)
+            self._update_presence_cache(guild_id, raw.user_id, raw.activities)
+
+    def _update_presence_cache(self, guild_id, user_id, activities):
+        if guild_id is None:
+            return
+        if activities:
+            self._presence_cache.setdefault(guild_id, {})[user_id] = tuple(activities)
+        else:
+            guild_presences = self._presence_cache.get(guild_id)
+            if guild_presences is not None:
+                guild_presences.pop(user_id, None)
+                if not guild_presences:
+                    self._presence_cache.pop(guild_id, None)
+
+    def get_member_activities(self, guild_id, user_id):
+        """Return cached activities for a guild user without requiring Intents.members."""
+        if guild_id is None:
+            return ()
+        cached = self._presence_cache.get(guild_id, {}).get(user_id)
+        if cached is not None:
+            return cached
+        guild = self.get_guild(guild_id)
+        member = guild.get_member(user_id) if guild is not None else None
+        return tuple(member.activities) if member is not None else ()
+
+    async def on_raw_presence_update(self, payload: discord.RawPresenceUpdateEvent):
+        self._update_presence_cache(payload.guild_id, payload.user_id, payload.activities)
+
+    async def on_guild_remove(self, guild: discord.Guild):
+        self._presence_cache.pop(guild.id, None)
 
     async def setup_hook(self):
         print("[AstroDiscord] Loading extensions...")
@@ -167,10 +223,9 @@ service = 'discord'
 component = 'Discord Client'
 deployment_channel = config['client']['deployment_channel']
 
-intents = discord.Intents.all()
+intents = discord.Intents.default()
 intents.message_content = True
 intents.presences = True
-intents.members = True
 
 # Instantiate the bot (prefix is required by commands.Bot but we mainly use tree/slash commands)
 client = AstroClient(

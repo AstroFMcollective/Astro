@@ -294,14 +294,17 @@ class CoreMusicCog(commands.Cog):
         embed_composer = EmbedComposer()
         
         try:
-            if user == None:
+            if user is None:
                 user = interaction.user
             identifier = None
-            guild = self.bot.get_guild(interaction.guild.id)
-            member = guild.get_member(user.id)
+            activities = (
+                self.bot.get_member_activities(interaction.guild.id, user.id)
+                if interaction.guild is not None
+                else ()
+            )
 
-            for activity in member.activities:
-                if isinstance(activity, Spotify):
+            for activity in activities:
+                if isinstance(activity, Spotify) and activity.track_id:
                     identifier = str(activity.track_id)
                     break
             
