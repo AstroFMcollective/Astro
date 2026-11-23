@@ -656,7 +656,7 @@ class CoreMusicCog(commands.Cog):
             embed.add_field(
                 name="Questions, feedback or privacy?",
                 value=(
-                    "Astro only retains music links sent to the bot for diagnostics — never message text, server info, or personal data. "
+                    "Astro only retains music links sent to the bot for diagnostics; never message text, server info, or personal data. "
                     f"Have questions? Reach out in our [support server]({SUPPORT_SERVER_URL})."
                 ),
                 inline=False
