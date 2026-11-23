@@ -4,13 +4,23 @@ from discord.ext import commands
 from asyncio import create_task, gather
 
 from AstroDiscord.components.api_caller import AstroAPI
-from AstroDiscord.components.embed_composer import EmbedComposer
+from AstroDiscord.components.embed_composer import (
+    ASTRO_30L_PERMISSIONS_GUIDE_URL,
+    EmbedComposer,
+    add_30l_disclaimer_field,
+)
 from AstroDiscord.components.url_tools import url_tools
 from AstroDiscord.components.time import current_unix_time_ms, current_unix_time
 from AstroDiscord.components.log import log, log_catastrophe
 import AstroDiscord.components.commands.request_counting as request_counting
 from AstroDiscord.components.paginator import PaginatorView
 from AstroDiscord.components.ini import config, text
+
+TOS_URL = "https://docs.google.com/document/d/1qfNdW0_Gvb3yK52tzd-FGa8TnW9S_cBQnE1-H4i561c/edit?tab=t.0#heading=h.wy2z4bjepw16"
+PRIVACY_POLICY_URL = "https://docs.google.com/document/d/1Mm8-Lg1MMYmvYN95XgMjhHoc3J4wbLaTckgIx7s_Igg/edit?tab=t.0#heading=h.t174t5nnt3lg"
+SUPPORT_SERVER_URL = "https://discord.gg/F2xaVUv7YX"
+REINVITE_URL = "https://discord.com/oauth2/authorize?client_id=1246471351485861967"
+LEGAL_LINKS_VALUE = f"[Terms of Service]({TOS_URL}) • [Privacy Policy]({PRIVACY_POLICY_URL})"
 
 class CoreMusicCog(commands.Cog):
     def __init__(self, bot):
@@ -520,17 +530,36 @@ class CoreMusicCog(commands.Cog):
             
         request_counting.client_latency(current_unix_time_ms() - start_time)
 
+    async def _run_info_command(self, interaction: discord.Interaction, command_name: str, build_embed):
+        """Run an informational slash command with shared defer, footer, stats, and error handling."""
+        await interaction.response.defer()
+        start_time = current_unix_time_ms()
+
+        try:
+            embed = await build_embed()
+            embed.set_footer(
+                text="Thank you for using Astro!",
+                icon_url=text['images']['pfpurl']
+            )
+            await interaction.followup.send(embed=embed)
+            request_counting.successful_request()
+        except Exception as error:
+            embed_composer = EmbedComposer()
+            await embed_composer.error('other')
+            await interaction.followup.send(embed=embed_composer.embed)
+            request_counting.failed_request()
+            await log_catastrophe(command_name, command_name, error)
+
+        request_counting.client_latency(current_unix_time_ms() - start_time)
+
     @app_commands.command(name='about', description='Get information about Astro and its services')
     @discord.app_commands.allowed_installs(guilds=True, users=True)
     @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
     async def about(self, interaction: discord.Interaction):
-        await interaction.response.defer()
-        start_time = current_unix_time_ms()
-        
-        try:
+        async def build_about_embed():
             bot_version = config['client']['version']
             api_data = await self.api.get_about()
-            
+
             embed = discord.Embed(
                 title="About Astro",
                 description="Astro is an open-source, multi-platform music discovery and sharing assistant, designed to connect your music experience seamlessly across services like Spotify, Apple Music, YouTube Music, and Deezer.",
@@ -538,7 +567,7 @@ class CoreMusicCog(commands.Cog):
             )
             embed.add_field(
                 name="Feature suggestions, questions or bug reports?",
-                value=f"Feel free to leave them in our server (link in bio).",
+                value="Feel free to leave them in our server (link in bio).",
                 inline=False
             )
             embed.add_field(
@@ -549,12 +578,12 @@ class CoreMusicCog(commands.Cog):
             if api_data:
                 api_version = api_data.get('version', 'Unknown')
                 api_uptime = api_data.get('uptime')
-                
+
                 if api_uptime:
                     api_uptime_value = f"<t:{api_uptime}:R> (<t:{api_uptime}:f>)"
                 else:
                     api_uptime_value = f"`{api_data.get('uptime_string', 'Unknown')}`"
-                
+
                 embed.add_field(
                     name="API Info",
                     value=f"• **Version**: `{api_version}`\n• **Uptime**: {api_uptime_value}",
@@ -569,25 +598,77 @@ class CoreMusicCog(commands.Cog):
 
             embed.add_field(
                 name="",
-                value="[Terms of Service](https://docs.google.com/document/d/1qfNdW0_Gvb3yK52tzd-FGa8TnW9S_cBQnE1-H4i561c/edit?tab=t.0#heading=h.wy2z4bjepw16) • [Privacy Policy](https://docs.google.com/document/d/1Mm8-Lg1MMYmvYN95XgMjhHoc3J4wbLaTckgIx7s_Igg/edit?tab=t.0#heading=h.t174t5nnt3lg)",
+                value=LEGAL_LINKS_VALUE,
                 inline=False
             )
-                
-            embed.set_footer(
-                text="Thank you for using Astro!",
-                icon_url=text['images']['pfpurl']
+            add_30l_disclaimer_field(embed)
+            return embed
+
+        await self._run_info_command(interaction, 'about', build_about_embed)
+
+    @app_commands.command(name='3-0l', description='Learn about the upcoming Astro 3.0L update and server permission changes')
+    @discord.app_commands.allowed_installs(guilds=True, users=True)
+    @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
+    async def astro_30l(self, interaction: discord.Interaction):
+        async def build_30l_embed():
+            embed = discord.Embed(
+                title="Astro 3.0L Update",
+                description=(
+                    "Astro 3.0L is coming soon - the biggest update ever made to Astro. "
+                    "The bot has been completely rebuilt from the ground up with cleaner, more streamlined embeds, "
+                    "stronger reliability, and the foundation for future features."
+                ),
+                colour=0xf5c000
             )
-            
-            await interaction.followup.send(embed=embed)
-            request_counting.successful_request()
-        except Exception as error:
-            embed_composer = EmbedComposer()
-            await embed_composer.error('other')
-            await interaction.followup.send(embed=embed_composer.embed)
-            request_counting.failed_request()
-            await log_catastrophe('about', 'about', error)
-            
-        request_counting.client_latency(current_unix_time_ms() - start_time)
+            embed.add_field(
+                name="What's Changing",
+                value=(
+                    "- **A new, streamlined design**: Upgraded to Discord's modern Components V2 layout for cleaner, unified, easier-to-read music cards.\n"
+                    "- **Persistent pagination**: Auto Link Lookup now uses pagination, and ALL multi-link pagianted results stay interactive forever, and no longer expire after a short timeout.\n"
+                    "- **Rebuilt internals**: The whole thing has been redone in JavaScript to take full advantage of all of Discord's features."
+                ),
+                inline=False
+            )
+            embed.add_field(
+                name="For server moderators",
+                value=(
+                    "We've revised and expanded Astro's requested server permissions to keep everything working smoothly.\n"
+                    f"Please review the **[3.0L Permissions Guide]({ASTRO_30L_PERMISSIONS_GUIDE_URL})** or **[re-add Astro to you server]({REINVITE_URL})**."
+                ),
+                inline=True
+            )
+            embed.add_field(
+                name="For users & User Apps",
+                value=(
+                    "All your favorite commands are staying, just faster and cleaner.\n"
+                    "No further action is needed."
+                ),
+                inline=True
+            )
+            embed.add_field(
+                name="Want to try the Astro 3.0L BETA?",
+                value=(
+                    "Interested in participating in the Astro 3.0L BETA or trying it out before it releases? "
+                    f"Join our **[official Discord server]({SUPPORT_SERVER_URL})**!"
+                ),
+                inline=False
+            )
+            embed.add_field(
+                name="Questions, feedback or privacy?",
+                value=(
+                    "Astro only retains music links sent to the bot for diagnostics — never message text, server info, or personal data. "
+                    f"Have questions? Reach out in our [support server]({SUPPORT_SERVER_URL})."
+                ),
+                inline=False
+            )
+            embed.add_field(
+                name="",
+                value=f"[3.0L Permissions Guide]({ASTRO_30L_PERMISSIONS_GUIDE_URL}) • [Re-add Astro]({REINVITE_URL}) • {LEGAL_LINKS_VALUE}",
+                inline=False
+            )
+            return embed
+
+        await self._run_info_command(interaction, '3-0l', build_30l_embed)
 
 async def setup(bot):
     await bot.add_cog(CoreMusicCog(bot))

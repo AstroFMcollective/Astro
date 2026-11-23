@@ -7,6 +7,20 @@ from PIL import Image
 import numpy as np
 from io import BytesIO
 
+ASTRO_30L_PERMISSIONS_GUIDE_URL = "https://docs.google.com/document/d/19TD09wfqNDXVHFpd_tYx3UWYr-s-iH-rdF-CakxIOVI/edit?usp=sharing"
+ASTRO_30L_DISCLAIMER = (
+    "-# Astro 3.0L is coming soon. MODS & ADMINS: please review Astro's server permissions and assign new ones. Learn more by running the /3-0l command. "
+    f"[3.0L Permissions Guide...]({ASTRO_30L_PERMISSIONS_GUIDE_URL})"
+)
+
+
+def add_30l_disclaimer_field(embed: Embed) -> None:
+    """Ensure the Astro 3.0L permissions disclaimer field is placed once at the end of an embed."""
+    for idx in range(len(embed.fields) - 1, -1, -1):
+        if embed.fields[idx].value == ASTRO_30L_DISCLAIMER:
+            embed.remove_field(idx)
+    embed.add_field(name='', value=ASTRO_30L_DISCLAIMER, inline=False)
+
 
 class EmbedComposer:
     def __init__(self):
@@ -54,6 +68,7 @@ class EmbedComposer:
             colour=0xf5c000
         )
         self.embed.set_author(name='Oh no!')
+        add_30l_disclaimer_field(self.embed)
         self.embed.set_footer(
             text=f"Thanks for using Astro!  •  Error code {error} - {meaning}",
             icon_url=text['images']['pfpurl']
@@ -142,6 +157,7 @@ class EmbedComposer:
                 for field in self.embed.fields.copy():
                     if field.value == 'Loading...':
                         self.embed.remove_field(self.embed.fields.index(field))
+                add_30l_disclaimer_field(self.embed)
                 self.embed.set_footer(
                     text=f"{text['embed']['tymsg']} • Done in {processing_time_ms} ms",
                     icon_url=text['images']['pfpurl']
@@ -295,6 +311,7 @@ class EmbedComposer:
 
             # Ensure the author block is correctly updated (anonymized or standard)
             if self.embed:
+                add_30l_disclaimer_field(self.embed)
                 if anonymous:
                     self.embed.set_author(name=f'A user {action}:', icon_url=text['images']['default_pfp'])
                 else:
@@ -330,6 +347,7 @@ class EmbedComposer:
             for field in self.embed.fields.copy():
                 if field.value == 'Loading...':
                     self.embed.remove_field(self.embed.fields.index(field))
+            add_30l_disclaimer_field(self.embed)
             proc_time = int(round(float(self.last_json.get('meta', {}).get('processing_time_ms', 0))))
             self.embed.set_footer(
                 text=f"{text['embed']['tymsg']} • Done in {proc_time} ms",
